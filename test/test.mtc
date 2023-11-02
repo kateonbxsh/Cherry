@@ -1,8 +1,19 @@
 
 string name = "Orago";
-string multiple = name * 5;
-string withoutO = name - "o" - "O";
 
-string info = "hello" + 5 + null + false + 5.6;
+int a = 1;
+int b = 2;
 
-return 404;
+unless name < "Orago" {
+    a = 5;
+} else if (name - "o" + "rag" + (b * 0)){
+    a = 4;
+}
+
+int exitCode = 69420;
+
+unless (not exitCode) {
+    exitCode = 220;
+}
+
+return exitCode;
