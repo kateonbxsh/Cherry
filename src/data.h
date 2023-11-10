@@ -3,10 +3,10 @@
 #include <string>
 #include <any>
 
-typedef struct {
+struct Value {
 
     std::string type;
     std::any value;
     bool thrown;
 
-} Value;
+};

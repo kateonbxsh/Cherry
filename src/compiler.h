@@ -5,8 +5,6 @@
 #include "scope.h"
 #include "statement.h"
 
-typedef std::stack<std::string> Callstack;
-
 enum CompilerState {
 
     GLOBAL,
@@ -17,17 +15,10 @@ enum CompilerState {
     AWAITING_SEMICOLON,
 
     AWAITING_BLOCK,
-    RET_ELSE_IF,
     RET_ELSE,
 
 };
 
-enum LexicalStack {
-
-    BRACKET,
-    BRACE
-
-};
 
 class Compiler {
 
@@ -40,7 +31,5 @@ private:
     Block parseInternal(Scope scope);
     TokenList parseExpression();
     Lexer lexer;
-    Callstack callstack;
-    std::stack<LexicalStack> lexicalStack;
 
 };

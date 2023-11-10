@@ -37,12 +37,12 @@ bool isNumeric(const Value& value) {
     return (value.type == "int" || value.type == "bool" || value.type == "float" || value.type == "null");
 }
 std::string stringify(const Value& value) {
-    if (value.type == "str") return std::any_cast<std::string>(value.value);
+    if (value.type == "string") return std::any_cast<std::string>(value.value);
     if (value.type == "int") return std::to_string(std::any_cast<int>(value.value));
     if (value.type == "float") return std::to_string(std::any_cast<float>(value.value));
     if (value.type == "bool") return std::to_string(std::any_cast<bool>(value.value));
     if (value.type == "null") return "null";
-    return "<object>";
+    return "<object " + value.type + ">";
 }
 float numericToFloat(const Value& value) {
     if (value.type == "int") return static_cast<float>(std::any_cast<int>(value.value));
@@ -71,7 +71,7 @@ int precedence(const Token& token) {
     } else if (kind == PLUS || kind == MINUS) {
         return 1;
     }
-    return 0;
+    return kind != LEFT_BRACE;
 }
 
 Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
@@ -79,19 +79,13 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
 
     Token token;
 
-    std::cout << "Evaluating expression: ";
-    for(Token& t : tokenList) {
-        std::cout << t.value << " ";
-    }
-    std::cout << "\n";
-
     int i = 0;
     while (i < tokenList.size()) {
         token = tokenList[i];
-        if (token.kind == NAME) {
+        if (token.kind == NAME && scope.hasVariable(token.value)) {
             valueStack.push(scope.getVariable(token.value));
         } else if (token.kind == STRING) {
-            valueStack.push({"str", token.value, false});
+            valueStack.push({"string", token.value, false});
         } else if (token.kind == FLOAT) {
             float value = std::stof(token.value);
             valueStack.push({"float", value, false});
@@ -103,8 +97,24 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
             Value rightOperand;
             Value leftOperand;
 
+            if (token.kind == NAME && !scope.hasMethod(token.value)) continue;
+
             Value result = {"null", 0};
             switch (token.kind) {
+                case NAME: {
+                    Method method = scope.getMethod(token.value);
+                    if (valueStack.empty()) break;
+                    int passedArgumentCount = numericToInt(valueStack.top());
+                    if (valueStack.size() < passedArgumentCount) break;
+                    valueStack.pop();
+                    std::vector<Value> passedArguments = {};
+                    while (passedArgumentCount-- > 0) {
+                        passedArguments.insert(passedArguments.begin(), valueStack.top());
+                        valueStack.pop();
+                    }
+                    result = method.call(passedArguments, scope);
+                    break;
+                }
                 case BITWISE_XOR: {
                     if (valueStack.size() < 2) break;
                     rightOperand = valueStack.top();
@@ -253,13 +263,13 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
                     valueStack.pop();
                     leftOperand = valueStack.top();
                     valueStack.pop();
-                    if (leftOperand.type == "str" && rightOperand.type == "str") {
+                    if (leftOperand.type == "string" && rightOperand.type == "string") {
                         std::string res = stringify(leftOperand)
                                 + stringify(rightOperand);
-                        result = {"str", res, false};
-                    } else if ((leftOperand.type == "str" || rightOperand.type == "str")) {
+                        result = {"string", res, false};
+                    } else if ((leftOperand.type == "string" || rightOperand.type == "string")) {
                         std::string res = stringify(leftOperand) + stringify(rightOperand);
-                        result = {"str", res, false};
+                        result = {"string", res, false};
                     } else if (isNumeric(leftOperand) && isNumeric(rightOperand)) {
                         if (leftOperand.type == "float" || rightOperand.type == "float") {
                             result = {"float",
@@ -278,14 +288,14 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
                     valueStack.pop();
                     leftOperand = valueStack.top();
                     valueStack.pop();
-                    if (leftOperand.type == "str" && rightOperand.type == "str") {
+                    if (leftOperand.type == "string" && rightOperand.type == "string") {
                         std::string left = stringify(leftOperand), right = stringify(rightOperand);
                         size_t pos = left.find(right);
                         while(pos != std::string::npos) {
                             left.replace(pos, right.length(), "");
                             pos = left.find(right);
                         }
-                        result = {"str", left, false};
+                        result = {"string", left, false};
                     } else if (isNumeric(leftOperand) && isNumeric(rightOperand)) {
                         if (leftOperand.type == "float" || rightOperand.type == "float") {
                             result = {"float",
@@ -304,16 +314,16 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
                     valueStack.pop();
                     leftOperand = valueStack.top();
                     valueStack.pop();
-                    if ((leftOperand.type == "str" || rightOperand.type == "str")
+                    if ((leftOperand.type == "string" || rightOperand.type == "string")
                     &&  (isNumeric(leftOperand) || (isNumeric(rightOperand)))) {
                         int times; std::string str;
-                        if (leftOperand.type == "str") { str = stringify(leftOperand); times = numericToInt(rightOperand); }
+                        if (leftOperand.type == "string") { str = stringify(leftOperand); times = numericToInt(rightOperand); }
                         else { str = stringify(rightOperand); times = numericToInt(leftOperand); }
                         std::string res;
                         while (times > 0) {
                             res += str; times--;
                         }
-                        result = {"str", res, false};
+                        result = {"string", res, false};
                     } else if (isNumeric(leftOperand) && isNumeric(rightOperand)) {
                         if (leftOperand.type == "float" || rightOperand.type == "float") {
                             result = {"float",
@@ -349,12 +359,10 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
         i++;
     }
 
-    if (valueStack.size() == 1) {
+    if (!valueStack.empty()) {
         return valueStack.top();
-    } else {
-        std::cerr << "Invalid expression" << std::endl;
-        return {"null", 0};
     }
+    return {"null"};
 }
 
 // Function to convert an infix expression to Reverse Polish Notation (RPN)
@@ -364,10 +372,27 @@ TokenList Compiler::parseExpression() {
 
     while (lexer.hasNextToken()) {
         Token token = lexer.nextToken();
-        Token nextToken;
-        Token incomingToken;
+        Token nextToken = lexer.peekToken();
 
         if (token.kind == NAME) {
+            if (nextToken.kind == LEFT_BRACE) {
+                lexer.nextToken();
+                int argCount = 0;
+                while(true) {
+                    if (lexer.peekToken().kind == RIGHT_BRACE) { //print("Hello", "there", print(5), print(6), 7);
+                        lexer.nextToken();
+                        break;
+                    }
+                    TokenList expression = parseExpression();
+                    output.insert(output.end(), expression.begin(), expression.end());
+                    argCount++;
+                    if (lexer.peekToken().kind == COMMA) {
+                        lexer.nextToken();
+                        continue;
+                    }
+                }
+                output.push_back({INTEGER, std::to_string(argCount)});
+            }
             output.push_back(token);
         } else if (token.kind == INTEGER || token.kind == FLOAT || token.kind == STRING) {
             output.push_back(token);
@@ -380,6 +405,18 @@ TokenList Compiler::parseExpression() {
         } else if (token.kind == TokenKind::LEFT_BRACE) {
             operatorStack.push(token);
         } else if (token.kind == TokenKind::RIGHT_BRACE) {
+            bool mine = false; std::stack<Token> copyOperator = operatorStack;
+            while(!operatorStack.empty()) {
+                if (copyOperator.top().kind == LEFT_BRACE) {
+                    mine = true;
+                    break;
+                }
+                copyOperator.pop();
+           }
+            if (!mine) {
+                lexer.moveReader(-1);
+                break;
+            }
             while (!operatorStack.empty() && operatorStack.top().kind != TokenKind::LEFT_BRACE) {
                 output.push_back(operatorStack.top());
                 operatorStack.pop();

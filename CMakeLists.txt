@@ -19,4 +19,6 @@ add_executable(proglang main.cpp
         src/executor.cpp
         src/executor.h
         src/expression.h
+        src/method.h
+        src/method.cpp
 )

@@ -172,3 +172,14 @@ TokenList Lexer::getTokenList() {
 void Lexer::back() {
     --reader;
 }
+
+Token Lexer::peekToken() {
+    Token result = nextToken();
+    back();
+    return result;
+}
+
+Token Lexer::currentToken() {
+    back();
+    return nextToken();
+}

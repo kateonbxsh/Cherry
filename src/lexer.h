@@ -57,6 +57,8 @@ public:
     Lexer();
     explicit Lexer(std::string data);
     Token nextToken();
+    Token peekToken();
+    Token currentToken();
     void back();
     bool hasNextToken();
     void initReader();

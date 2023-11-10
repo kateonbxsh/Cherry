@@ -9,33 +9,7 @@
 #include "statements/VariableAffectation.h"
 #include "statements/Return.h"
 #include "statements/IfStatement.h"
-
-const char* tokenKindNames[] = {
-        "NONE",
-        "WHITESPACE",
-        "STRING",
-        "INTEGER",
-        "FLOAT",
-        "NAME",
-        "IF",
-        "UNLESS",
-        "ELSE",
-        "METHOD",
-        "RETURN",
-        "RIGHT_BRACKET",
-        "LEFT_BRACKET",
-        "RIGHT_BRACE",
-        "LEFT_BRACE",
-        "COMMA",
-        "SEMICOLON",
-        "COLON",
-        "EQUALS",
-        "TIMES",
-        "DIVIDE",
-        "PLUS",
-        "MINUS",
-        "END_OF_FEED"
-};
+#include "statements/FunctionCall.h"
 
 Compiler::Compiler(Lexer& inputLexer) {
     lexer = inputLexer;
@@ -44,13 +18,9 @@ Compiler::Compiler(Lexer& inputLexer) {
 Block Compiler::parse() {
 
     //clear callstack
-    while(!callstack.empty()) callstack.pop();
-    while(!lexicalStack.empty()) lexicalStack.pop();
     lexer.initReader();
 
     //init callstack
-    callstack.emplace("global");
-
     Scope scope;
 
     return parseInternal(scope);
@@ -74,7 +44,6 @@ Block Compiler::parseInternal(Scope scope) {
     std::stack<CompilerState> stateStack;
     stateStack.push(GLOBAL);
 
-    StatementType currentStatementType;
     bool awaitingOneStatement = false;
 
     while(lexer.hasNextToken()) {
@@ -91,6 +60,14 @@ Block Compiler::parseInternal(Scope scope) {
             case GLOBAL: {
                 awaitingOneStatement = state == AWAITING_BLOCK;
                 if (kind == NAME) {
+                    if (lexer.peekToken().kind == LEFT_BRACE) {
+                        lexer.back();
+                        auto fCall = new FunctionCall;
+                        fCall->expression = parseExpression();
+                        currentBlock->statements.push_back(fCall);
+                        state = AWAITING_SEMICOLON;
+                        continue;
+                    }
                     state = RET_VAR_NAME;
                     currentVariableName = value;
                     expected = {NAME, EQUALS};

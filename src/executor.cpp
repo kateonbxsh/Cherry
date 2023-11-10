@@ -4,17 +4,17 @@
 #include "statements/Return.h"
 #include "statements/IfStatement.h"
 #include "expression.h"
+#include "statements/FunctionCall.h"
 
 Value Executor::execute(Block& block) {
 
     Scope scope;
     Value result = executeInternal(block, scope);
-    scope.printVariables();
     return result;
 
 }
 
-Value Executor::executeInternal(Block& block, Scope& scope) {
+Value Executor::executeInternal(Block block, Scope& scope) {
 
     std::vector<Statement*> statements = block.statements;
 
@@ -24,6 +24,12 @@ Value Executor::executeInternal(Block& block, Scope& scope) {
 
             case NOT_A_STATEMENT:
                 continue;
+            case FUNCTION_CALL: {
+                auto fCall = dynamic_cast<FunctionCall *>(ptrStatement);
+                if (fCall == nullptr) continue;
+                evaluateExpression(fCall->expression, scope);
+                break;
+            }
             case VARIABLE_DEFINITION: {
                 auto pDefinition = dynamic_cast<VariableDefinition *>(ptrStatement);
                 if (pDefinition == nullptr) continue;
