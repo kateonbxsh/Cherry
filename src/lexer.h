@@ -5,12 +5,13 @@
 #include <map>
 
 enum TokenKind {
+
     NONE,
     WHITESPACE,
     STRING,
     INTEGER,
     FLOAT,
-    NAME,
+    IDENTIFIER,
     IF,
     UNLESS,
     ELSE,
@@ -56,15 +57,20 @@ class Lexer{
 public:
     Lexer();
     explicit Lexer(std::string data);
+
     Token nextToken();
     Token peekToken();
     Token currentToken();
+    void savePosition();
+    void rollPosition();
+    void deletePosition();
     void back();
     bool hasNextToken();
     void initReader();
     void moveReader(int d);
     std::string getParseData();
     TokenList getTokenList();
+
 private:
     void defineCharKinds();
 
@@ -73,6 +79,7 @@ private:
     std::string parseData;
     std::map<std::string, TokenKind> tokenMap;
     std::vector<Token> tokens;
+    std::stack<int> positions;
     int reader = 0;
 };
 

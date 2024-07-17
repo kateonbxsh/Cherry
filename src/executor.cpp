@@ -1,5 +1,5 @@
 #include "executor.h"
-#include "statements/VariableDefinition.h"
+#include "statements/definition/VariableDefinition.h"
 #include "statements/VariableAffectation.h"
 #include "statements/Return.h"
 #include "statements/IfStatement.h"
@@ -31,7 +31,7 @@ Value Executor::executeInternal(Block block, Scope& scope) {
                 break;
             }
             case VARIABLE_DEFINITION: {
-                auto pDefinition = dynamic_cast<VariableDefinition *>(ptrStatement);
+                auto pDefinition = dynamic_cast<Expression *>(ptrStatement);
                 if (pDefinition == nullptr) continue;
                 Value result = evaluateExpression(pDefinition->expression, scope);
                 scope.setVariable(pDefinition->name, result);

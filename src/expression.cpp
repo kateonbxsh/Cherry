@@ -82,7 +82,7 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
     int i = 0;
     while (i < tokenList.size()) {
         token = tokenList[i];
-        if (token.kind == NAME && scope.hasVariable(token.value)) {
+        if (token.kind == IDENTIFIER && scope.hasVariable(token.value)) {
             valueStack.push(scope.getVariable(token.value));
         } else if (token.kind == STRING) {
             valueStack.push({"string", token.value, false});
@@ -97,11 +97,11 @@ Value Executor::evaluateExpression(TokenList tokenList, Scope& scope) {
             Value rightOperand;
             Value leftOperand;
 
-            if (token.kind == NAME && !scope.hasMethod(token.value)) continue;
+            if (token.kind == IDENTIFIER && !scope.hasMethod(token.value)) continue;
 
             Value result = {"null", 0};
             switch (token.kind) {
-                case NAME: {
+                case IDENTIFIER: {
                     Method method = scope.getMethod(token.value);
                     if (valueStack.empty()) break;
                     int passedArgumentCount = numericToInt(valueStack.top());
@@ -374,7 +374,7 @@ TokenList Compiler::parseExpression() {
         Token token = lexer.nextToken();
         Token nextToken = lexer.peekToken();
 
-        if (token.kind == NAME) {
+        if (token.kind == IDENTIFIER) {
             if (nextToken.kind == LEFT_BRACE) {
                 lexer.nextToken();
                 int argCount = 0;

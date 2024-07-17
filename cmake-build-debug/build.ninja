@@ -97,6 +97,18 @@ build CMakeFiles/proglang.dir/src/method.cpp.obj: CXX_COMPILER__proglang_unscann
   OBJECT_DIR = CMakeFiles\proglang.dir
   OBJECT_FILE_DIR = CMakeFiles\proglang.dir\src
 
+build CMakeFiles/proglang.dir/src/statements/definition/VariableDefinition.cpp.obj: CXX_COMPILER__proglang_unscanned_Debug C$:/Users/aouab/Desktop/EpicGame/EpicProgLang/src/statements/definition/VariableDefinition.cpp || cmake_object_order_depends_target_proglang
+  DEP_FILE = CMakeFiles\proglang.dir\src\statements\definition\VariableDefinition.cpp.obj.d
+  FLAGS = -g -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles\proglang.dir
+  OBJECT_FILE_DIR = CMakeFiles\proglang.dir\src\statements\definition
+
+build CMakeFiles/proglang.dir/src/statement.cpp.obj: CXX_COMPILER__proglang_unscanned_Debug C$:/Users/aouab/Desktop/EpicGame/EpicProgLang/src/statement.cpp || cmake_object_order_depends_target_proglang
+  DEP_FILE = CMakeFiles\proglang.dir\src\statement.cpp.obj.d
+  FLAGS = -g -fdiagnostics-color=always
+  OBJECT_DIR = CMakeFiles\proglang.dir
+  OBJECT_FILE_DIR = CMakeFiles\proglang.dir\src
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target proglang
@@ -105,7 +117,7 @@ build CMakeFiles/proglang.dir/src/method.cpp.obj: CXX_COMPILER__proglang_unscann
 #############################################
 # Link the executable proglang.exe
 
-build proglang.exe: CXX_EXECUTABLE_LINKER__proglang_Debug CMakeFiles/proglang.dir/main.cpp.obj CMakeFiles/proglang.dir/src/lexer.cpp.obj CMakeFiles/proglang.dir/src/compiler.cpp.obj CMakeFiles/proglang.dir/src/scope.cpp.obj CMakeFiles/proglang.dir/src/expression.cpp.obj CMakeFiles/proglang.dir/src/type.cpp.obj CMakeFiles/proglang.dir/src/executor.cpp.obj CMakeFiles/proglang.dir/src/method.cpp.obj
+build proglang.exe: CXX_EXECUTABLE_LINKER__proglang_Debug CMakeFiles/proglang.dir/main.cpp.obj CMakeFiles/proglang.dir/src/lexer.cpp.obj CMakeFiles/proglang.dir/src/compiler.cpp.obj CMakeFiles/proglang.dir/src/scope.cpp.obj CMakeFiles/proglang.dir/src/expression.cpp.obj CMakeFiles/proglang.dir/src/type.cpp.obj CMakeFiles/proglang.dir/src/executor.cpp.obj CMakeFiles/proglang.dir/src/method.cpp.obj CMakeFiles/proglang.dir/src/statements/definition/VariableDefinition.cpp.obj CMakeFiles/proglang.dir/src/statement.cpp.obj
   FLAGS = -g
   LINK_LIBRARIES = -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32
   OBJECT_DIR = CMakeFiles\proglang.dir

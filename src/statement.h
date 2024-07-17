@@ -1,41 +1,30 @@
 #pragma once
 
-#include <vector>
-#include <string>
-
-enum StatementType {
-
-    NOT_A_STATEMENT,
-    VARIABLE_DEFINITION,
-    VARIABLE_AFFECTATION,
-    IF_STATEMENT,
-    RETURN_STATEMENT,
-    FUNCTION_CALL
-
-};
+#include "lexer.h"
 
 class Statement {
 
 public:
-    Statement() = default;
 
-    int pos = 0; int line = 0;
-
-    StatementType getType() const {
-        return statementType;
-    }
-
+    static Statement* parse(Lexer& lexer);
     virtual void execute() {};
 
 protected:
-    explicit Statement(StatementType type) : statementType(type) {}
 
-private:
-    StatementType statementType = NOT_A_STATEMENT;
+    bool valid = true;
+    Token lastToken;
+    std::vector<TokenKind> expected;
+
 };
 
-struct Block {
+class NotAStatement : public Statement {
 
-    std::vector<Statement*> statements{};
+public:
+
+    NotAStatement(Token lastToken, std::vector<TokenKind> expected);
+
+private:
+
+    bool valid = false;
 
 };

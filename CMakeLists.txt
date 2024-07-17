@@ -15,10 +15,12 @@ add_executable(proglang main.cpp
         src/type.cpp
         src/type.h
         src/statement.h
-        src/statements/VariableDefinition.h
+        src/statements/definition/VariableDefinition.h
         src/executor.cpp
         src/executor.h
         src/expression.h
         src/method.h
         src/method.cpp
+        src/statements/definition/VariableDefinition.cpp
+        src/statement.cpp
 )

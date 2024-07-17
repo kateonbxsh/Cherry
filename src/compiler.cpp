@@ -5,7 +5,7 @@
 
 #include "compiler.h"
 #include "statement.h"
-#include "statements/VariableDefinition.h"
+#include "statements/definition/VariableDefinition.h"
 #include "statements/VariableAffectation.h"
 #include "statements/Return.h"
 #include "statements/IfStatement.h"
@@ -29,7 +29,7 @@ Block Compiler::parse() {
 
 Block Compiler::parseInternal(Scope scope) {
 
-    std::vector<TokenKind> generalExpected = {NAME, METHOD, IF, RETURN, END_OF_FEED, RIGHT_BRACKET};
+    std::vector<TokenKind> generalExpected = {IDENTIFIER, METHOD, IF, RETURN, END_OF_FEED, RIGHT_BRACKET};
     std::vector<TokenKind> expected = generalExpected;
     std::vector<Type> types = scope.getTypes();
     std::string currentVariableName;
@@ -59,7 +59,7 @@ Block Compiler::parseInternal(Scope scope) {
             case AWAITING_BLOCK:
             case GLOBAL: {
                 awaitingOneStatement = state == AWAITING_BLOCK;
-                if (kind == NAME) {
+                if (kind == IDENTIFIER) {
                     if (lexer.peekToken().kind == LEFT_BRACE) {
                         lexer.back();
                         auto fCall = new FunctionCall;
@@ -70,7 +70,7 @@ Block Compiler::parseInternal(Scope scope) {
                     }
                     state = RET_VAR_NAME;
                     currentVariableName = value;
-                    expected = {NAME, EQUALS};
+                    expected = {IDENTIFIER, EQUALS};
                     continue;
                 }
                 if (kind == RETURN) {
@@ -142,7 +142,7 @@ Block Compiler::parseInternal(Scope scope) {
             }
 
             case RET_VAR_NAME: {
-                if (kind == NAME) {
+                if (kind == IDENTIFIER) {
                     currentVariableType = currentVariableName;
                     currentVariableName = value;
                     state = RET_VAR_EQUAL;
@@ -159,7 +159,7 @@ Block Compiler::parseInternal(Scope scope) {
             }
 
             case RET_VAR_EQUAL: {
-                auto definition = new VariableDefinition;
+                auto definition = new Expression;
                 definition->name = currentVariableName;
                 definition->type = currentVariableType;
                 if (kind == SEMICOLON) {

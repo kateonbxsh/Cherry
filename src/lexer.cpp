@@ -146,7 +146,7 @@ Token Lexer::convertToken(const std::string& substring) {
     if (std::regex_match(substring, floatRegex)) {
         return {FLOAT, substring};
     }
-    return {NAME, substring};
+    return {IDENTIFIER, substring};
 }
 
 bool Lexer::hasNextToken() {
@@ -182,4 +182,17 @@ Token Lexer::peekToken() {
 Token Lexer::currentToken() {
     back();
     return nextToken();
+}
+
+void Lexer::savePosition() {
+    positions.push(reader);
+}
+
+void Lexer::rollPosition() {
+    reader = positions.top();
+    Lexer::deletePosition();
+}
+
+void Lexer::deletePosition() {
+    positions.pop();
 }
