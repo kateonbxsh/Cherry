@@ -1,22 +1,22 @@
-#pragma once
 
-#include <string>
-#include <vector>
-#include <map>
-#include "data.h"
+enum PrimitiveType {
 
+    NOT_PRIMITIVE,
+    INTEGER,
+    FLOAT,
+    STRING,
+    BOOLEAN
+
+};
 
 class Type {
 
 public:
 
-    Type() = default;
-    explicit Type(std::string typeName, std::any defaultValue);
-    void setConstructor(const Value& function);
+    Type(): primitive(false), primitiveType(PrimitiveType::NOT_PRIMITIVE) {};
+    Type(PrimitiveType type): primitive(true), primitiveType(type) {};
 
-    std::string name;
-    std::any defaultValue;
-    Value constructor;
-    std::map<std::string, Value> members;
+    bool primitive;
+    PrimitiveType primitiveType;
 
 };

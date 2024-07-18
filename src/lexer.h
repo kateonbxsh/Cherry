@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <stack>
 
 enum TokenKind {
 
@@ -61,6 +62,7 @@ public:
     Token nextToken();
     Token peekToken();
     Token currentToken();
+    bool expectToken(TokenKind kind);
     void savePosition();
     void rollPosition();
     void deletePosition();

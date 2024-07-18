@@ -19,7 +19,7 @@ Expression *Expression::parse(Lexer &lexer) {
     }
 
     if (!foundFirstOperand) {
-        auto identifier = ExpressionIdentifier::parse(lexer);
+        auto identifier = ExpressionValue::parse(lexer);
         if (identifier->valid) {
             expression->firstOperand = identifier;
             deleteAllStatements(invalids);
@@ -95,11 +95,11 @@ ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
 
     auto parenWrapped = new ExpressionParenWrapped;
 
-    auto paren = lexer.nextToken();
-    if (paren.kind != LEFT_BRACE) {
-        parenWrapped->lastToken = paren;
+    if (!lexer.expectToken(LEFT_BRACE)) {
+        parenWrapped->lastToken = lexer.nextToken();
         parenWrapped->expected = {LEFT_BRACE};
         parenWrapped->valid = false;
+        lexer.rollPosition();
         return parenWrapped;
     }
 
@@ -108,22 +108,50 @@ ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
         parenWrapped->lastToken = expression->lastToken;
         parenWrapped->expected = expression->expected;
         parenWrapped->valid = false;
+        lexer.rollPosition();
         delete expression;
         return parenWrapped;
     }
 
-    paren = lexer.nextToken();
-    if (paren.kind != RIGHT_BRACE) {
-        parenWrapped->lastToken = paren;
+    if (!lexer.expectToken(RIGHT_BRACE)) {
+        parenWrapped->lastToken = lexer.nextToken();
         parenWrapped->expected = {RIGHT_BRACE};
         parenWrapped->valid = false;
+        lexer.rollPosition();
         delete expression;
         return parenWrapped;
     }
 
     parenWrapped->child = expression;
     parenWrapped->valid = true;
+    lexer.deletePosition();
     return parenWrapped;
+
+}
+
+ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
+
+    lexer.savePosition();
+    auto expression = new ExpressionValue;
+
+    Token identifier = lexer.nextToken();
+    if (
+        identifier.kind == IDENTIFIER || 
+        identifier.kind == STRING || 
+        identifier.kind == INTEGER || 
+        identifier.kind == FLOAT) {
+        
+        lexer.deletePosition();
+        expression->identifier = identifier;
+        expression->valid = true;
+        return expression;
+    } 
+
+    expression->valid = false;
+    expression->lastToken = identifier;
+    expression->expected = {TokenKind::IDENTIFIER, TokenKind::STRING, TokenKind::INTEGER, TokenKind::FLOAT};
+
+    return expression;
 
 }
 

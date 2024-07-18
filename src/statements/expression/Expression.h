@@ -30,11 +30,11 @@ private:
 
 };
 
-class ExpressionIdentifier : public Statement {
+class ExpressionValue : public Statement {
 
 public:
 
-    static ExpressionIdentifier* parse(Lexer& lexer);
+    static ExpressionValue* parse(Lexer& lexer);
     void execute() override;
 
 private:

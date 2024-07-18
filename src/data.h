@@ -5,8 +5,8 @@
 
 struct Value {
 
-    std::string type;
-    std::any value;
+    Type* type;
+    void* value;
     bool thrown;
 
 };

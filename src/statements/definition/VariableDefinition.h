@@ -13,6 +13,7 @@ public:
 
 private:
 
+    Expression* expression;
     Token type;
     Token name;
 

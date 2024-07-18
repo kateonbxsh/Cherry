@@ -196,3 +196,14 @@ void Lexer::rollPosition() {
 void Lexer::deletePosition() {
     positions.pop();
 }
+
+bool Lexer::expectToken(TokenKind kind) {
+    savePosition();
+    auto token = nextToken();
+    if (token.kind == kind) {
+        deletePosition();
+        return true;
+    }
+    rollPosition();
+    return false;
+}

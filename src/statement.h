@@ -6,7 +6,6 @@ class Statement {
 
 public:
 
-    static Statement* parse(Lexer& lexer);
     virtual void execute() {};
 
     bool valid = true;
