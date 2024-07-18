@@ -19,11 +19,26 @@ private:
 
 class ExpressionParenWrapped : public Statement {
 
+public:
+
     static ExpressionParenWrapped* parse(Lexer& lexer);
     void execute() override;
 
 private:
 
     Expression* child;
+
+};
+
+class ExpressionIdentifier : public Statement {
+
+public:
+
+    static ExpressionIdentifier* parse(Lexer& lexer);
+    void execute() override;
+
+private:
+
+    Token identifier;
 
 };

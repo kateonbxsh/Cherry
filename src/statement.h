@@ -9,22 +9,12 @@ public:
     static Statement* parse(Lexer& lexer);
     virtual void execute() {};
 
-protected:
-
     bool valid = true;
     Token lastToken;
     std::vector<TokenKind> expected;
 
 };
 
-class NotAStatement : public Statement {
+Statement* getFurthestInvalidStatement(std::vector<Statement*> statements);
 
-public:
-
-    NotAStatement(Token lastToken, std::vector<TokenKind> expected);
-
-private:
-
-    bool valid = false;
-
-};
+void deleteAllStatements(std::vector<Statement*> statements);
