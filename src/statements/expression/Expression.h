@@ -26,7 +26,7 @@ public:
 
 private:
 
-    Expression* child;
+    Expression* child = nullptr;
 
 };
 
