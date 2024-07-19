@@ -136,10 +136,10 @@ ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
 
     Token identifier = lexer.nextToken();
     if (
-        identifier.kind == IDENTIFIER || 
-        identifier.kind == STRING || 
-        identifier.kind == INTEGER || 
-        identifier.kind == FLOAT) {
+        identifier.kind == IDENTIFIER ||
+        identifier.kind == PRIMITIVE_STRING ||
+        identifier.kind == PRIMITIVE_INTEGER ||
+        identifier.kind == PRIMITIVE_FLOAT) {
         
         lexer.deletePosition();
         expression->identifier = identifier;
@@ -149,7 +149,7 @@ ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
 
     expression->valid = false;
     expression->lastToken = identifier;
-    expression->expected = {TokenKind::IDENTIFIER, TokenKind::STRING, TokenKind::INTEGER, TokenKind::FLOAT};
+    expression->expected = {TokenKind::IDENTIFIER, TokenKind::PRIMITIVE_STRING, TokenKind::PRIMITIVE_INTEGER, TokenKind::PRIMITIVE_FLOAT};
 
     return expression;
 

@@ -2,10 +2,10 @@
 enum PrimitiveType {
 
     NOT_PRIMITIVE,
-    INTEGER,
-    FLOAT,
-    STRING,
-    BOOLEAN
+    PRIMITIVE_INTEGER,
+    PRIMITIVE_FLOAT,
+    PRIMITIVE_STRING,
+    PRIMITIVE_BOOLEAN
 
 };
 
@@ -13,8 +13,8 @@ class Type {
 
 public:
 
-    Type(): primitive(false), primitiveType(PrimitiveType::NOT_PRIMITIVE) {};
-    Type(PrimitiveType type): primitive(true), primitiveType(type) {};
+    Type(): primitive(false), primitiveType(NOT_PRIMITIVE) {};
+    explicit Type(PrimitiveType type): primitive(true), primitiveType(type) {};
 
     bool primitive;
     PrimitiveType primitiveType;

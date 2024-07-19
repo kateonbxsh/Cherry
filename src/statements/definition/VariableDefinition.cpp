@@ -1,5 +1,5 @@
 #include "VariableDefinition.h"
-#include <Expression.h>
+#include "../expression/Expression.h"
 
 VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
 

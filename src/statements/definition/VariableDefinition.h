@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../../statement.h"
-#include "../../type.h"
 #include "../../lexer.h"
+#include "../expression/Expression.h"
 
 class VariableDefinition : public Statement {
 
@@ -13,7 +13,7 @@ public:
 
 private:
 
-    Expression* expression;
+    Expression* expression = nullptr;
     Token type;
     Token name;
 

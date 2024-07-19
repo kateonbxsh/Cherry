@@ -11,10 +11,10 @@ bool firstIsBigger(const Value& value1, const Value& value2) {
 
     if (value1.type != value2.type) return false;
 
-    if (value1.type->primitiveType == FLOAT) return *((float*) (value1.value)) > *((float*) (value2.value));
-    if (value1.type->primitiveType == STRING) return *((std::string*) (value1.value)) > *((std::string*) (value2.value));
-    if (value1.type->primitiveType == INTEGER) return *((int*) (value1.value)) > *((int*) (value2.value));
-    if (value1.type->primitiveType == BOOLEAN) return *((bool*) (value1.value)) > *((bool*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value1.value)) > *((float*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value1.value)) > *((std::string*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value1.value)) > *((int*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_BOOLEAN) return *((bool*) (value1.value)) > *((bool*) (value2.value));
 
     return false;
 }
@@ -23,34 +23,34 @@ bool compareValues(const Value& value1, const Value& value2) {
 
     if (value1.type != value2.type) return false;
 
-    if (value1.type->primitiveType == FLOAT) return *((float*) (value1.value)) == *((float*) (value2.value));
-    if (value1.type->primitiveType == STRING) return *((std::string*) (value1.value)) == *((std::string*) (value2.value));
-    if (value1.type->primitiveType == INTEGER) return *((int*) (value1.value)) == *((int*) (value2.value));
-    if (value1.type->primitiveType == BOOLEAN) return *((bool*) (value1.value)) == *((bool*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value1.value)) == *((float*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value1.value)) == *((std::string*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value1.value)) == *((int*) (value2.value));
+    if (value1.type->primitiveType == PRIMITIVE_BOOLEAN) return *((bool*) (value1.value)) == *((bool*) (value2.value));
     
     return false;
 }
 
 bool isTruthy(const Value& value) {
     if (!value.type->primitive) return (value.value != nullptr);
-    if (value.type->primitiveType == FLOAT) return *((float*) (value.value)) > 0.5f;
-    if (value.type->primitiveType == STRING) return (*((std::string*) (value.value))).length() > 0;
-    if (value.type->primitiveType == INTEGER) return *((int*) (value.value)) > 0;
-    if (value.type->primitiveType == BOOLEAN) return *((bool*) (value.value));
+    if (value.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value.value)) > 0.5f;
+    if (value.type->primitiveType == PRIMITIVE_STRING) return (*((std::string*) (value.value))).length() > 0;
+    if (value.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value.value)) > 0;
+    if (value.type->primitiveType == PRIMITIVE_BOOLEAN) return *((bool*) (value.value));
     return false;
 }
 bool isNumeric(const Value& value) {
     return (
-        value.type->primitiveType == FLOAT ||
-        value.type->primitiveType == INTEGER ||
-        value.type->primitiveType == BOOLEAN
+            value.type->primitiveType == PRIMITIVE_FLOAT ||
+        value.type->primitiveType == PRIMITIVE_INTEGER ||
+                    value.type->primitiveType == PRIMITIVE_BOOLEAN
     );
 }
 std::string stringify(const Value& value) {
-    if (value.type->primitiveType == STRING) return *((std::string*) (value.value));
-    if (value.type->primitiveType == INTEGER) return std::to_string(*((int*) (value.value)));
-    if (value.type->primitiveType == FLOAT) return std::to_string(*((float*) (value.value)));
-    if (value.type->primitiveType == BOOLEAN) return std::to_string(*((bool*) (value.value)));
+    if (value.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value.value));
+    if (value.type->primitiveType == PRIMITIVE_INTEGER) return std::to_string(*((int*) (value.value)));
+    if (value.type->primitiveType == PRIMITIVE_FLOAT) return std::to_string(*((float*) (value.value)));
+    if (value.type->primitiveType == PRIMITIVE_BOOLEAN) return std::to_string(*((bool*) (value.value)));
     return "<object>";
 }
 

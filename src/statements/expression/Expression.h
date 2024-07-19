@@ -12,8 +12,8 @@ public:
 
 private:
 
-    Statement* firstOperand;
-    Statement* secondOperand;
+    Statement* firstOperand = nullptr;
+    Statement* secondOperand = nullptr;
     Token expressionOperator;
 };
 

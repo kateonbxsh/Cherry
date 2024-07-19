@@ -1,7 +1,6 @@
 #include <regex>
 #include "lexer.h"
 
-
 Lexer::Lexer() = default;
 Lexer::Lexer(std::string data) {
 

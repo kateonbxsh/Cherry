@@ -14,6 +14,6 @@ public:
 
 };
 
-Statement* getFurthestInvalidStatement(std::vector<Statement*> statements);
+Statement* getFurthestInvalidStatement(const std::vector<Statement*>& statements);
 
-void deleteAllStatements(std::vector<Statement*> statements);
+void deleteAllStatements(const std::vector<Statement*>& statements);
