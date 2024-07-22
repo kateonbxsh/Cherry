@@ -5,12 +5,11 @@
 #include <utility>
 #include <valarray>
 #include "parser.h"
-#include "executor.h"
 
 bool firstIsBigger(const Value& value1, const Value& value2) {
 
     if (value1.type != value2.type) return false;
-
+    if (value1.type == nullptr) return true;
     if (value1.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value1.value)) > *((float*) (value2.value));
     if (value1.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value1.value)) > *((std::string*) (value2.value));
     if (value1.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value1.value)) > *((int*) (value2.value));
@@ -22,7 +21,7 @@ bool firstIsBigger(const Value& value1, const Value& value2) {
 bool compareValues(const Value& value1, const Value& value2) {
 
     if (value1.type != value2.type) return false;
-
+    if (value1.type == nullptr) return true;
     if (value1.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value1.value)) == *((float*) (value2.value));
     if (value1.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value1.value)) == *((std::string*) (value2.value));
     if (value1.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value1.value)) == *((int*) (value2.value));
@@ -47,6 +46,7 @@ bool isNumeric(const Value& value) {
     );
 }
 std::string stringify(const Value& value) {
+    if (value.type==nullptr) return "null";
     if (value.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value.value));
     if (value.type->primitiveType == PRIMITIVE_INTEGER) return std::to_string(*((int*) (value.value)));
     if (value.type->primitiveType == PRIMITIVE_FLOAT) return std::to_string(*((float*) (value.value)));
@@ -61,12 +61,46 @@ bool isOperator(const Token& token) {
 
 int precedence(const Token& token) {
     TokenKind kind = token.kind;
-    if (kind == AND || kind == OR) {
+    if (kind == EXPONENT) {
+        return 4;
+    } else if (kind == DIVIDE) {
         return 3;
-    } else if (kind == TIMES || kind == DIVIDE) {
+    } else if (kind == TIMES) {
         return 2;
     } else if (kind == PLUS || kind == MINUS) {
         return 1;
     }
-    return kind != LEFT_BRACE;
+    return 0;
+}
+
+Value performOperator(const Value& value1, const Value& value2, TokenKind op) {
+    if (op <= BEGIN_OF_OPERATORS || op >= END_OF_OPERATORS) return NullValue;
+    if (value1.type == nullptr || value2.type == nullptr) return NullValue;
+
+    switch (op)
+    {
+    case EQUALS:
+        return Value{BooleanType, new bool(compareValues(value1, value2)), false};
+        break;
+    
+    case BIGGER_THAN:
+        return Value{BooleanType, new bool(firstIsBigger(value1, value2)), false};
+        break;
+
+    case SMALLER_THAN:
+        return Value{BooleanType, new bool(firstIsBigger(value2, value1)), false};
+        break;
+
+    case BIGGER_OR_EQUAL:
+        return Value{BooleanType, new bool(!firstIsBigger(value2, value1)), false};
+        break;
+
+    case SMALLER_OR_EQUAL:
+        return Value{BooleanType, new bool(!firstIsBigger(value1, value2)), false};
+        break;
+
+    default:
+        break;
+    }
+
 }

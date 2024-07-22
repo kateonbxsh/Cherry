@@ -9,7 +9,7 @@ class VariableDefinition : public Statement {
 public:
 
     static VariableDefinition* parse(Lexer& lexer);
-    void execute() override;
+    Value execute(Scope& scope) override;
 
 private:
 

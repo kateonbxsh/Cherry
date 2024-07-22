@@ -3,12 +3,13 @@
 #include "../../statement.h"
 #include "../../type.h"
 #include "../../lexer.h"
+#include <scope.h>
 
 class Expression : public Statement {
 public:
 
     static Expression* parse(Lexer& lexer);
-    void execute() override;
+    Value execute(Scope& scope) override;
 
 private:
 
@@ -22,7 +23,7 @@ class ExpressionParenWrapped : public Statement {
 public:
 
     static ExpressionParenWrapped* parse(Lexer& lexer);
-    void execute() override;
+    Value execute(Scope& scope) override;
 
 private:
 
@@ -35,7 +36,7 @@ class ExpressionValue : public Statement {
 public:
 
     static ExpressionValue* parse(Lexer& lexer);
-    void execute() override;
+    Value execute(Scope& scope) override;
 
 private:
 

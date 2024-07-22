@@ -6,8 +6,10 @@
 
 struct Value {
 
-    Type* type;
+    const Type* type;
     void* value;
     bool thrown;
 
 };
+
+const Value NullValue = Value{nullptr, nullptr, false};

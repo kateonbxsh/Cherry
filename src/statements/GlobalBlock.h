@@ -1,12 +1,13 @@
 #include "lexer.h"
 #include "statement.h"
+#include <data.h>
 
 class GlobalBlock : public Statement {
 
 public:
 
     static GlobalBlock* parse(Lexer& lexer);
-    void execute() override;
+    Value execute(Scope& scope) override;
 
 private:
 

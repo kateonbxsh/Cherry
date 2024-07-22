@@ -6,7 +6,7 @@ class Statement {
 
 public:
 
-    virtual void execute() {};
+    virtual Value execute(Scope& scope) {};
 
     bool valid = true;
     Token lastToken;

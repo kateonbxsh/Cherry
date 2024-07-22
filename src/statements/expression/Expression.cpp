@@ -149,12 +149,25 @@ ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
 
     expression->valid = false;
     expression->lastToken = identifier;
-    expression->expected = {TokenKind::IDENTIFIER, TokenKind::PRIMITIVE_STRING, TokenKind::PRIMITIVE_INTEGER, TokenKind::PRIMITIVE_FLOAT};
+    expression->expected = {TokenKind::IDENTIFIER, STRING, INTEGER, FLOAT};
 
     return expression;
 
 }
 
-void Expression::execute() {
-    Statement::execute();
+Value Expression::execute(Scope& scope) {
+    
+    auto value1 = this->firstOperand->execute(scope);
+    if (value1.thrown) return value1;
+
+    if (this->expressionOperator.kind != NONE) {
+        auto value2 = this->firstOperand->execute(scope);
+        if (value2.thrown) return value2;
+
+        
+
+    }
+
+    return value1;
+
 }

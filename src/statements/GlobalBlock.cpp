@@ -32,3 +32,12 @@ GlobalBlock* GlobalBlock::parse(Lexer& lexer) {
     return block;
 
 }
+
+Value GlobalBlock::execute(Scope& scope) {
+
+    for (auto childStatement : this->children) {
+        auto returned = childStatement->execute(scope);
+        if (returned.thrown) return returned;
+    }
+
+}
