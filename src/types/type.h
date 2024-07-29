@@ -1,3 +1,4 @@
+#pragma once
 
 enum PrimitiveType {
 
@@ -21,7 +22,7 @@ public:
 
 };
 
-Type* IntegerType = new Type(PrimitiveType::PRIMITIVE_INTEGER);
-Type* FloatType = new Type(PrimitiveType::PRIMITIVE_FLOAT);
-Type* StringType = new Type(PrimitiveType::PRIMITIVE_STRING);
-Type* BooleanType = new Type(PrimitiveType::PRIMITIVE_BOOLEAN);
+extern const Type* IntegerType;
+extern const Type* FloatType;
+extern const Type* StringType;
+extern const Type* BooleanType;

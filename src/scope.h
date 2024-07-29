@@ -4,7 +4,7 @@
 #include <map>
 #include <set>
 #include "data.h"
-#include "type.h"
+#include "types/type.h"
 
 class Scope {
 
@@ -21,7 +21,7 @@ public:
     void printVariables();
 
 private:
-    std::map<std::string, Value> variables;
-    std::map<std::string, Type*> types;
+    std::map<std::string, Value> variables = {};
+    std::map<std::string, Type*> types = {};
 
 };

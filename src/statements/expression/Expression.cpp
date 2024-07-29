@@ -1,8 +1,10 @@
+#include <data.h>
 #include "statements/expression/Expression.h"
 #include <expressions.h>
-#include <data.h>
 
 Expression *Expression::parse(Lexer &lexer) {
+
+    std::cout << "parsing normal expression..." << std::endl;
 
     lexer.savePosition();
 
@@ -44,10 +46,12 @@ Expression *Expression::parse(Lexer &lexer) {
     //Found a valid first operand, we check if there is no second operand.
     expression->expressionOperator = {NONE};
 
+    lexer.savePosition();
     auto potentialOperator = lexer.nextToken();
     if (isOperator(potentialOperator)) {
         expression->expressionOperator = potentialOperator;
     } else {
+        lexer.rollPosition();
         lexer.deletePosition();
         deleteAllStatements(invalids);
         expression->valid = true;
@@ -55,24 +59,24 @@ Expression *Expression::parse(Lexer &lexer) {
     }
 
     //Found operator now we need the second operand
-    auto secondOperand = Expression::parse(lexer);
-    if (secondOperand->valid) {
+    auto potentialSecondOperand = Expression::parse(lexer);
+    if (potentialSecondOperand->valid) {
         //complete expression
-        expression->secondOperand = secondOperand;
+        expression->secondOperand = potentialSecondOperand;
         expression->valid = true;
         deleteAllStatements(invalids);
         lexer.deletePosition();
 
         //check precedence and inverse
-        if (secondOperand->expressionOperator.kind != NONE) {
+        if (potentialSecondOperand->expressionOperator.kind != NONE) {
             int myPresedence = precedence(expression->expressionOperator);
-            int childPresedence = precedence(secondOperand->expressionOperator);
+            int childPresedence = precedence(potentialSecondOperand->expressionOperator);
             if (myPresedence > childPresedence) {
                 //Rotate the tree
-                auto childFirstOperand = secondOperand->firstOperand;
+                auto childFirstOperand = potentialSecondOperand->firstOperand;
                 expression->secondOperand = childFirstOperand;
-                secondOperand->firstOperand = expression;
-                return secondOperand;
+                potentialSecondOperand->firstOperand = expression;
+                return potentialSecondOperand;
             }
         }
 
@@ -91,6 +95,8 @@ Expression *Expression::parse(Lexer &lexer) {
 }
 
 ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
+
+     std::cout << "parsing paren expression..." << std::endl;
 
     lexer.savePosition();
 
@@ -132,25 +138,32 @@ ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
 
 ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
 
+    std::cout << "parsing value expression..." << std::endl;
+
     lexer.savePosition();
     auto expression = new ExpressionValue;
 
-    Token identifier = lexer.nextToken();
+    Token nextToken = lexer.nextToken();
     if (
-        identifier.kind == IDENTIFIER ||
-        identifier.kind == PRIMITIVE_STRING ||
-        identifier.kind == PRIMITIVE_INTEGER ||
-        identifier.kind == PRIMITIVE_FLOAT) {
+        nextToken.kind == IDENTIFIER ||
+        nextToken.kind == STRING ||
+        nextToken.kind == INTEGER ||
+        nextToken.kind == FLOAT ||
+        nextToken.kind == TRUE ||
+        nextToken.kind == FALSE ||
+        nextToken.kind == NULL_TOKEN
+    ) {
         
         lexer.deletePosition();
-        expression->identifier = identifier;
+        expression->identifier = nextToken;
         expression->valid = true;
         return expression;
     } 
 
     expression->valid = false;
-    expression->lastToken = identifier;
-    expression->expected = {TokenKind::IDENTIFIER, STRING, INTEGER, FLOAT};
+    expression->lastToken = nextToken;
+    expression->expected = {IDENTIFIER, STRING, INTEGER, FLOAT};
+    lexer.rollPosition();
 
     return expression;
 
@@ -183,17 +196,45 @@ Value ExpressionValue::execute(Scope &scope) {
 
     auto token = this->identifier;
 
-
     switch(token.kind) {
         case INTEGER:
+        {
             auto v = new int(std::stoi(token.value));
-            return Value(IntegerType, (void*) v);
+            return Value(IntegerType, v);
+        }
         
         case FLOAT:
-            auto v = new int(std::stof(token.value));
-            return {FloatType, v, nullptr};
-    }
+        {
+            auto v = new float(std::stof(token.value));
+            return Value(FloatType, v);
+        }
+            
 
-    
+        case NULL_TOKEN:
+        {
+            return NullValue;
+        }
+
+        case STRING:
+        {
+            auto v = new std::string(token.value);
+            return Value(StringType, v);
+        }
+            
+
+        case TRUE:
+        case FALSE:
+        {
+            auto v = new bool(token.value == "true");
+            return Value(BooleanType, v);
+        }
+            
+
+        default: 
+        {
+            //TO-DO: return this when token is identifier and throw on default
+            return scope.getVariable(token.value);
+        }
+    }
 
 }

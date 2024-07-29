@@ -2,13 +2,14 @@
 
 #include <string>
 #include <any>
-#include <type.h>
+#include "types/type.h"
 
 struct Value {
 
-    Value(Type* type, void* value): type(type), value(value), thrownException(nullptr) {};
+    Value(): type(nullptr), value(nullptr), thrownException(nullptr) {};
+    Value(const Type *type, void* value): type(type), value(value), thrownException(nullptr) {};
 
-    Type* type;
+    const Type* type;
     void* value;
     Value* thrownException; //non-null when exception is thrown
 

@@ -22,9 +22,10 @@ GlobalBlock* Parser::parse() {
 
         auto lastToken = block->lastToken;
         std::cerr << "[FATAL] CompileError: \"" << lastToken.value << "\" at line " << lastToken.line << ", char " << lastToken.pos << std::endl;
-        std::cerr << "Unexpected token " << lastToken.value << " of type " << lastToken.kind << std::endl;
+        std::cerr << "Unexpected token " << lastToken.value << " of type: " << tokenKindStrings[lastToken.kind] << std::endl;
         std::cerr << "Expected: ";
-        for (auto expected : block->expected) {
+        auto expected = tokenKindsToString(block->expected);
+        for (auto expected : expected) {
             std::cerr << expected << " ";
         }
         std::cerr << std::endl;

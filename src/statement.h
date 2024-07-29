@@ -1,12 +1,14 @@
 #pragma once
 
 #include "lexer.h"
+#include "data.h"
+#include "scope.h"
 
 class Statement {
 
 public:
 
-    virtual Value execute(Scope& scope) {};
+    virtual Value execute(Scope& scope) = 0;
 
     bool valid = true;
     Token lastToken;
@@ -16,4 +18,4 @@ public:
 
 Statement* getFurthestInvalidStatement(const std::vector<Statement*>& statements);
 
-void deleteAllStatements(const std::vector<Statement*>& statements);
+void deleteAllStatements(std::vector<Statement*>& statements);

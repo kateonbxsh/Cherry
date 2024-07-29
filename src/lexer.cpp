@@ -126,6 +126,9 @@ void Lexer::defineCharKinds() {
     tokenMap["unless"] = UNLESS;
     tokenMap["method"] = METHOD;
     tokenMap["return"] = RETURN;
+    tokenMap["null"] = NULL_TOKEN;
+    tokenMap["true"] = TRUE;
+    tokenMap["false"] = FALSE;
 
     tokenMap[""] = END_OF_FEED;
 
@@ -205,4 +208,55 @@ bool Lexer::expectToken(TokenKind kind) {
     }
     rollPosition();
     return false;
+}
+
+const std::vector<std::string> tokenKindStrings = {
+    "none",
+    "whitespace",
+    "string",
+    "integer",
+    "float",
+    "null_token",
+    "true",
+    "false",
+    "identifier",
+    "if",
+    "unless",
+    "else",
+    "method",
+    "return",
+    "right_bracket",
+    "left_bracket",
+    "right_brace",
+    "left_brace",
+    "comma",
+    "semicolon",
+    "colon",
+    "equals",
+    "begin_of_operators",
+    "comparative_equals", "comparative_not_equals",
+    "bigger_than", "bigger_or_equal",
+    "smaller_than", "smaller_or_equal",
+    "times", "exponent",
+    "divide",
+    "plus",
+    "minus",
+    "bitwise_and", "bitwise_or", "bitwise_xor",
+    "and", "or", "xor", "not",
+    "modulo", "div",
+    "end_of_operators",
+    "quote",
+    "end_of_feed"
+};
+
+std::vector<std::string> tokenKindsToString(const std::vector<TokenKind>& tokenKinds) {
+    std::vector<std::string> result;
+    for (const auto& token : tokenKinds) {
+        if (token >= 0 && token < tokenKindStrings.size()) {
+            result.push_back(tokenKindStrings[token]);
+        } else {
+            result.push_back("unknown");
+        }
+    }
+    return result;
 }

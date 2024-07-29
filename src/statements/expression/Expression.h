@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../../statement.h"
-#include <type.h>
-#include "../../lexer.h"
-#include <scope.h>
+#include "statement.h"
+#include "types/type.h"
+#include "lexer.h"
+#include "scope.h"
 
 class Expression : public Statement {
 public:

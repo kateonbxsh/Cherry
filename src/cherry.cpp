@@ -1,10 +1,10 @@
 #include <iostream>
 #include <fstream>
-#include <parser.h>
-#include <interpreter.h>
+#include "lexer.h"
+#include "parser.h"
+#include "interpreter.h"
 
 using namespace std;
-
 
 int main(int argCount, char ** args) {
     if (argCount < 2) {
@@ -18,10 +18,13 @@ int main(int argCount, char ** args) {
     }
     std::string fileContent((std::istreambuf_iterator<char>(fileToParse)), std::istreambuf_iterator<char>());
     fileToParse.close();
+    cout << ">> Lexing..." << endl;
     Lexer lexer(fileContent);
+    cout << ">> Parsing..." << endl;
     Parser parser(lexer);
     auto block = parser.parse();
     if (block != nullptr) {
+        cout << "Interpreting..." << endl;
         Interpreter interpreter;
         interpreter.interpret(block);
         return 0;

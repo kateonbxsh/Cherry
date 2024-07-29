@@ -1,6 +1,6 @@
 #include <iostream>
 #include "scope.h"
-#include "type.h"
+#include "types/type.h"
 #include "expressions.h"
 #include <set>
 #include <utility>

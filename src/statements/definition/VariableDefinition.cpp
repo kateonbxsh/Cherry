@@ -1,8 +1,10 @@
 #include "VariableDefinition.h"
-#include "../expression/Expression.h"
-#include <type.h>
+#include "statements/expression/Expression.h"
+#include "types/type.h"
 
 VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
+
+    std::cout << "parsing variable definition" << std::endl;
 
     lexer.savePosition();
 
@@ -29,38 +31,40 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
         lexer.rollPosition();
         return varDef;
     }
-
-    lexer.savePosition();
-    nextToken = lexer.nextToken();
-    if (nextToken.kind == SEMICOLON) {
+    
+    if (lexer.expectToken(SEMICOLON)) {
         varDef->valid = true;
         varDef->expression = nullptr;
         lexer.deletePosition();
         return varDef;
-    }
-    lexer.rollPosition();
-
-    auto expression = Expression::parse(lexer);
-
-    if (!expression->valid) {
-        varDef->lastToken = expression->lastToken;
-        varDef->expected = expression->expected;
+    } else if (!lexer.expectToken(EQUALS)) {
         varDef->valid = false;
-        delete expression;
+        varDef->expression = nullptr;
         lexer.rollPosition();
         return varDef;
     }
 
-    varDef->expression = expression;
+    Expression* parsedExpression = Expression::parse(lexer);
 
-    nextToken = lexer.nextToken();
-    if (nextToken.kind == SEMICOLON) {
+    if (!parsedExpression->valid) {
+        varDef->lastToken = parsedExpression->lastToken;
+        varDef->expected = parsedExpression->expected;
+        varDef->valid = false;
+        delete parsedExpression;
+        lexer.rollPosition();
+        return varDef;
+    }
+
+    varDef->expression = parsedExpression;
+
+    if (lexer.expectToken(SEMICOLON)) {
         varDef->valid = true;
         lexer.deletePosition();
         return varDef;
     }
     
-    delete expression;
+    delete parsedExpression;
+    varDef->valid = false;
     varDef->lastToken = nextToken;
     varDef->expected = {SEMICOLON};
     return varDef;
@@ -72,8 +76,13 @@ Value VariableDefinition::execute(Scope& scope) {
     Type* type = scope.getType(this->type.value);
     auto name = this->name.value;
 
-    auto value = this->expression->execute(scope);
-
-    scope.setVariable(name, {type, &value, nullptr});
+    if (this->expression != nullptr) {
+        auto value = this->expression->execute(scope);
+        scope.setVariable(name, value);
+        return value;
+    } else {
+        scope.setVariable(name, NullValue);
+        return NullValue;
+    }
 
 }

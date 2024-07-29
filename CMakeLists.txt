@@ -2,8 +2,21 @@ cmake_minimum_required(VERSION 3.22)
 project(Cherry)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
-include_directories(${PROJECT_SOURCE_DIR}/src/**)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(Cherry main.cpp)
+set(SOURCE_FILES
+    src/types/types.cpp
+    src/cherry.cpp
+    src/expressions.cpp
+    src/interpreter.cpp
+    src/lexer.cpp
+    src/parser.cpp
+    src/scope.cpp
+    src/statement.cpp
+    src/statements/GlobalBlock.cpp
+    src/statements/definition/VariableDefinition.cpp
+    src/statements/expression/Expression.cpp
+)
+
+add_executable(Cherry ${SOURCE_FILES})

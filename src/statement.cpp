@@ -8,20 +8,21 @@ Statement* getFurthestInvalidStatement(const std::vector<Statement*>& statements
         if (st->lastToken.line > line) {
             delete furthestStatement;
             furthestStatement = st;
-        } else {
-            if (st->lastToken.pos > c) {
-                delete furthestStatement;
-                furthestStatement = st;
-            } else delete st;
-        }
+            line = st->lastToken.line, c = st->lastToken.pos;
+        } else if (st->lastToken.line == line && st->lastToken.pos > c) {
+            delete furthestStatement;
+            furthestStatement = st;
+            line = st->lastToken.line, c = st->lastToken.pos;
+        } else delete st;
     }
 
     return furthestStatement;
 
 }
 
-void deleteAllStatements(const std::vector<Statement*>& statements) {
+void deleteAllStatements(std::vector<Statement*>& statements) {
     for(Statement* st : statements) {
         delete st;
     }
+    statements.clear();
 }

@@ -12,6 +12,9 @@ enum TokenKind {
     STRING,
     INTEGER,
     FLOAT,
+    NULL_TOKEN,
+    TRUE,
+    FALSE,
     IDENTIFIER,
     IF,
     UNLESS,
@@ -85,3 +88,6 @@ private:
     int reader = 0;
 };
 
+extern const std::vector<std::string> tokenKindStrings;
+
+std::vector<std::string> tokenKindsToString(const std::vector<TokenKind>& tokenKinds);

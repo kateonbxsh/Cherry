@@ -47,6 +47,7 @@ bool isNumeric(const Value& value) {
 }
 std::string stringify(const Value& value) {
     if (value.type==nullptr) return "null";
+    if (value.value==nullptr) return "<non-initialized>";
     if (value.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value.value));
     if (value.type->primitiveType == PRIMITIVE_INTEGER) return std::to_string(*((int*) (value.value)));
     if (value.type->primitiveType == PRIMITIVE_FLOAT) return std::to_string(*((float*) (value.value)));
@@ -80,27 +81,27 @@ Value performOperator(const Value& value1, const Value& value2, TokenKind op) {
     switch (op)
     {
     case EQUALS:
-        return Value{BooleanType, new bool(compareValues(value1, value2)), nullptr};
+        return Value(BooleanType, new bool(compareValues(value1, value2)));
         break;
     
     case BIGGER_THAN:
-        return Value{BooleanType, new bool(firstIsBigger(value1, value2)), nullptr};
+        return Value(BooleanType, new bool(firstIsBigger(value1, value2)));
         break;
 
     case SMALLER_THAN:
-        return Value{BooleanType, new bool(firstIsBigger(value2, value1)), nullptr};
+        return Value(BooleanType, new bool(firstIsBigger(value2, value1)));
         break;
 
     case BIGGER_OR_EQUAL:
-        return Value{BooleanType, new bool(!firstIsBigger(value2, value1)), nullptr};
+        return Value(BooleanType, new bool(!firstIsBigger(value2, value1)));
         break;
 
     case SMALLER_OR_EQUAL:
-        return Value{BooleanType, new bool(!firstIsBigger(value1, value2)), nullptr};
+        return Value(BooleanType, new bool(!firstIsBigger(value1, value2)));
         break;
 
     default:
-        break;
+        return NullValue;
     }
 
 }
