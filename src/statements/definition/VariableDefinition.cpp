@@ -1,5 +1,6 @@
 #include "VariableDefinition.h"
 #include "../expression/Expression.h"
+#include <type.h>
 
 VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
 
@@ -63,5 +64,16 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
     varDef->lastToken = nextToken;
     varDef->expected = {SEMICOLON};
     return varDef;
+
+}
+
+Value VariableDefinition::execute(Scope& scope) {
+
+    Type* type = scope.getType(this->type.value);
+    auto name = this->name.value;
+
+    auto value = this->expression->execute(scope);
+
+    scope.setVariable(name, {type, &value, nullptr});
 
 }

@@ -1,16 +1,17 @@
 #pragma once
 
 #include <stack>
-#include "lexer.h"
-#include "scope.h"
-#include "statement.h"
+#include <lexer.h>
+#include <scope.h>
+#include <statement.h>
+#include "statements/GlobalBlock.h"
 
 class Parser {
 
 public:
 
     explicit Parser(Lexer& inputLexer);
-    Statement* parse();
+    GlobalBlock* parse();
 
 private:
 

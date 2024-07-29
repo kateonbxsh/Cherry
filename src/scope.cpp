@@ -6,8 +6,13 @@
 #include <utility>
 #include <algorithm>
 
-void Scope::addType(const std::string& name, const Type& type) {
+void Scope::addType(const std::string& name, Type* type) {
     types[name] = type;
+}
+
+Type *Scope::getType(const std::string &name)
+{
+    return types[name];
 }
 
 void Scope::setVariable(const std::string& name, const Value& value) {
@@ -18,7 +23,7 @@ Value Scope::getVariable(const std::string &name) {
     if (variables.count(name) > 0) {
         return variables[name];
     }
-    return {"null", 0};
+    return NullValue;
 }
 
 void Scope::printVariables() {
@@ -35,16 +40,10 @@ bool isVowel(char c) {
 
 Scope::Scope() {
 
-    static Type
-        typeInt,
-        typeBool,
-        typeStr,
-        typeFloat;
-
-    addType("int", typeInt);
-    addType("bool", typeStr);
-    addType("str", typeFloat);
-    addType("float", typeBool);
+    addType("int", (Type*) IntegerType);
+    addType("bool", (Type*) BooleanType);
+    addType("string", (Type*) FloatType);
+    addType("float", (Type*) StringType);
 
 }
 

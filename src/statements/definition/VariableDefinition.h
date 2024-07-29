@@ -2,7 +2,7 @@
 
 #include "../../statement.h"
 #include "../../lexer.h"
-#include "../expression/Expression.h"
+#include <statements/expression/Expression.h>
 
 class VariableDefinition : public Statement {
 

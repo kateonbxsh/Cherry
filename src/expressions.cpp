@@ -80,23 +80,23 @@ Value performOperator(const Value& value1, const Value& value2, TokenKind op) {
     switch (op)
     {
     case EQUALS:
-        return Value{BooleanType, new bool(compareValues(value1, value2)), false};
+        return Value{BooleanType, new bool(compareValues(value1, value2)), nullptr};
         break;
     
     case BIGGER_THAN:
-        return Value{BooleanType, new bool(firstIsBigger(value1, value2)), false};
+        return Value{BooleanType, new bool(firstIsBigger(value1, value2)), nullptr};
         break;
 
     case SMALLER_THAN:
-        return Value{BooleanType, new bool(firstIsBigger(value2, value1)), false};
+        return Value{BooleanType, new bool(firstIsBigger(value2, value1)), nullptr};
         break;
 
     case BIGGER_OR_EQUAL:
-        return Value{BooleanType, new bool(!firstIsBigger(value2, value1)), false};
+        return Value{BooleanType, new bool(!firstIsBigger(value2, value1)), nullptr};
         break;
 
     case SMALLER_OR_EQUAL:
-        return Value{BooleanType, new bool(!firstIsBigger(value1, value2)), false};
+        return Value{BooleanType, new bool(!firstIsBigger(value1, value2)), nullptr};
         break;
 
     default:

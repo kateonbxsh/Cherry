@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include "src/compiler.h"
-#include "src/executor.h"
+#include <parser.h>
+#include <interpreter.h>
 
 using namespace std;
 
@@ -19,11 +19,12 @@ int main(int argCount, char ** args) {
     std::string fileContent((std::istreambuf_iterator<char>(fileToParse)), std::istreambuf_iterator<char>());
     fileToParse.close();
     Lexer lexer(fileContent);
-    Compiler compiler(lexer);
-    Block block = compiler.parse();
-    Value result = Executor::execute(block);
-    if (result.type == "int") {
-        return any_cast<int>(result.value);
+    Parser parser(lexer);
+    auto block = parser.parse();
+    if (block != nullptr) {
+        Interpreter interpreter;
+        interpreter.interpret(block);
+        return 0;
     }
-    return 0;   
+    return 1;   
 }

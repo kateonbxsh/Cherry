@@ -1,5 +1,6 @@
-#include "Expression.h"
-#include "expressions.h"
+#include "statements/expression/Expression.h"
+#include <expressions.h>
+#include <data.h>
 
 Expression *Expression::parse(Lexer &lexer) {
 
@@ -158,16 +159,41 @@ ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
 Value Expression::execute(Scope& scope) {
     
     auto value1 = this->firstOperand->execute(scope);
-    if (value1.thrown) return value1;
+    if (value1.thrownException != nullptr) return value1;
 
     if (this->expressionOperator.kind != NONE) {
         auto value2 = this->firstOperand->execute(scope);
-        if (value2.thrown) return value2;
+        if (value2.thrownException != nullptr) return value2;
 
-        
+        return performOperator(value1, value2, this->expressionOperator.kind);
 
     }
 
     return value1;
+
+}
+
+Value ExpressionParenWrapped::execute(Scope &scope) {
+
+    return this->child->execute(scope);
+
+}
+
+Value ExpressionValue::execute(Scope &scope) {
+
+    auto token = this->identifier;
+
+
+    switch(token.kind) {
+        case INTEGER:
+            auto v = new int(std::stoi(token.value));
+            return Value(IntegerType, (void*) v);
+        
+        case FLOAT:
+            auto v = new int(std::stof(token.value));
+            return {FloatType, v, nullptr};
+    }
+
+    
 
 }

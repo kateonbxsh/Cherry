@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../statement.h"
-#include "../../type.h"
+#include <type.h>
 #include "../../lexer.h"
 #include <scope.h>
 
