@@ -3,13 +3,9 @@
 
 GlobalBlock* GlobalBlock::parse(Lexer& lexer) {
 
-    std::cout << "parsing global block" << std::endl;
-
     auto block = new GlobalBlock;
 
     while(!lexer.expectToken(END_OF_FEED)) {
-
-        std::cout << "looking for valid statement" << std::endl;
 
         auto variableDefinition = VariableDefinition::parse(lexer);
         std::vector<Statement*> invalids = {};
@@ -17,14 +13,11 @@ GlobalBlock* GlobalBlock::parse(Lexer& lexer) {
         if (!variableDefinition->valid) {
             invalids.push_back(variableDefinition);
         } else {
-            std::cout << "found valid, continuing" << std::endl;
             block->children.push_back(variableDefinition);
             deleteAllStatements(invalids);
             continue;
         }
-
-        std::cout << "all invalid, no valid statement" << std::endl;
-
+        
         //no valid statement
         auto furthest = getFurthestInvalidStatement(invalids);
         deleteAllStatements(block->children);

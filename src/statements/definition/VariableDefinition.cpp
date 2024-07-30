@@ -4,8 +4,6 @@
 
 VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
 
-    std::cout << "parsing variable definition" << std::endl;
-
     lexer.savePosition();
 
     auto varDef = new VariableDefinition();
@@ -81,7 +79,7 @@ Value VariableDefinition::execute(Scope& scope) {
         scope.setVariable(name, value);
         return value;
     } else {
-        scope.setVariable(name, NullValue);
+        scope.setVariable(name, Value(type, nullptr));
         return NullValue;
     }
 

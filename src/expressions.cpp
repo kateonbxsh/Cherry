@@ -41,10 +41,11 @@ bool isTruthy(const Value& value) {
 bool isNumeric(const Value& value) {
     return (
             value.type->primitiveType == PRIMITIVE_FLOAT ||
-        value.type->primitiveType == PRIMITIVE_INTEGER ||
-                    value.type->primitiveType == PRIMITIVE_BOOLEAN
+            value.type->primitiveType == PRIMITIVE_INTEGER ||
+            value.type->primitiveType == PRIMITIVE_BOOLEAN
     );
 }
+
 std::string stringify(const Value& value) {
     if (value.type==nullptr) return "null";
     if (value.value==nullptr) return "<non-initialized>";
@@ -99,6 +100,9 @@ Value performOperator(const Value& value1, const Value& value2, TokenKind op) {
     case SMALLER_OR_EQUAL:
         return Value(BooleanType, new bool(!firstIsBigger(value1, value2)));
         break;
+
+    case PLUS:
+        
 
     default:
         return NullValue;

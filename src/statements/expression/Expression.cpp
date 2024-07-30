@@ -4,8 +4,6 @@
 
 Expression *Expression::parse(Lexer &lexer) {
 
-    std::cout << "parsing normal expression..." << std::endl;
-
     lexer.savePosition();
 
     auto expression = new Expression();
@@ -96,8 +94,6 @@ Expression *Expression::parse(Lexer &lexer) {
 
 ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
 
-     std::cout << "parsing paren expression..." << std::endl;
-
     lexer.savePosition();
 
     auto parenWrapped = new ExpressionParenWrapped;
@@ -137,8 +133,6 @@ ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
 }
 
 ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
-
-    std::cout << "parsing value expression..." << std::endl;
 
     lexer.savePosition();
     auto expression = new ExpressionValue;

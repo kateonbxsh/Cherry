@@ -27,7 +27,7 @@ Value Scope::getVariable(const std::string &name) {
 }
 
 void Scope::printVariables() {
-    std::cout << "DECLARED VARIABLES: " << std::endl;
+    std::cout << "Scope variables: " << std::endl;
     for(const auto& pair : variables) {
         std::cout << pair.first << " = (" << pair.second.type << ") " << stringify(pair.second) << std::endl;
     }
