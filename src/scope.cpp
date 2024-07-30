@@ -41,7 +41,7 @@ bool isVowel(char c) {
 Scope::Scope() {
 
     addType("int", (Type*) IntegerType);
-    addType("bool", (Type*) BooleanType);
+    addType("boolean", (Type*) BooleanType);
     addType("string", (Type*) FloatType);
     addType("float", (Type*) StringType);
 

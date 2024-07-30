@@ -12,7 +12,7 @@ public:
 
     bool valid = true;
     Token lastToken;
-    std::vector<TokenKind> expected;
+    std::string expected;
 
 };
 

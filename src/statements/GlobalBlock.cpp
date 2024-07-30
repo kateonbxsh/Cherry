@@ -1,5 +1,5 @@
 #include "statements/GlobalBlock.h"
-#include "statements/definition/VariableDefinition.h"
+#include "statements/variable/VariableDefinition.h"
 
 GlobalBlock* GlobalBlock::parse(Lexer& lexer) {
 

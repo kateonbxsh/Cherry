@@ -8,18 +8,24 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
 
     auto varDef = new VariableDefinition();
 
-    auto nextToken = lexer.nextToken();
-    if (nextToken.kind == IDENTIFIER) {
-        varDef->type = nextToken;
+    if (lexer.expectToken(LET)) {
+        varDef->inferred = true;
     } else {
-        varDef->lastToken = nextToken;
-        varDef->expected = {IDENTIFIER};
-        varDef->valid = false;
-        lexer.rollPosition();
-        return varDef;
+
+        Token nextToken = lexer.nextToken();
+        if (nextToken.kind == IDENTIFIER) {
+            varDef->type = nextToken;
+        } else {
+            varDef->lastToken = nextToken;
+            varDef->expected = {IDENTIFIER};
+            varDef->valid = false;
+            lexer.rollPosition();
+            return varDef;
+        }
+
     }
 
-    nextToken = lexer.nextToken();
+    Token nextToken = lexer.nextToken();
     if (nextToken.kind == IDENTIFIER) {
         varDef->name = nextToken;
     } else {
@@ -30,7 +36,7 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
         return varDef;
     }
     
-    if (lexer.expectToken(SEMICOLON)) {
+    if (!varDef->inferred && lexer.expectToken(SEMICOLON)) {
         varDef->valid = true;
         varDef->expression = nullptr;
         lexer.deletePosition();
@@ -38,6 +44,8 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
     } else if (!lexer.expectToken(EQUALS)) {
         varDef->valid = false;
         varDef->expression = nullptr;
+        varDef->expected = {EQUALS};
+        varDef->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return varDef;
     }

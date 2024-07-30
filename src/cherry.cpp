@@ -4,6 +4,8 @@
 #include "parser.h"
 #include "interpreter.h"
 
+#define DEBUG_LEXER_TOKEN true
+
 using namespace std;
 
 int main(int argCount, char ** args) {
@@ -19,6 +21,11 @@ int main(int argCount, char ** args) {
     std::string fileContent((std::istreambuf_iterator<char>(fileToParse)), std::istreambuf_iterator<char>());
     fileToParse.close();
     Lexer lexer(fileContent);
+    #if DEBUG_LEXER_TOKEN 
+        for(auto token : lexer.getTokenList()) {
+            std::cout << token.value << ", " << std::endl;
+        }
+    #endif
     Parser parser(lexer);
     auto block = parser.parse();
     if (block != nullptr) {

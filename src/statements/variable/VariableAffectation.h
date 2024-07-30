@@ -4,17 +4,17 @@
 #include "lexer.h"
 #include "statements/expression/Expression.h"
 
-class VariableDefinition : public Statement {
+class VariableAffectation : public Statement {
 
 public:
 
-    static VariableDefinition* parse(Lexer& lexer);
+    static VariableAffectation* parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:
 
     Expression* expression;
-    Token type;
     Token name;
+    TokenKind selfOperation;
 
 };

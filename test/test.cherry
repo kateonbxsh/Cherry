@@ -1,3 +1,5 @@
-float a = 5;
+let a = 5.6;
 
 int c;
+
+let d;

@@ -6,7 +6,7 @@ Lexer::Lexer(std::string data) {
 
     static std::regex nameRegex(R"(\b[a-zA-Z_-][a-zA-Z0-9_-]*\b)");
     static std::regex intRegex(R"(-?[0-9]+)");
-    static std::regex floatRegex(R"(-?[0-9]*\.[0-9]+)");
+    static std::regex floatRegex(R"(-?(([0-9]*\.[0-9]*)|([0-9]+f)))");
 
     defineCharKinds();
 
@@ -121,6 +121,7 @@ void Lexer::defineCharKinds() {
     tokenMap["\t"] = WHITESPACE;
     tokenMap["\n"] = WHITESPACE;
     tokenMap[" "] = WHITESPACE;
+    tokenMap["let"] = LET;
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
     tokenMap["unless"] = UNLESS;
@@ -137,7 +138,7 @@ void Lexer::defineCharKinds() {
 Token Lexer::convertToken(const std::string& substring) {
 
     static std::regex intRegex(R"(-?[0-9]+)");
-    static std::regex floatRegex(R"(-?[0-9]*\.[0-9]+)");
+    static std::regex floatRegex(R"(-?(([0-9]*\.[0-9]*)|([0-9]+f)))");
 
     if (tokenMap[substring] != NONE) {
         return {tokenMap[substring], substring};
@@ -220,6 +221,7 @@ const std::vector<std::string> tokenKindStrings = {
     "true",
     "false",
     "identifier",
+    "let",
     "if",
     "unless",
     "else",
