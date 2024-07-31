@@ -3,18 +3,18 @@
 void Type::defineTypes()
 {
     IntegerType->setName("integer");
-    FloatType->setName("float");
+    RealType->setName("float");
     StringType->setName("string");
     BooleanType->setName("boolean");
 
 }
 
-void Type::setName(const std::string &name)
+void Type::setName(const string &name)
 {
     this->name = name;
 }
 
-std::string Type::getName()
+string Type::getName()
 {
     return name;
 }

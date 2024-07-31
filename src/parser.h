@@ -11,7 +11,7 @@ class Parser {
 public:
 
     explicit Parser(Lexer& inputLexer);
-    GlobalBlock* parse();
+    unique<GlobalBlock> parse();
 
 private:
 

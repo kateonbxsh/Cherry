@@ -6,20 +6,20 @@
 #include <utility>
 #include <algorithm>
 
-void Scope::addType(const std::string& name, Type* type) {
+void Scope::addType(const string& name, reference<Type> type) {
     types[name] = type;
 }
 
-Type *Scope::getType(const std::string &name)
+reference<Type> Scope::getType(const string &name)
 {
     return types[name];
 }
 
-void Scope::setVariable(const std::string& name, const Value& value) {
+void Scope::setVariable(const string& name, const Value& value) {
     variables[name] = value;
 }
 
-Value Scope::getVariable(const std::string &name) {
+Value Scope::getVariable(const string &name) {
     if (variables.count(name) > 0) {
         return variables[name];
     }
@@ -40,14 +40,14 @@ bool isVowel(char c) {
 
 Scope::Scope() {
 
-    addType("int", (Type*) IntegerType);
-    addType("boolean", (Type*) BooleanType);
-    addType("string", (Type*) FloatType);
-    addType("float", (Type*) StringType);
+    addType("int", IntegerType);
+    addType("boolean", BooleanType);
+    addType("string", RealType);
+    addType("real", StringType);
 
 }
 
-bool Scope::hasVariable(const std::string &name) {
+bool Scope::hasVariable(const string &name) {
     return variables.find(name) != variables.end();
 }
 

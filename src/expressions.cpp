@@ -5,107 +5,142 @@
 #include <utility>
 #include <valarray>
 #include "parser.h"
+#include <cmath>
 
-bool firstIsBigger(const Value& value1, const Value& value2) {
-
-    if (value1.type != value2.type) return false;
-    if (value1.type == nullptr) return true;
-    if (value1.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value1.value)) > *((float*) (value2.value));
-    if (value1.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value1.value)) > *((std::string*) (value2.value));
-    if (value1.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value1.value)) > *((int*) (value2.value));
-    if (value1.type->primitiveType == PRIMITIVE_BOOLEAN) return *((bool*) (value1.value)) > *((bool*) (value2.value));
-
-    return false;
-}
-
-bool compareValues(const Value& value1, const Value& value2) {
-
-    if (value1.type != value2.type) return false;
-    if (value1.type == nullptr) return true;
-    if (value1.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value1.value)) == *((float*) (value2.value));
-    if (value1.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value1.value)) == *((std::string*) (value2.value));
-    if (value1.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value1.value)) == *((int*) (value2.value));
-    if (value1.type->primitiveType == PRIMITIVE_BOOLEAN) return *((bool*) (value1.value)) == *((bool*) (value2.value));
-    
-    return false;
-}
-
-bool isTruthy(const Value& value) {
-    if (!value.type->primitive) return (value.value != nullptr);
-    if (value.type->primitiveType == PRIMITIVE_FLOAT) return *((float*) (value.value)) > 0.5f;
-    if (value.type->primitiveType == PRIMITIVE_STRING) return (*((std::string*) (value.value))).length() > 0;
-    if (value.type->primitiveType == PRIMITIVE_INTEGER) return *((int*) (value.value)) > 0;
-    if (value.type->primitiveType == PRIMITIVE_BOOLEAN) return *((bool*) (value.value));
-    return false;
-}
 bool isNumeric(const Value& value) {
-    return (
-            value.type->primitiveType == PRIMITIVE_FLOAT ||
-            value.type->primitiveType == PRIMITIVE_INTEGER ||
-            value.type->primitiveType == PRIMITIVE_BOOLEAN
-    );
+    return value.type == RealType ||
+           value.type == IntegerType ||
+           value.type == BooleanType;
 }
 
-std::string stringify(const Value& value) {
-    if (value.type==nullptr) return "null";
-    if (value.value==nullptr) return "<non-initialized>";
-    if (value.type->primitiveType == PRIMITIVE_STRING) return *((std::string*) (value.value));
-    if (value.type->primitiveType == PRIMITIVE_INTEGER) return std::to_string(*((int*) (value.value)));
-    if (value.type->primitiveType == PRIMITIVE_FLOAT) return std::to_string(*((float*) (value.value)));
-    if (value.type->primitiveType == PRIMITIVE_BOOLEAN) return std::to_string(*((bool*) (value.value)));
-    return "<object>";
+bool areNumericTypes(const Value& value1, const Value& value2) {
+    return isNumeric(value1) && isNumeric(value2);
 }
 
-bool isOperator(const Token& token) {
-    TokenKind kind = token.kind;
-    return (kind > BEGIN_OF_OPERATORS && kind < END_OF_OPERATORS);
-}
+float getNumericValueAsReal(const Value& value) {
 
-int precedence(const Token& token) {
-    TokenKind kind = token.kind;
-    if (kind == EXPONENT) {
-        return 4;
-    } else if (kind == DIVIDE) {
-        return 3;
-    } else if (kind == TIMES) {
-        return 2;
-    } else if (kind == PLUS || kind == MINUS) {
-        return 1;
+    if (!isNumeric(value)) {
+        return 0;
     }
-    return 0;
+
+    switch (value.type->primitiveType) {
+        case PRIMITIVE_REAL:
+            return std::get<real>(value.value);
+        case PRIMITIVE_INTEGER:
+            return static_cast<real>(std::get<integer>(value.value));
+        case PRIMITIVE_BOOLEAN:
+            return static_cast<real>(std::get<boolean>(value.value));
+        default:
+            return 0.0f;
+    }
 }
 
-Value performOperator(const Value& value1, const Value& value2, TokenKind op) {
-    if (op <= BEGIN_OF_OPERATORS || op >= END_OF_OPERATORS) return NullValue;
-    if (value1.type == nullptr || value2.type == nullptr) return NullValue;
+int getNumericValueAsInt(const Value& value) {
 
-    switch (op)
-    {
-    case EQUALS:
-        return Value(BooleanType, new bool(compareValues(value1, value2)));
-        break;
+    if (!isNumeric(value)) {
+        return 0;
+    }
+
+    switch (value.type->primitiveType) {
+        case PRIMITIVE_REAL:
+            return static_cast<integer>(std::get<real>(value.value));
+        case PRIMITIVE_INTEGER:
+            return std::get<integer>(value.value);
+        case PRIMITIVE_BOOLEAN:
+            return static_cast<integer>(std::get<boolean>(value.value));
+        default:
+            return 0;
+    }
+}
+
+reference<Type> getResultType(const Value& value1, const Value& value2) {
+    if (value1.type == RealType || value2.type == RealType)
+        return RealType;
+    return IntegerType;
+}
+
+Value add(const Value& value1, const Value& value2) {
+
+    if (!areNumericTypes(value1, value2)) return NullValue;
+
+    reference<Type> resultType = getResultType(value1, value2);
+    if (resultType == RealType) {
+        float result = getNumericValueAsReal(value1) + getNumericValueAsReal(value2);
+        return Value(RealType, result);
+    }
+    if (resultType == IntegerType) {
+        int result = getNumericValueAsInt(value1) + getNumericValueAsInt(value2);
+        return Value(IntegerType, result);
+    }
     
-    case BIGGER_THAN:
-        return Value(BooleanType, new bool(firstIsBigger(value1, value2)));
-        break;
+    return Value();
+}
 
-    case SMALLER_THAN:
-        return Value(BooleanType, new bool(firstIsBigger(value2, value1)));
-        break;
+Value subtract(const Value& value1, const Value& value2) {
+    
+    if (!areNumericTypes(value1, value2)) return NullValue;
 
-    case BIGGER_OR_EQUAL:
-        return Value(BooleanType, new bool(!firstIsBigger(value2, value1)));
-        break;
-
-    case SMALLER_OR_EQUAL:
-        return Value(BooleanType, new bool(!firstIsBigger(value1, value2)));
-        break;
-
-    case PLUS:
-        
-
-    default:
-        return NullValue;
+    reference<Type> resultType = getResultType(value1, value2);
+    if (resultType == RealType) {
+        float result = getNumericValueAsReal(value1) - getNumericValueAsReal(value2);
+        return Value(RealType, result);
     }
+    if (resultType == IntegerType) {
+        int result = getNumericValueAsInt(value1) - getNumericValueAsInt(value2);
+        return Value(IntegerType, result);
+    }
+    
+    return Value();
+}
 
+Value multiply(const Value& value1, const Value& value2) {
+    
+    if (!areNumericTypes(value1, value2)) return NullValue;
+
+    reference<Type> resultType = getResultType(value1, value2);
+    if (resultType == RealType) {
+        float result = getNumericValueAsReal(value1) * getNumericValueAsReal(value2);
+        return Value(RealType, result);
+    }
+    if (resultType == IntegerType) {
+        int result = getNumericValueAsInt(value1) * getNumericValueAsInt(value2);
+        return Value(IntegerType, result);
+    }
+    
+    return Value();
+}
+
+Value divide(const Value& value1, const Value& value2) {
+    
+    if (!areNumericTypes(value1, value2)) return NullValue;
+
+    reference<Type> resultType = getResultType(value1, value2);
+    if (resultType == RealType) {
+        real denominator = getNumericValueAsReal(value2);
+        if (denominator == 0) {
+            return NullValue;
+        }
+        real result = getNumericValueAsReal(value1) / denominator;
+        return Value(RealType, result);
+    }
+    if (resultType == IntegerType) {
+        int denominator = getNumericValueAsInt(value2);
+        if (denominator == 0) {
+            return NullValue;
+        }
+        int result = getNumericValueAsInt(value1) / denominator;
+        return Value(IntegerType, result);
+    }
+    
+    return Value();
+}
+
+Value exponent(const Value& value1, const Value& value2) {
+
+    if (!areNumericTypes(value1, value2)) return NullValue;
+
+    real base = getNumericValueAsReal(value1);
+    real exp = getNumericValueAsReal(value2);
+
+    return Value(RealType, std::pow(base, exp));
 }

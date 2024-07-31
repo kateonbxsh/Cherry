@@ -1,6 +1,6 @@
 #include "types/type.h"
 
-Type* IntegerType = new Type(PrimitiveType::PRIMITIVE_INTEGER);
-Type* FloatType = new Type(PrimitiveType::PRIMITIVE_FLOAT);
-Type* StringType = new Type(PrimitiveType::PRIMITIVE_STRING);
-Type* BooleanType = new Type(PrimitiveType::PRIMITIVE_BOOLEAN);
+reference<Type> IntegerType = create_reference<Type>(PrimitiveType::PRIMITIVE_INTEGER);
+reference<Type> RealType = create_reference<Type>(PrimitiveType::PRIMITIVE_REAL);
+reference<Type> StringType = create_reference<Type>(PrimitiveType::PRIMITIVE_STRING);
+reference<Type> BooleanType = create_reference<Type>(PrimitiveType::PRIMITIVE_BOOLEAN);

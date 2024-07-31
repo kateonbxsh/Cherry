@@ -5,14 +5,14 @@
 
 #include "parser.h"
 #include "statement.h"
-#include "statements/definition/VariableDefinition.h"
+#include "statements/variable/VariableDefinition.h"
 #include "statements/GlobalBlock.h"
 
 Parser::Parser(Lexer& inputLexer) {
     lexer = inputLexer;
 }
 
-GlobalBlock* Parser::parse() {
+unique<GlobalBlock> Parser::parse() {
 
     lexer.initReader();
 
@@ -23,18 +23,13 @@ GlobalBlock* Parser::parse() {
         auto lastToken = block->lastToken;
         std::cerr << "[FATAL] CompileError: \"" << lastToken.value << "\" at line " << lastToken.line << ", char " << lastToken.pos << std::endl;
         std::cerr << "Unexpected token " << lastToken.value << " of type: " << tokenKindStrings[lastToken.kind] << std::endl;
-        std::cerr << "Expected: ";
-        auto expected = tokenKindsToString(block->expected);
-        for (auto expected : expected) {
-            std::cerr << expected << " ";
-        }
+        std::cerr << "Expected: " << block->expected;
         std::cerr << std::endl;
 
-        delete block;
         return nullptr;
 
     }
 
-    return block;
+    return move(block);
 
 }

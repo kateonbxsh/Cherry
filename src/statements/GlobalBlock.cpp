@@ -1,31 +1,23 @@
 #include "statements/GlobalBlock.h"
 #include "statements/variable/VariableDefinition.h"
+#include "statements/GeneralStatement.h"
 
-GlobalBlock* GlobalBlock::parse(Lexer& lexer) {
+unique<GlobalBlock> GlobalBlock::parse(Lexer& lexer) {
 
-    auto block = new GlobalBlock;
+    auto block = create_unique<GlobalBlock>();
 
     while(!lexer.expectToken(END_OF_FEED)) {
 
-        auto variableDefinition = VariableDefinition::parse(lexer);
-        std::vector<Statement*> invalids = {};
+        auto nextStatement = GeneralStatement::parse(lexer);
 
-        if (!variableDefinition->valid) {
-            invalids.push_back(variableDefinition);
-        } else {
-            block->children.push_back(variableDefinition);
-            deleteAllStatements(invalids);
-            continue;
+        if (!nextStatement->valid) {
+            block->expected = nextStatement->expected;
+            block->lastToken = nextStatement->lastToken;
+            block->valid = false;
+            return block;
         }
-        
-        //no valid statement
-        auto furthest = getFurthestInvalidStatement(invalids);
-        deleteAllStatements(block->children);
-        block->valid = false;
-        block->expected = furthest->expected;
-        block->lastToken = furthest->lastToken;
-        delete furthest;
-        return block;
+
+        block->children.push_back(nextStatement);
 
     }
 
@@ -38,7 +30,7 @@ Value GlobalBlock::execute(Scope& scope) {
 
     Value lastValue;
 
-    for (auto childStatement : this->children) {
+    for (auto& childStatement : this->children) {
         lastValue = childStatement->execute(scope);
         if (lastValue.thrownException != nullptr) return lastValue;
     }

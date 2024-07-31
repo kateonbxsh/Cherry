@@ -8,13 +8,13 @@
 class Expression : public Statement {
 public:
 
-    static Expression* parse(Lexer& lexer);
+    static unique<Expression> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:
 
-    Statement* firstOperand = nullptr;
-    Statement* secondOperand = nullptr;
+    unique<Expression> firstOperand = nullptr;
+    unique<Expression> secondOperand = nullptr;
     Token expressionOperator;
 };
 
@@ -22,20 +22,15 @@ class ExpressionParenWrapped : public Statement {
 
 public:
 
-    static ExpressionParenWrapped* parse(Lexer& lexer);
-    Value execute(Scope& scope) override;
-
-private:
-
-    Expression* child = nullptr;
+    static unique<Expression> parse(Lexer& lexer);
 
 };
 
-class ExpressionValue : public Statement {
+class ExpressionValue : public Expression {
 
 public:
 
-    static ExpressionValue* parse(Lexer& lexer);
+    static unique<ExpressionValue> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:

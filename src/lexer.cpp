@@ -121,7 +121,7 @@ void Lexer::defineCharKinds() {
     tokenMap["\t"] = WHITESPACE;
     tokenMap["\n"] = WHITESPACE;
     tokenMap[" "] = WHITESPACE;
-    tokenMap["let"] = LET;
+    tokenMap["infer"] = INFER;
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
     tokenMap["unless"] = UNLESS;
@@ -221,7 +221,7 @@ const std::vector<std::string> tokenKindStrings = {
     "true",
     "false",
     "identifier",
-    "let",
+    "infer",
     "if",
     "unless",
     "else",

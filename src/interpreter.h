@@ -7,6 +7,6 @@ class Interpreter {
 public:
     Interpreter() = default;
 
-    void interpret(GlobalBlock* block);
+    void interpret(unique<GlobalBlock>& block);
 
 };

@@ -2,31 +2,29 @@
 #include "statements/expression/Expression.h"
 #include <expressions.h>
 
-Expression *Expression::parse(Lexer &lexer) {
+unique<Expression> Expression::parse(Lexer &lexer) {
 
     lexer.savePosition();
 
-    auto expression = new Expression();
-    std::vector<Statement*> invalids = {};
+    auto expression = create_unique<Expression>();
+    std::vector<unique<Statement>> invalids = {};
     bool foundFirstOperand = false;
 
     auto parenWrapped = ExpressionParenWrapped::parse(lexer);
     if (parenWrapped->valid) {
-        expression->firstOperand = parenWrapped;
-        deleteAllStatements(invalids);
+        expression->firstOperand = move(parenWrapped);
         foundFirstOperand = true;
     } else {
-        invalids.push_back(parenWrapped);
+        invalids.push_back(move(parenWrapped));
     }
 
     if (!foundFirstOperand) {
         auto identifier = ExpressionValue::parse(lexer);
         if (identifier->valid) {
-            expression->firstOperand = identifier;
-            deleteAllStatements(invalids);
+            expression->firstOperand = move(identifier);
             foundFirstOperand = true;
         } else {
-            invalids.push_back(identifier);
+            invalids.push_back(move(identifier));
         }
     }
 
@@ -37,7 +35,6 @@ Expression *Expression::parse(Lexer &lexer) {
         expression->expected = furthest->expected;
         expression->lastToken = furthest->lastToken;
         expression->valid = false;
-        delete furthest;
         return expression;
     }
 
@@ -51,7 +48,6 @@ Expression *Expression::parse(Lexer &lexer) {
     } else {
         lexer.rollPosition();
         lexer.deletePosition();
-        deleteAllStatements(invalids);
         expression->valid = true;
         return expression;
     }
@@ -60,9 +56,8 @@ Expression *Expression::parse(Lexer &lexer) {
     auto potentialSecondOperand = Expression::parse(lexer);
     if (potentialSecondOperand->valid) {
         //complete expression
-        expression->secondOperand = potentialSecondOperand;
+        expression->secondOperand = move(potentialSecondOperand);
         expression->valid = true;
-        deleteAllStatements(invalids);
         lexer.deletePosition();
 
         //check precedence and inverse
@@ -71,9 +66,9 @@ Expression *Expression::parse(Lexer &lexer) {
             int childPresedence = precedence(potentialSecondOperand->expressionOperator);
             if (myPresedence > childPresedence) {
                 //Rotate the tree
-                auto childFirstOperand = potentialSecondOperand->firstOperand;
-                expression->secondOperand = childFirstOperand;
-                potentialSecondOperand->firstOperand = expression;
+                auto newRoot = move(expression->secondOperand);
+                expression->secondOperand = move(newRoot->firstOperand);
+                newRoot->firstOperand = move(expression);
                 return potentialSecondOperand;
             }
         }
@@ -87,55 +82,46 @@ Expression *Expression::parse(Lexer &lexer) {
     expression->expected = furthest->expected;
     expression->lastToken = furthest->lastToken;
     expression->valid = false;
-    delete furthest;
     return expression;
 
 }
 
-ExpressionParenWrapped* ExpressionParenWrapped::parse(Lexer& lexer) {
+unique<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
 
     lexer.savePosition();
 
-    auto parenWrapped = new ExpressionParenWrapped;
-
     if (!lexer.expectToken(LEFT_BRACE)) {
-        parenWrapped->lastToken = lexer.nextToken();
-        parenWrapped->expected = {LEFT_BRACE};
-        parenWrapped->valid = false;
+        auto exp = create_unique<Expression>();
+        exp->lastToken = lexer.nextToken();
+        exp->expected = "(";
+        exp->valid = false;
         lexer.rollPosition();
-        return parenWrapped;
+        return move(exp);
     }
 
     auto expression = Expression::parse(lexer);
     if (!expression->valid) {
-        parenWrapped->lastToken = expression->lastToken;
-        parenWrapped->expected = expression->expected;
-        parenWrapped->valid = false;
         lexer.rollPosition();
-        delete expression;
-        return parenWrapped;
+        return expression;
     }
 
     if (!lexer.expectToken(RIGHT_BRACE)) {
-        parenWrapped->lastToken = lexer.nextToken();
-        parenWrapped->expected = {RIGHT_BRACE};
-        parenWrapped->valid = false;
+        expression->lastToken = lexer.nextToken();
+        expression->expected = ")";
+        expression->valid = false;
         lexer.rollPosition();
-        delete expression;
-        return parenWrapped;
+        return expression;
     }
 
-    parenWrapped->child = expression;
-    parenWrapped->valid = true;
     lexer.deletePosition();
-    return parenWrapped;
+    return expression;
 
 }
 
-ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
+unique<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
 
     lexer.savePosition();
-    auto expression = new ExpressionValue;
+    auto expression = create_unique<ExpressionValue>();
 
     Token nextToken = lexer.nextToken();
     if (
@@ -151,7 +137,7 @@ ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
         lexer.deletePosition();
         expression->identifier = nextToken;
         expression->valid = true;
-        return expression;
+        return move(expression);
     } 
 
     expression->valid = false;
@@ -159,7 +145,7 @@ ExpressionValue* ExpressionValue::parse(Lexer& lexer) {
     expression->expected = {IDENTIFIER, STRING, INTEGER, FLOAT};
     lexer.rollPosition();
 
-    return expression;
+    return move(expression);
 
 }
 
@@ -180,12 +166,6 @@ Value Expression::execute(Scope& scope) {
 
 }
 
-Value ExpressionParenWrapped::execute(Scope &scope) {
-
-    return this->child->execute(scope);
-
-}
-
 Value ExpressionValue::execute(Scope &scope) {
 
     auto token = this->identifier;
@@ -193,14 +173,12 @@ Value ExpressionValue::execute(Scope &scope) {
     switch(token.kind) {
         case INTEGER:
         {
-            auto v = new int(std::stoi(token.value));
-            return Value(IntegerType, v);
+            return Value(IntegerType, std::stol(token.value));
         }
         
         case FLOAT:
         {
-            auto v = new float(std::stof(token.value));
-            return Value(FloatType, v);
+            return Value(RealType, std::stod(token.value));
         }
             
 
@@ -210,9 +188,8 @@ Value ExpressionValue::execute(Scope &scope) {
         }
 
         case STRING:
-        {
-            auto v = new std::string(token.value);
-            return Value(StringType, v);
+        {;
+            return Value(StringType, token.value);
         }
             
 

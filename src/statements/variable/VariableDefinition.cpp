@@ -2,13 +2,13 @@
 #include "statements/expression/Expression.h"
 #include "types/type.h"
 
-VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
+unique<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
 
     lexer.savePosition();
 
-    auto varDef = new VariableDefinition();
+    auto varDef = create_unique<VariableDefinition>();
 
-    if (lexer.expectToken(LET)) {
+    if (lexer.expectToken(INFER)) {
         varDef->inferred = true;
     } else {
 
@@ -50,18 +50,17 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
         return varDef;
     }
 
-    Expression* parsedExpression = Expression::parse(lexer);
+    auto parsedExpression = Expression::parse(lexer);
 
     if (!parsedExpression->valid) {
         varDef->lastToken = parsedExpression->lastToken;
         varDef->expected = parsedExpression->expected;
         varDef->valid = false;
-        delete parsedExpression;
         lexer.rollPosition();
         return varDef;
     }
 
-    varDef->expression = parsedExpression;
+    varDef->expression = move(parsedExpression);
 
     if (lexer.expectToken(SEMICOLON)) {
         varDef->valid = true;
@@ -69,7 +68,6 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
         return varDef;
     }
     
-    delete parsedExpression;
     varDef->valid = false;
     varDef->lastToken = nextToken;
     varDef->expected = {SEMICOLON};
@@ -79,7 +77,7 @@ VariableDefinition *VariableDefinition::parse(Lexer &lexer) {
 
 Value VariableDefinition::execute(Scope& scope) {
 
-    Type* type = scope.getType(this->type.value);
+    reference<Type> type = scope.getType(this->type.value);
     auto name = this->name.value;
 
     if (this->expression != nullptr) {

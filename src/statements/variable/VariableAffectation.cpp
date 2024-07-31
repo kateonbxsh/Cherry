@@ -3,11 +3,11 @@
 #include "types/type.h"
 #include <expressions.h>
 
-VariableAffectation *VariableAffectation::parse(Lexer &lexer) {
+unique<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
 
     lexer.savePosition();
 
-    auto varAff = new VariableAffectation();
+    auto varAff = create_unique<VariableAffectation>();
 
     Token next = lexer.nextToken();
     if (next.kind == IDENTIFIER) {
@@ -47,7 +47,7 @@ VariableAffectation *VariableAffectation::parse(Lexer &lexer) {
         return varAff;
     }
 
-    varAff->expression = potentialExpr;
+    varAff->expression = move(potentialExpr);
 
     if (!lexer.expectToken(SEMICOLON)) {
         varAff->valid = false;

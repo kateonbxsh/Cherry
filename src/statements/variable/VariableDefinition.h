@@ -8,13 +8,13 @@ class VariableDefinition : public Statement {
 
 public:
 
-    static VariableDefinition* parse(Lexer& lexer);
+    static unique<VariableDefinition> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:
 
     bool inferred = false;
-    Expression* expression;
+    unique<Expression> expression;
     Token type;
     Token name;
 

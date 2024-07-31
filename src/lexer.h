@@ -16,7 +16,7 @@ enum TokenKind {
     TRUE,
     FALSE,
     IDENTIFIER,
-    LET,
+    INFER,
     IF,
     UNLESS,
     ELSE,

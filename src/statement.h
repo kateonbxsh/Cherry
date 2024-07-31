@@ -12,10 +12,8 @@ public:
 
     bool valid = true;
     Token lastToken;
-    std::string expected;
+    string expected;
 
 };
 
-Statement* getFurthestInvalidStatement(const std::vector<Statement*>& statements);
-
-void deleteAllStatements(std::vector<Statement*>& statements);
+unique<Statement> getFurthestInvalidStatement(const std::vector<unique<Statement>>& statements);

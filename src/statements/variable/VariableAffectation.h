@@ -8,12 +8,12 @@ class VariableAffectation : public Statement {
 
 public:
 
-    static VariableAffectation* parse(Lexer& lexer);
+    static unique<VariableAffectation> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:
 
-    Expression* expression;
+    unique<Expression> expression;
     Token name;
     TokenKind selfOperation;
 

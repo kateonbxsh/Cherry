@@ -18,7 +18,7 @@ int main(int argCount, char ** args) {
         cout << "Failed to open file." << endl;
         return 2;
     }
-    std::string fileContent((std::istreambuf_iterator<char>(fileToParse)), std::istreambuf_iterator<char>());
+    string fileContent((std::istreambuf_iterator<char>(fileToParse)), std::istreambuf_iterator<char>());
     fileToParse.close();
     Lexer lexer(fileContent);
     #if DEBUG_LEXER_TOKEN 

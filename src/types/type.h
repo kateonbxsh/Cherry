@@ -1,11 +1,13 @@
 #pragma once
+
 #include <string>
+#include "macros.h"
 
 enum PrimitiveType {
 
     NOT_PRIMITIVE,
     PRIMITIVE_INTEGER,
-    PRIMITIVE_FLOAT,
+    PRIMITIVE_REAL,
     PRIMITIVE_STRING,
     PRIMITIVE_BOOLEAN
 
@@ -20,19 +22,19 @@ public:
     Type(): primitive(false), primitiveType(PrimitiveType::NOT_PRIMITIVE) {};
     explicit Type(PrimitiveType type): primitive(true), primitiveType(type) {};
 
-    void setName(const std::string& name);
-    std::string getName();
+    void setName(const string& name);
+    string getName();
 
     bool primitive;
     PrimitiveType primitiveType;
 
 private:
 
-    std::string name;
+    string name;
 
 };
 
-extern Type* IntegerType;
-extern Type* FloatType;
-extern Type* StringType;
-extern Type* BooleanType;
+extern reference<Type> IntegerType;
+extern reference<Type> RealType;
+extern reference<Type> StringType;
+extern reference<Type> BooleanType;

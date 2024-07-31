@@ -1,17 +1,21 @@
 #pragma once
 
 #include <string>
+#include "macros.h"
 #include <any>
 #include "types/type.h"
 
 struct Value {
 
-    Value(): type(nullptr), value(nullptr), thrownException(nullptr) {};
-    Value(const Type *type, void* value): type(type), value(value), thrownException(nullptr) {};
+    Value() : type(nullptr), value(nullptr), thrownException(nullptr) {}
 
-    const Type* type;
-    void* value;
-    Value* thrownException; //non-null when exception is thrown
+    template<typename T>
+    Value(reference<Type> type, T value)
+        : type(type), value(value), thrownException(nullptr) {}
+
+    reference<Type> type;
+    variant<real, string, integer, boolean, void*> value;
+    reference<Value> thrownException; //non-null when exception is thrown
 
 };
 

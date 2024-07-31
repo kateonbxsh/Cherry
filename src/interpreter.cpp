@@ -1,7 +1,7 @@
 #include "interpreter.h"
 #include "scope.h"
 
-void Interpreter::interpret(GlobalBlock* block)
+void Interpreter::interpret(unique<GlobalBlock>& block)
 {
 
     Scope mainScope = Scope();

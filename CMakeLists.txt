@@ -15,7 +15,9 @@ set(SOURCE_FILES
     src/scope.cpp
     src/statement.cpp
     src/statements/GlobalBlock.cpp
-    src/statements/definition/VariableDefinition.cpp
+    src/statements/GeneralStatement.cpp
+    src/statements/variable/VariableDefinition.cpp
+    src/statements/variable/VariableAffectation.cpp
     src/statements/expression/Expression.cpp
 )
 
