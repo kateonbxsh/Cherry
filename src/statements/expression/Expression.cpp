@@ -2,12 +2,12 @@
 #include "statements/expression/Expression.h"
 #include <expressions.h>
 
-unique<Expression> Expression::parse(Lexer &lexer) {
+uref<Expression> Expression::parse(Lexer &lexer) {
 
     lexer.savePosition();
 
     auto expression = create_unique<Expression>();
-    std::vector<unique<Statement>> invalids = {};
+    std::vector<uref<Statement>> invalids = {};
     bool foundFirstOperand = false;
 
     auto parenWrapped = ExpressionParenWrapped::parse(lexer);
@@ -55,25 +55,25 @@ unique<Expression> Expression::parse(Lexer &lexer) {
     //Found operator now we need the second operand
     auto potentialSecondOperand = Expression::parse(lexer);
     if (potentialSecondOperand->valid) {
+
         //complete expression
         expression->secondOperand = move(potentialSecondOperand);
         expression->valid = true;
         lexer.deletePosition();
 
         //check precedence and inverse
-        if (potentialSecondOperand->expressionOperator.kind != NONE) {
+        if (expression->secondOperand->expressionOperator.kind != NONE) {
             int myPresedence = precedence(expression->expressionOperator);
-            int childPresedence = precedence(potentialSecondOperand->expressionOperator);
+            int childPresedence = precedence(expression->secondOperand->expressionOperator);
             if (myPresedence > childPresedence) {
                 //Rotate the tree
                 auto newRoot = move(expression->secondOperand);
                 expression->secondOperand = move(newRoot->firstOperand);
                 newRoot->firstOperand = move(expression);
-                return potentialSecondOperand;
+                return move(newRoot);
             }
         }
-
-        return expression;
+        return move(expression);
     }
 
     //Invalid second operand
@@ -82,11 +82,11 @@ unique<Expression> Expression::parse(Lexer &lexer) {
     expression->expected = furthest->expected;
     expression->lastToken = furthest->lastToken;
     expression->valid = false;
-    return expression;
+    return move(expression);
 
 }
 
-unique<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
+uref<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
 
     lexer.savePosition();
 
@@ -118,7 +118,7 @@ unique<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
 
 }
 
-unique<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
+uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
 
     lexer.savePosition();
     auto expression = create_unique<ExpressionValue>();
@@ -155,7 +155,7 @@ Value Expression::execute(Scope& scope) {
     if (value1.thrownException != nullptr) return value1;
 
     if (this->expressionOperator.kind != NONE) {
-        auto value2 = this->firstOperand->execute(scope);
+        auto value2 = this->secondOperand->execute(scope);
         if (value2.thrownException != nullptr) return value2;
 
         return performOperator(value1, value2, this->expressionOperator.kind);
@@ -173,12 +173,12 @@ Value ExpressionValue::execute(Scope &scope) {
     switch(token.kind) {
         case INTEGER:
         {
-            return Value(IntegerType, std::stol(token.value));
+            return Value((integer) std::stol(token.value));
         }
         
         case FLOAT:
         {
-            return Value(RealType, std::stod(token.value));
+            return Value((real) std::stod(token.value));
         }
             
 
@@ -189,15 +189,15 @@ Value ExpressionValue::execute(Scope &scope) {
 
         case STRING:
         {;
-            return Value(StringType, token.value);
+            return Value(token.value);
         }
             
 
         case TRUE:
         case FALSE:
         {
-            auto v = new bool(token.value == "true");
-            return Value(BooleanType, v);
+            boolean v = (token.value == "true");
+            return Value(v);
         }
             
 

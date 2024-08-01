@@ -2,7 +2,7 @@
 #include "statements/expression/Expression.h"
 #include "types/type.h"
 
-unique<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
+uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
 
     lexer.savePosition();
 
@@ -85,7 +85,7 @@ Value VariableDefinition::execute(Scope& scope) {
         scope.setVariable(name, value);
         return value;
     } else {
-        scope.setVariable(name, Value(type, nullptr));
+        scope.setVariable(name, Value(type));
         return NullValue;
     }
 

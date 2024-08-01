@@ -9,11 +9,11 @@ class GlobalBlock : public Statement {
 
 public:
 
-    static unique<GlobalBlock> parse(Lexer& lexer);
+    static uref<GlobalBlock> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:
 
-    std::vector<unique<Statement>> children = {};
+    std::vector<uref<Statement>> children = {};
 
 };

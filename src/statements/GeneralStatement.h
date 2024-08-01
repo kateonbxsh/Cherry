@@ -9,6 +9,6 @@ class GeneralStatement : public Statement {
 
 public:
 
-    static unique<Statement> parse(Lexer& lexer);
+    static uref<Statement> parse(Lexer& lexer);
 
 };

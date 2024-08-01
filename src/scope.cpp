@@ -20,10 +20,12 @@ void Scope::setVariable(const string& name, const Value& value) {
 }
 
 Value Scope::getVariable(const string &name) {
-    if (variables.count(name) > 0) {
-        return variables[name];
-    }
-    return NullValue;
+    if (variables.count(name) == 0) return NullValue;
+
+    Value val = variables[name];
+    if (!val.initialized) return NullValue;
+
+    return val;
 }
 
 void Scope::printVariables() {

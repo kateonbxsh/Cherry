@@ -2,7 +2,7 @@
 #include "statements/variable/VariableDefinition.h"
 #include "statements/GeneralStatement.h"
 
-unique<GlobalBlock> GlobalBlock::parse(Lexer& lexer) {
+uref<GlobalBlock> GlobalBlock::parse(Lexer& lexer) {
 
     auto block = create_unique<GlobalBlock>();
 
@@ -17,7 +17,7 @@ unique<GlobalBlock> GlobalBlock::parse(Lexer& lexer) {
             return block;
         }
 
-        block->children.push_back(nextStatement);
+        block->children.push_back(move(nextStatement));
 
     }
 

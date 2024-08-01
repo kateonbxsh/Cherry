@@ -3,7 +3,7 @@
 #include "types/type.h"
 #include <expressions.h>
 
-unique<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
+uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
 
     lexer.savePosition();
 

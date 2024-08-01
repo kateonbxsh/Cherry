@@ -13,6 +13,7 @@ set(SOURCE_FILES
     src/lexer.cpp
     src/parser.cpp
     src/scope.cpp
+    src/data.cpp
     src/statement.cpp
     src/statements/GlobalBlock.cpp
     src/statements/GeneralStatement.cpp

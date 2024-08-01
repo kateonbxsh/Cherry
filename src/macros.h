@@ -13,7 +13,7 @@ template<typename T>
 using reference = shared_ptr<T>;
 
 template<typename T>
-using unique = unique_ptr<T>;
+using uref = unique_ptr<T>;
 
 #define create_reference make_shared
 #define create_unique make_unique

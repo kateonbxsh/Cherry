@@ -3,9 +3,9 @@
 #include "variable/VariableDefinition.h"
 #include "variable/VariableAffectation.h"
 
-unique<Statement> GeneralStatement::parse(Lexer& lexer) {
+uref<Statement> GeneralStatement::parse(Lexer& lexer) {
     
-    std::vector<unique<Statement>> invalids = {};
+    std::vector<uref<Statement>> invalids = {};
 
     auto variableDefinition = VariableDefinition::parse(lexer);
     if (!variableDefinition->valid) {

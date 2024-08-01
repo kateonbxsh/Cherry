@@ -4,7 +4,7 @@
 #include "parser.h"
 #include "interpreter.h"
 
-#define DEBUG_LEXER_TOKEN true
+#define DEBUG_LEXER_TOKEN false
 
 using namespace std;
 
@@ -29,6 +29,7 @@ int main(int argCount, char ** args) {
     Parser parser(lexer);
     auto block = parser.parse();
     if (block != nullptr) {
+        cout << "Interpreting.." << endl;
         Interpreter interpreter;
         interpreter.interpret(block);
         return 0;

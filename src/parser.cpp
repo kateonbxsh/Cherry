@@ -12,7 +12,7 @@ Parser::Parser(Lexer& inputLexer) {
     lexer = inputLexer;
 }
 
-unique<GlobalBlock> Parser::parse() {
+uref<GlobalBlock> Parser::parse() {
 
     lexer.initReader();
 

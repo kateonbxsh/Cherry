@@ -5,7 +5,6 @@
 #include "scope.h"
 
 class Statement {
-
 public:
 
     virtual Value execute(Scope& scope) = 0;
@@ -16,4 +15,9 @@ public:
 
 };
 
-unique<Statement> getFurthestInvalidStatement(const std::vector<unique<Statement>>& statements);
+class NotAStatement : public Statement {
+public:
+    Value execute(Scope& scope);
+};
+
+uref<Statement> getFurthestInvalidStatement(const std::vector<uref<Statement>>& statements);
