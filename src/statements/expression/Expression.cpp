@@ -39,7 +39,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     }
 
     //Found a valid first operand, we check if there is no second operand.
-    expression->expressionOperator = {NONE};
+    expression->expressionOperator = {NONE, "", 0, 0};
 
     lexer.savePosition();
     auto potentialOperator = lexer.nextToken();
@@ -70,10 +70,10 @@ uref<Expression> Expression::parse(Lexer &lexer) {
                 auto newRoot = move(expression->secondOperand);
                 expression->secondOperand = move(newRoot->firstOperand);
                 newRoot->firstOperand = move(expression);
-                return move(newRoot);
+                return newRoot;
             }
         }
-        return move(expression);
+        return expression;
     }
 
     //Invalid second operand
@@ -82,7 +82,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     expression->expected = furthest->expected;
     expression->lastToken = furthest->lastToken;
     expression->valid = false;
-    return move(expression);
+    return expression;
 
 }
 
@@ -93,10 +93,10 @@ uref<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
     if (!lexer.expectToken(LEFT_BRACE)) {
         auto exp = create_unique<Expression>();
         exp->lastToken = lexer.nextToken();
-        exp->expected = "(";
+        exp->expected = tokenKindsToString({LEFT_BRACE});
         exp->valid = false;
         lexer.rollPosition();
-        return move(exp);
+        return exp;
     }
 
     auto expression = Expression::parse(lexer);
@@ -107,7 +107,7 @@ uref<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
 
     if (!lexer.expectToken(RIGHT_BRACE)) {
         expression->lastToken = lexer.nextToken();
-        expression->expected = ")";
+        expression->expected = tokenKindsToString({RIGHT_BRACE});
         expression->valid = false;
         lexer.rollPosition();
         return expression;
@@ -137,15 +137,15 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
         lexer.deletePosition();
         expression->identifier = nextToken;
         expression->valid = true;
-        return move(expression);
+        return expression;
     } 
 
     expression->valid = false;
     expression->lastToken = nextToken;
-    expression->expected = {IDENTIFIER, STRING, INTEGER, FLOAT};
+    expression->expected = tokenKindsToString({IDENTIFIER, STRING, INTEGER, FLOAT, TRUE, FALSE, NULL_TOKEN});
     lexer.rollPosition();
 
-    return move(expression);
+    return expression;
 
 }
 

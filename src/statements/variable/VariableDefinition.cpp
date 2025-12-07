@@ -17,7 +17,7 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
             varDef->type = nextToken;
         } else {
             varDef->lastToken = nextToken;
-            varDef->expected = {IDENTIFIER};
+            varDef->expected = {"type name", "class name", "interface name", "enum name", "primitive type"};
             varDef->valid = false;
             lexer.rollPosition();
             return varDef;
@@ -30,7 +30,7 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
         varDef->name = nextToken;
     } else {
         varDef->lastToken = nextToken;
-        varDef->expected = {IDENTIFIER};
+        varDef->expected = {"variable name"};
         varDef->valid = false;
         lexer.rollPosition();
         return varDef;
@@ -44,7 +44,7 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
     } else if (!lexer.expectToken(EQUALS)) {
         varDef->valid = false;
         varDef->expression = nullptr;
-        varDef->expected = {EQUALS};
+        varDef->expected = tokenKindsToString({EQUALS, SEMICOLON});
         varDef->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return varDef;
@@ -69,8 +69,9 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
     }
     
     varDef->valid = false;
-    varDef->lastToken = nextToken;
-    varDef->expected = {SEMICOLON};
+    varDef->lastToken = lexer.peekToken();
+    varDef->expected = tokenKindsToString({SEMICOLON});
+    lexer.rollPosition();
     return varDef;
 
 }

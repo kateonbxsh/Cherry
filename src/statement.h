@@ -11,7 +11,7 @@ public:
 
     bool valid = true;
     Token lastToken;
-    string expected;
+    std::vector<string> expected;
 
 };
 

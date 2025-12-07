@@ -12,7 +12,7 @@ Lexer::Lexer(std::string data) {
 
     parseData = data;
     std::string currentReadValue;
-    int i, pos = 0, line = 1, currentPos, currentLine;
+    long long unsigned int i, pos = 0, line = 1, currentPos, currentLine;
     bool inString = false, isName = false, isNumber = false; std::string currentString;
     for(i = 0; i < data.length(); (i++, pos++)) {
         std::string currentChar = std::string(1, data[i]);
@@ -23,14 +23,10 @@ Lexer::Lexer(std::string data) {
             continue;
         } else if (inString && kindOfChar == QUOTE) {
             inString = false;
-            tokens.push_back({STRING, currentString});
+            tokens.push_back({STRING, currentString, 0, 0});
             continue;
         } else if (inString) {
             currentString.append(currentChar);
-            continue;
-        }
-        if (currentReadValue.empty() && kindOfChar == WHITESPACE) {
-            if (currentChar == "\n") { pos = 0; line++; }
             continue;
         }
         if (
@@ -43,7 +39,10 @@ Lexer::Lexer(std::string data) {
             result.line = currentLine; result.pos = currentPos;
             tokens.push_back(result);
             currentReadValue.clear();
-            if (kindOfChar == WHITESPACE) continue;
+        }
+        if (currentReadValue.empty() && kindOfChar == WHITESPACE) {
+            if (currentChar == "\n") { pos = 0; line++; }
+            continue;
         }
         if (kindOfChar != WHITESPACE) {
             if (currentReadValue.empty()) {
@@ -62,7 +61,7 @@ Lexer::Lexer(std::string data) {
         if (tokenMap[currentReadValue] != NONE || kindOfChar == WHITESPACE) {
             isNumber = false; isName = false;
             Token result = convertToken(currentReadValue);
-            result.line = line; result.pos = pos;
+            result.line = currentLine; result.pos = currentPos;
             tokens.push_back(result);
             currentReadValue.clear();
         }
@@ -75,7 +74,7 @@ Token Lexer::nextToken() {
         return tokens.at(reader++);
     }
     reader++;
-    return {END_OF_FEED, ""};
+    return {END_OF_FEED, "", 0, 0};
 }
 
 void Lexer::defineCharKinds() {
@@ -141,15 +140,15 @@ Token Lexer::convertToken(const std::string& substring) {
     static std::regex floatRegex(R"(-?(([0-9]*\.[0-9]*)|([0-9]+f)))");
 
     if (tokenMap[substring] != NONE) {
-        return {tokenMap[substring], substring};
+        return {tokenMap[substring], substring, 0, 0};
     }
     if (std::regex_match(substring, intRegex)) {
-        return {INTEGER, substring};
+        return {INTEGER, substring, 0, 0};
     }
     if (std::regex_match(substring, floatRegex)) {
-        return {FLOAT, substring};
+        return {FLOAT, substring, 0, 0};
     }
-    return {IDENTIFIER, substring};
+    return {IDENTIFIER, substring, 0, 0};
 }
 
 bool Lexer::hasNextToken() {

@@ -2,7 +2,7 @@
 
 #include <string>
 #include "macros.h"
-#include <any>
+#include <variant>
 #include "types/type.h"
 
 struct Value {

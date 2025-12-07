@@ -135,6 +135,9 @@ reference<Type> getResultType(const Value& value1, const Value& value2) {
 
 Value add(const Value& value1, const Value& value2) {
 
+    if (value1.type == StringType || value2.type == StringType) {
+        return Value(stringify(value1) + stringify(value2));
+    }
     if (!areNumericTypes(value1, value2)) return NullValue;
 
     reference<Type> resultType = getResultType(value1, value2);
@@ -169,6 +172,12 @@ Value subtract(const Value& value1, const Value& value2) {
 
 Value multiply(const Value& value1, const Value& value2) {
     
+    if (value1.type == StringType && isNumeric(value2)) {
+        string result = "";
+        int times = getNumericValueAsInt(value2);
+        while (times--) result += stringify(value1);
+        return Value(result);
+    }
     if (!areNumericTypes(value1, value2)) return NullValue;
 
     reference<Type> resultType = getResultType(value1, value2);

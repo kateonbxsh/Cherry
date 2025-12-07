@@ -14,7 +14,7 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
         varAff->name = next;
     } else {
         varAff->valid = false;
-        varAff->expected = "variable name";
+        varAff->expected = {"variable name"};
         varAff->lastToken = next;
         lexer.rollPosition();
         return varAff;
@@ -31,7 +31,7 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
 
     if (!lexer.expectToken(EQUALS)) {
         varAff->valid = false;
-        varAff->expected = "=";
+        varAff->expected = tokenKindsToString({EQUALS});
         varAff->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return varAff;
@@ -51,7 +51,7 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
 
     if (!lexer.expectToken(SEMICOLON)) {
         varAff->valid = false;
-        varAff->expected = ";";
+        varAff->expected = tokenKindsToString({SEMICOLON});
         varAff->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return varAff;

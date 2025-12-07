@@ -13,13 +13,15 @@ uref<Statement> getFurthestInvalidStatement(const std::vector<uref<Statement>>& 
             furthestStatement->lastToken = st->lastToken;
             furthestStatement->expected = st->expected;
             furthestStatement->valid = false;
+        } else if (st->lastToken.line == line && st->lastToken.pos == c && furthestStatement != nullptr) {
+            furthestStatement->expected.append_range(st->expected);
         }
     }
 
     return furthestStatement;
 }
 
-Value NotAStatement::execute(Scope &scope)
+Value NotAStatement::execute(Scope&)
 {
     return NullValue;
 }

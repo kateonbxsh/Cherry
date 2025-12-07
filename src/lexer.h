@@ -86,7 +86,7 @@ private:
     std::map<std::string, TokenKind> tokenMap;
     std::vector<Token> tokens;
     std::stack<int> positions;
-    int reader = 0;
+    long long unsigned int reader = 0;
 };
 
 extern const std::vector<std::string> tokenKindStrings;

@@ -1,9 +1,4 @@
-infer a = 10;
+string character = "AB";
+string booboo = character * false;
 
-infer c = ( 5 + 6 ) / ( 7 * 8 );
-
-c ^= 6;
-
-boolean d = c != 15;
-
-real amazingVar = c;
+int a = true + true + true + true;
