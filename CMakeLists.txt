@@ -20,11 +20,16 @@ set(SOURCE_FILES
     src/data.cpp
     src/flags.cpp
     src/statement.cpp
+    src/statements/Block.cpp
     src/statements/GlobalBlock.cpp
     src/statements/GeneralStatement.cpp
     src/statements/variable/VariableDefinition.cpp
     src/statements/variable/VariableAffectation.cpp
     src/statements/expression/Expression.cpp
+    src/statements/function/FunctionDeclaration.cpp
+    src/statements/function/FunctionCall.cpp
+    src/statements/function/FunctionStatement.cpp
+    src/statements/conditional/IfStatement.cpp
 )
 
 add_executable(Cherry ${SOURCE_FILES})

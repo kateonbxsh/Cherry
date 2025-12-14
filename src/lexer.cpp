@@ -79,10 +79,12 @@ Token Lexer::nextToken() {
 
 void Lexer::defineCharKinds() {
 
-    tokenMap["{"] = LEFT_BRACKET;
-    tokenMap["}"] = RIGHT_BRACKET;
-    tokenMap["("] = LEFT_BRACE;
-    tokenMap[")"] = RIGHT_BRACE;
+    tokenMap["["] = LEFT_BRACKET;
+    tokenMap["]"] = RIGHT_BRACKET;
+    tokenMap["{"] = LEFT_BRACE;
+    tokenMap["}"] = RIGHT_BRACE;
+    tokenMap["("] = LEFT_PARENTHESIS;
+    tokenMap[")"] = RIGHT_PARENTHESIS;
     tokenMap[";"] = SEMICOLON;
     tokenMap[":"] = COLON;
     tokenMap[","] = COMMA;
@@ -226,6 +228,8 @@ const std::vector<std::string> tokenKindStrings = {
     "else",
     "method",
     "return",
+    "right_parenthesis",
+    "left_parenthesis",
     "right_bracket",
     "left_bracket",
     "right_brace",

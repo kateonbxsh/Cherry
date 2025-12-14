@@ -1,30 +1,34 @@
 #include <data.h>
 #include "statements/expression/Expression.h"
+#include "statements/function/FunctionCall.hpp"
 #include <expressions.h>
+#include <functional>
 
 uref<Expression> Expression::parse(Lexer &lexer) {
 
     lexer.savePosition();
 
     auto expression = create_unique<Expression>();
-    std::vector<uref<Statement>> invalids = {};
+
+    std::vector<uref<Statement>> invalids;
     bool foundFirstOperand = false;
 
-    auto parenWrapped = ExpressionParenWrapped::parse(lexer);
-    if (parenWrapped->valid) {
-        expression->firstOperand = move(parenWrapped);
-        foundFirstOperand = true;
-    } else {
-        invalids.push_back(move(parenWrapped));
-    }
+    // List of parsers to try in order
+    using ExprParser = std::function<uref<Expression>(Lexer&)>;
+    std::vector<ExprParser> parsers = {
+        [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
+        [](Lexer& l) { return ExpressionValue::parse(l); },
+        [](Lexer& l) { return FunctionCall::parse(l); }
+    };
 
-    if (!foundFirstOperand) {
-        auto identifier = ExpressionValue::parse(lexer);
-        if (identifier->valid) {
-            expression->firstOperand = move(identifier);
+    for (auto& parser : parsers) {
+        auto expr = parser(lexer);
+        if (expr->valid) {
+            expression->firstOperand = move(expr);
             foundFirstOperand = true;
+            break; // stop at first valid parse
         } else {
-            invalids.push_back(move(identifier));
+            invalids.push_back(move(expr));
         }
     }
 
@@ -90,10 +94,10 @@ uref<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
 
     lexer.savePosition();
 
-    if (!lexer.expectToken(LEFT_BRACE)) {
+    if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         auto exp = create_unique<Expression>();
         exp->lastToken = lexer.nextToken();
-        exp->expected = tokenKindsToString({LEFT_BRACE});
+        exp->expected = tokenKindsToString({RIGHT_PARENTHESIS});
         exp->valid = false;
         lexer.rollPosition();
         return exp;
@@ -105,9 +109,9 @@ uref<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
         return expression;
     }
 
-    if (!lexer.expectToken(RIGHT_BRACE)) {
+    if (!lexer.expectToken(RIGHT_PARENTHESIS)) {
         expression->lastToken = lexer.nextToken();
-        expression->expected = tokenKindsToString({RIGHT_BRACE});
+        expression->expected = tokenKindsToString({RIGHT_PARENTHESIS});
         expression->valid = false;
         lexer.rollPosition();
         return expression;
@@ -196,7 +200,7 @@ Value ExpressionValue::execute(Scope &scope) {
         case TRUE:
         case FALSE:
         {
-            boolean v = (token.value == "true");
+            boolean v = (token.kind == TRUE);
             return Value(v);
         }
             

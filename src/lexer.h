@@ -22,6 +22,8 @@ enum TokenKind {
     ELSE,
     METHOD,
     RETURN,
+    RIGHT_PARENTHESIS,
+    LEFT_PARENTHESIS,
     RIGHT_BRACKET,
     LEFT_BRACKET,
     RIGHT_BRACE,

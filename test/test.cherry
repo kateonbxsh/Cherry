@@ -1,4 +1,11 @@
 string character = "AB";
-string booboo = character * false;
+string booboo = character * 20;
 
 int a = true + true + true + true;
+
+method something(int a, int b) {
+    if a && b && c(50, c) {
+        dont();
+        dont_do_it(with_some_parameter, and_another + 50);
+    }
+}
