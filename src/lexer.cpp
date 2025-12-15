@@ -303,6 +303,7 @@ const std::vector<std::string> tokenKindStrings = {
     "if",
     "unless",
     "else",
+    "function",
     "method",
     "return",
     "right_parenthesis",

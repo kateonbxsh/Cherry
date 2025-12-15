@@ -20,6 +20,7 @@ enum TokenKind {
     IF,
     UNLESS,
     ELSE,
+    FUNCTION,
     METHOD,
     RETURN,
     RIGHT_PARENTHESIS,

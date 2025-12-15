@@ -1,4 +1,5 @@
 #include "statements/conditional/IfStatement.hpp"
+#include <expressions.h>
 
 uref<IfStatement> IfStatement::parse(Lexer& lexer) {
     lexer.savePosition();
@@ -180,11 +181,11 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
 
 
 Value IfStatement::execute(Scope& scope) {
-    /*for (auto& clause : clauses) {
+    for (auto& clause : clauses) {
         Value condValue = clause.condition->execute(scope);
         if (condValue.thrownException != nullptr) return condValue;
 
-        bool cond = condValue.asBool();
+        bool cond = isTruthy(condValue);
         if (clause.isUnless) cond = !cond;
 
         if (cond) return clause.body->execute(scope);
@@ -192,6 +193,5 @@ Value IfStatement::execute(Scope& scope) {
 
     if (elseClause) return elseClause->execute(scope);
 
-    return NullValue;*/
     return NullValue;
 }

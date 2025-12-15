@@ -9,7 +9,8 @@ enum PrimitiveType {
     PRIMITIVE_INTEGER,
     PRIMITIVE_REAL,
     PRIMITIVE_STRING,
-    PRIMITIVE_BOOLEAN
+    PRIMITIVE_BOOLEAN,
+    FUNCTION_TYPE
 
 };
 
@@ -38,3 +39,4 @@ extern reference<Type> IntegerType;
 extern reference<Type> RealType;
 extern reference<Type> StringType;
 extern reference<Type> BooleanType;
+extern reference<Type> FunctionType;

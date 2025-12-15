@@ -53,6 +53,59 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     expression->expressionOperator = {NONE, "", 0, 0};
 
     lexer.savePosition();
+
+    if (lexer.expectToken(LEFT_PARENTHESIS)) {
+        // this is a function call
+        std::cout << DEBUG_PREFIX << "Expression is a method call\n";
+        auto call = create_unique<FunctionCall>();
+        call->function = move(expression);
+
+        expression = create_unique<Expression>();
+
+        while (!lexer.expectToken(RIGHT_PARENTHESIS)) {
+            auto arg = Expression::parse(lexer);
+            if (!arg->valid) {
+                if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid expression in function arguments\n";
+
+                expression->valid = false;
+                expression->expected = arg->expected;
+                expression->lastToken = arg->lastToken;
+                lexer.rollPosition();
+                return expression;
+            }
+
+            call->arguments.push_back(move(arg));
+
+            if (DEBUG) {
+                std::cout << DEBUG_SUCCESS_PREFIX
+                        << "Parsed argument #" << call->arguments.size() << "\n";
+            }
+
+            Token sep = lexer.nextToken();
+            if (sep.kind == RIGHT_PARENTHESIS) {
+                if (DEBUG) std::cout << DEBUG_PREFIX << "End of argument list\n";
+                break;
+            }
+
+            if (sep.kind != COMMA) {
+                if (DEBUG) {
+                    std::cout << DEBUG_ERROR_PREFIX
+                            << "Expected ',' or ')', got\n";
+                }
+
+                expression->valid = false;
+                expression->expected = tokenKindsToString({COMMA, RIGHT_PARENTHESIS});
+                expression->lastToken = sep;
+                lexer.rollPosition();
+                return call;
+            }
+
+            if (DEBUG) std::cout << DEBUG_PREFIX << "Comma found, parsing next argument\n";
+        }
+
+        expression->firstOperand = move(call);
+    }
+
     auto potentialOperator = lexer.nextToken();
 
     if (isOperator(potentialOperator)) {

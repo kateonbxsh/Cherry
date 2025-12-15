@@ -1,57 +1,97 @@
-#include <iostream>
 #include "scope.h"
-#include "types/type.h"
+#include <iostream>
 #include "expressions.h"
-#include <set>
-#include <utility>
-#include <algorithm>
 
-void Scope::addType(const string& name, reference<Type> type) {
-    types[name] = type;
-}
+// =======================
+// Constructor
+// =======================
+Scope::Scope(reference<Scope> parent)
+    : parent(parent) {
 
-reference<Type> Scope::getType(const string &name)
-{
-    return types[name];
-}
-
-void Scope::setVariable(const string& name, const Value& value) {
-    variables[name] = value;
-}
-
-Value Scope::getVariable(const string &name) {
-    if (variables.count(name) == 0) return NullValue;
-
-    Value val = variables[name];
-    if (!val.initialized) return NullValue;
-
-    return val;
-}
-
-void Scope::printVariables() {
-    std::cout << "Scope variables: " << std::endl;
-    for(const auto& pair : variables) {
-        std::cout << pair.first << " = (" << pair.second.type << ") " << stringify(pair.second) << std::endl;
+    // Only root scope defines builtins
+    if (!parent) {
+        addType("int", IntegerType);
+        addType("boolean", BooleanType);
+        addType("string", StringType);
+        addType("real", RealType);
     }
 }
 
-bool isVowel(char c) {
-    char lowercaseC = tolower(c);
-    return (lowercaseC == 'a' || lowercaseC == 'e' || lowercaseC == 'i' || lowercaseC == 'o' || lowercaseC == 'u');
+// =======================
+// Child scope creation
+// =======================
+reference<Scope> Scope::createChild() {
+    return create_reference<Scope>(this);
 }
 
-Scope::Scope() {
-
-    addType("int", IntegerType);
-    addType("boolean", BooleanType);
-    addType("string", RealType);
-    addType("real", StringType);
-
+// =======================
+// Variables
+// =======================
+void Scope::setVariable(const std::string& name, const Value& value) {
+    variables[name] = value;
 }
 
-bool Scope::hasVariable(const string &name) {
-    return variables.find(name) != variables.end();
+bool Scope::hasVariable(const std::string& name) const {
+    if (variables.contains(name))
+        return true;
+
+    if (parent)
+        return parent->hasVariable(name);
+
+    return false;
 }
 
+Value Scope::getVariable(const std::string& name) {
+    // local
+    if (variables.contains(name)) {
+        const Value& val = variables.at(name);
+        if (!val.initialized)
+            return NullValue;
+        return val;
+    }
 
+    // parent
+    if (parent)
+        return parent->getVariable(name);
 
+    // undefined
+    return makeUndefinedVariableError(name);
+}
+
+// =======================
+// Types
+// =======================
+void Scope::addType(const std::string& name, reference<Type> type) {
+    types[name] = type;
+}
+
+reference<Type> Scope::getType(const std::string& name) {
+    if (types.contains(name))
+        return types[name];
+
+    if (parent)
+        return parent->getType(name);
+
+    return nullptr;
+}
+
+// =======================
+// Errors
+// =======================
+Value Scope::makeUndefinedVariableError(const std::string& name) const {
+    Value err = NullValue;
+    err.thrownException = create_reference<Value>(
+        Value("undefined variable: " + name)
+    );
+    return err;
+}
+
+// =======================
+// Debug
+// =======================
+void Scope::printVariables() const {
+    std::cout << "Scope variables:\n";
+    for (const auto& [name, value] : variables) {
+        std::cout << "  " << name << " = " << stringify(value) << "\n";
+    }
+}

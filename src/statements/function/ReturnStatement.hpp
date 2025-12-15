@@ -5,13 +5,12 @@
 #include "statements/expression/Expression.h"
 #include <vector>
 
-class FunctionCall : public Expression {
+class ReturnStatement : public Statement {
 public:
 
-    static uref<FunctionCall> parse(Lexer& lexer);
+    static uref<ReturnStatement> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
-    uref<Expression> function;
-    std::vector<uref<Expression>> arguments;
-    
+private:
+    uref<Expression> expression;
 };

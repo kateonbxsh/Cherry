@@ -29,6 +29,7 @@ set(SOURCE_FILES
     src/statements/function/FunctionDeclaration.cpp
     src/statements/function/FunctionCall.cpp
     src/statements/function/FunctionStatement.cpp
+    src/statements/function/ReturnStatement.cpp
     src/statements/conditional/IfStatement.cpp
 )
 

@@ -1,4 +1,5 @@
 #include "FunctionDeclaration.hpp"
+#include "types/function.h"
 
 uref<FunctionDeclaration> FunctionDeclaration::parse(Lexer& lexer) {
 
@@ -6,9 +7,9 @@ uref<FunctionDeclaration> FunctionDeclaration::parse(Lexer& lexer) {
     auto funcDecl = create_unique<FunctionDeclaration>();
 
     // Expect "method" keyword
-    if (!lexer.expectToken(METHOD)) {
+    if (!lexer.expectToken(FUNCTION)) {
         funcDecl->valid = false;
-        funcDecl->expected = tokenKindsToString({METHOD});
+        funcDecl->expected = tokenKindsToString({FUNCTION});
         funcDecl->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return funcDecl;
@@ -86,7 +87,15 @@ uref<FunctionDeclaration> FunctionDeclaration::parse(Lexer& lexer) {
 }
 
 Value FunctionDeclaration::execute(Scope& scope) {
-    // Store the function in the scope
-    //scope.setFunction(name.value, create_unique<FunctionDeclaration>(*this));
-    return NullValue;
+    
+    Function function;
+    function.body = create_reference<Block>(body);
+    function.parameters = {};
+    for(auto& param : parameters) {
+        FunctionParameter functionParameter;
+        functionParameter.name = param.name.value;
+        functionParameter.type = scope.getType(param.type.value);
+        function.parameters.push_back(functionParameter);
+    }
+    return Value(function);
 }

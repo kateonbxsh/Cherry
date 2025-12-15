@@ -6,7 +6,6 @@ void Type::defineTypes()
     RealType->setName("float");
     StringType->setName("string");
     BooleanType->setName("boolean");
-
 }
 
 void Type::setName(const string &name)

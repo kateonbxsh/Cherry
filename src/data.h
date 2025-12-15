@@ -4,6 +4,7 @@
 #include "macros.h"
 #include <variant>
 #include "types/type.h"
+#include "types/function.h"
 
 struct Value {
 
@@ -15,10 +16,11 @@ struct Value {
     Value(integer i);
     Value(real r);
     Value(string s);
+    Value(Function function);
 
     boolean initialized = true;
     reference<Type> type;
-    variant<real, string, integer, boolean, void*> value;
+    variant<real, string, integer, boolean, Function, void*> value;
     reference<Value> thrownException; //non-null when exception is thrown
 
 };

@@ -2,26 +2,32 @@
 
 #include <string>
 #include <map>
-#include <set>
 #include "data.h"
 #include "types/type.h"
 
 class Scope {
-
 public:
-    Scope();
+    explicit Scope(reference<Scope> parent = nullptr);
 
-    void setVariable(const string& name, const Value& value);
-    bool hasVariable(const string& name);
-    Value getVariable(const string& name);
+    // variables
+    void setVariable(const std::string& name, const Value& value);
+    bool hasVariable(const std::string& name) const;
+    Value getVariable(const std::string& name);
 
-    void addType(const string& name, reference<Type> type);
-    reference<Type> getType(const string& name);
+    // types
+    void addType(const std::string& name, reference<Type> type);
+    reference<Type> getType(const std::string& name);
 
-    void printVariables();
+    // scope management
+    reference<Scope> createChild();
+
+    void printVariables() const;
 
 private:
-    std::map<string, Value> variables = {};
-    std::map<string, reference<Type>> types = {};
+    reference<Scope> parent;
 
+    std::map<std::string, Value> variables;
+    std::map<std::string, reference<Type>> types;
+
+    Value makeUndefinedVariableError(const std::string& name) const;
 };

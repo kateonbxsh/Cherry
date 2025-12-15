@@ -1,4 +1,5 @@
 #include "data.h"
+#include "types/function.h"
 
 Value::Value(reference<Type>& type)
 {
@@ -28,4 +29,10 @@ Value::Value(string a)
 {
     type=StringType;
     value=a;
+}
+
+Value::Value(Function function)
+{
+    type=FunctionType;
+    value=function;
 }

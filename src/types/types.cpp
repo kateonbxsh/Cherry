@@ -4,3 +4,4 @@ reference<Type> IntegerType = create_reference<Type>(PrimitiveType::PRIMITIVE_IN
 reference<Type> RealType = create_reference<Type>(PrimitiveType::PRIMITIVE_REAL);
 reference<Type> StringType = create_reference<Type>(PrimitiveType::PRIMITIVE_STRING);
 reference<Type> BooleanType = create_reference<Type>(PrimitiveType::PRIMITIVE_BOOLEAN);
+reference<Type> FunctionType = create_reference<Type>(PrimitiveType::FUNCTION_TYPE);
