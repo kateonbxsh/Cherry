@@ -20,14 +20,16 @@ uref<Statement> GeneralStatement::parse(Lexer& lexer) {
         {"VariableDefinition", [](Lexer& l) { return VariableDefinition::parse(l); }},
         {"VariableAffectation", [](Lexer& l) { return VariableAffectation::parse(l); }},
         {"FunctionDeclaration", [](Lexer& l) { return FunctionDeclaration::parse(l); }},
-        {"FunctionStatement", [](Lexer& l) { return FunctionStatement::parse(l); }},
-        {"IfStatement", [](Lexer& l) { return IfStatement::parse(l); }}
+        {"IfStatement", [](Lexer& l) { return IfStatement::parse(l); }},
+        {"FunctionStatement", [](Lexer& l) { return FunctionStatement::parse(l); }} 
     };
 
     for (auto& [name, parser] : parsers) {
         if (DEBUG) std::cout << DEBUG_PREFIX << "Trying " << name << "::parse\n";
 
+        DEBUG_TABS++;
         auto stmt = parser(lexer);
+        DEBUG_TABS--;
 
         if (!stmt->valid) {
             if (DEBUG) std::cout << DEBUG_WARNING_PREFIX << name << " invalid\n";

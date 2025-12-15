@@ -81,6 +81,7 @@ uref<FunctionDeclaration> FunctionDeclaration::parse(Lexer& lexer) {
 
     funcDecl->body = move(bodyBlock);
     funcDecl->valid = true;
+    lexer.deletePosition();
     return funcDecl;
 }
 

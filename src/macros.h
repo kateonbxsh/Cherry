@@ -22,17 +22,20 @@ using uref = unique_ptr<T>;
 // Cherry prefix: pink background, bold white text
 #define CHERRY_PREFIX "\e[45m\e[1;37m Cherry \e[0m "
 
+#define DEBUG_TABS __debug_tabs
+extern int __debug_tabs;
+
 // Debug prefix: cherry prefix + DEBUG, cyan background, bold white text
-#define DEBUG_PREFIX "\e[46m\e[1;37m DEBUG \e[0m "
+#define DEBUG_PREFIX (std::string("\e[46m\e[1;37m DEBUG \e[0m ") + std::string(DEBUG_TABS * 4, ' '))
 
 // Debug error prefix: cherry + debug, red text
-#define DEBUG_ERROR_PREFIX DEBUG_PREFIX "\e[0;31m"
+#define DEBUG_ERROR_PREFIX DEBUG_PREFIX + "\e[0;31m"
 
 // Debug success prefix: cherry + debug, green text
-#define DEBUG_SUCCESS_PREFIX DEBUG_PREFIX "\e[0;32m"
+#define DEBUG_SUCCESS_PREFIX DEBUG_PREFIX + "\e[0;32m"
 
 // Debug warning prefix: cherry + debug, yellow text
-#define DEBUG_WARNING_PREFIX DEBUG_PREFIX "\e[0;33m"
+#define DEBUG_WARNING_PREFIX DEBUG_PREFIX + "\e[0;33m"
 
 // Compile error prefix: cherry + compile error, magenta background, bold white text
 #define COMPILE_ERROR_PREFIX "\e[41m\e[1;37m COMPILE ERROR \e[0m\e[1;31m "

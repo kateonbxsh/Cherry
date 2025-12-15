@@ -1,11 +1,6 @@
-string character = "AB";
-string booboo = character * 20;
+if (a and some_complex_expression and hoho) {
+    call();
+    dont_do_something(bad, bad, bad + not_so_bad(1 + 3 - BIG_BOMBOCLAAT_METHD(HEHE)));
 
-int a = true + true + true + true;
-
-method something(int a, int b) {
-    if a && b && c(50, c) {
-        dont();
-        dont_do_it(with_some_parameter, and_another + 50);
-    }
+    but_do_it() unless cock(cocked());
 }

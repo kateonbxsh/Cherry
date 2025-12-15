@@ -25,6 +25,7 @@ uref<FunctionStatement> FunctionStatement::parse(Lexer& lexer) {
     }
     funcStatement->call = move(call);
     funcStatement->valid = true;
+    lexer.deletePosition();
     return funcStatement;
 }
 

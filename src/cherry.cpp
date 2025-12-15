@@ -7,6 +7,7 @@
 
 using namespace std;
 bool __debug_mode = false;
+int __debug_tabs = 0;
 
 int main(int argCount, char ** args) {
 

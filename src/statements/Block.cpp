@@ -42,6 +42,7 @@ uref<Block> Block::parse(Lexer& lexer) {
 
     block->statements.push_back(move(stmt));
     block->valid = true;
+    lexer.deletePosition();
     return block;
 }
 

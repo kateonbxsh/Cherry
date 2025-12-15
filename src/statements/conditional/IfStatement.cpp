@@ -4,17 +4,38 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
     lexer.savePosition();
 
     auto ifStmt = create_unique<IfStatement>();
+
+    if (DEBUG) std::cout << DEBUG_PREFIX << "Entering IfStatement::parse\n";
+
     Token next = lexer.nextToken();
 
     // --- One-line FunctionCall if/unless ---
     if (next.kind != IF && next.kind != UNLESS) {
+
+        if (DEBUG) std::cout << DEBUG_PREFIX << "Trying one-line FunctionCall if/unless\n";
+
         lexer.back();
+        DEBUG_TABS++;
         auto potentialCall = FunctionCall::parse(lexer);
+        DEBUG_TABS--;
+
         if (potentialCall->valid) {
+            if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "FunctionCall parsed successfully\n";
+
             next = lexer.nextToken();
             if (next.kind == IF || next.kind == UNLESS) {
+
+                if (DEBUG) {
+                    std::cout << DEBUG_PREFIX
+                              << "Detected one-line "
+                              << (next.kind == UNLESS ? "unless" : "if")
+                              << "\n";
+                }
+
                 auto cond = Expression::parse(lexer);
                 if (!cond->valid) {
+                    if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid condition in one-line if\n";
+
                     ifStmt->valid = false;
                     ifStmt->expected = cond->expected;
                     ifStmt->lastToken = cond->lastToken;
@@ -23,6 +44,8 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
                 }
 
                 if (!lexer.expectToken(SEMICOLON)) {
+                    if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Missing semicolon in one-line if\n";
+
                     ifStmt->valid = false;
                     ifStmt->expected = tokenKindsToString({SEMICOLON});
                     ifStmt->lastToken = lexer.nextToken();
@@ -33,33 +56,55 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
                 auto bodyBlock = create_unique<Block>();
                 bodyBlock->statements.push_back(move(potentialCall));
 
-                ifStmt->clauses.push_back({move(cond), move(bodyBlock), next.kind == UNLESS});
+                ifStmt->clauses.push_back({
+                    move(cond),
+                    move(bodyBlock),
+                    next.kind == UNLESS
+                });
+
                 ifStmt->valid = true;
+
+                if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Parsed one-line if/unless statement\n";
+                lexer.deletePosition();
                 return ifStmt;
             } else {
-                // Not an if/unless after FunctionCall → not an IfStatement
-                lexer.rollPosition();
+                if (DEBUG) std::cout << DEBUG_WARNING_PREFIX << "FunctionCall not followed by if/unless\n";
+
                 ifStmt->valid = false;
                 ifStmt->expected = tokenKindsToString({IF, UNLESS});
-                ifStmt->lastToken = next;
+                ifStmt->lastToken = lexer.nextToken();
+                lexer.rollPosition();
                 return ifStmt;
             }
         }
-        // Not a FunctionCall → roll back and try normal if/unless
+
+        if (DEBUG) std::cout << DEBUG_PREFIX << "Not a FunctionCall, trying block if/unless\n";
+
         lexer.rollPosition();
         next = lexer.nextToken();
     }
 
     // --- Multi-clause block form ---
-    auto parseClause = [&](uref<Expression>& cond, uref<Block>& body, bool& isUnless) -> bool {
+    if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing block if/unless\n";
+
+    auto parseClause = [&](uref<Expression>& cond, uref<Block>& body) -> bool {
+        if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Parsing expression\n";
+        DEBUG_TABS++;
         cond = Expression::parse(lexer);
+        DEBUG_TABS--;
         if (!cond->valid) return false;
+
+        if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Parsing block\n";
+        DEBUG_TABS++;
         body = Block::parse(lexer);
+        DEBUG_TABS--;
         return body->valid;
     };
 
     while (true) {
         if (next.kind != IF && next.kind != UNLESS) {
+            if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected IF or UNLESS\n";
+
             ifStmt->valid = false;
             ifStmt->expected = tokenKindsToString({IF, UNLESS});
             ifStmt->lastToken = next;
@@ -70,7 +115,16 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
         IfClause clause;
         clause.isUnless = (next.kind == UNLESS);
 
-        if (!parseClause(clause.condition, clause.body, clause.isUnless)) {
+        if (DEBUG) {
+            std::cout << DEBUG_PREFIX
+                      << "Parsing "
+                      << (clause.isUnless ? "unless" : "if")
+                      << " clause\n";
+        }
+
+        if (!parseClause(clause.condition, clause.body)) {
+            if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid condition or block in clause\n";
+
             ifStmt->valid = false;
             ifStmt->expected = {"condition or block"};
             ifStmt->lastToken = lexer.nextToken();
@@ -80,25 +134,36 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
 
         ifStmt->clauses.push_back(move(clause));
 
+        if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Clause parsed successfully\n";
+
         next = lexer.peekToken();
         if (next.kind == ELSE) {
             lexer.nextToken(); // consume ELSE
             Token lookahead = lexer.peekToken();
+
             if (lookahead.kind == IF || lookahead.kind == UNLESS) {
-                lexer.nextToken(); // consume ELSE IF/UNLESS
+                if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing else-if / else-unless\n";
+
+                lexer.nextToken(); // consume IF/UNLESS
                 next = lookahead;
-                continue; // parse next clause
+                continue;
             } else {
-                // ELSE block
+                if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing else block\n";
+
                 auto elseBlock = Block::parse(lexer);
                 if (!elseBlock->valid) {
+                    if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid else block\n";
+
                     ifStmt->valid = false;
                     ifStmt->expected = elseBlock->expected;
                     ifStmt->lastToken = elseBlock->lastToken;
                     lexer.rollPosition();
                     return ifStmt;
                 }
+
                 ifStmt->elseClause = move(elseBlock);
+
+                if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Else block parsed\n";
                 break;
             }
         } else {
@@ -107,8 +172,12 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
     }
 
     ifStmt->valid = true;
+
+    if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "IfStatement parsed successfully\n";
+    lexer.deletePosition();
     return ifStmt;
 }
+
 
 Value IfStatement::execute(Scope& scope) {
     /*for (auto& clause : clauses) {

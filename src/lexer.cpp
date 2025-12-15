@@ -4,77 +4,154 @@
 Lexer::Lexer() = default;
 Lexer::Lexer(std::string data) {
 
-    static std::regex nameRegex(R"(\b[a-zA-Z_-][a-zA-Z0-9_-]*\b)");
-    static std::regex intRegex(R"(-?[0-9]+)");
-    static std::regex floatRegex(R"(-?(([0-9]*\.[0-9]*)|([0-9]+f)))");
-
     defineCharKinds();
+    parseData = std::move(data);
 
-    parseData = data;
-    std::string currentReadValue;
-    long long unsigned int i, pos = 0, line = 1, currentPos, currentLine;
-    bool inString = false, isName = false, isNumber = false; std::string currentString;
-    for(i = 0; i < data.length(); (i++, pos++)) {
-        std::string currentChar = std::string(1, data[i]);
-        TokenKind kindOfChar = tokenMap[currentChar];
-        if (!inString && kindOfChar == QUOTE) {
-            inString = true;
-            currentString = "";
-            continue;
-        } else if (inString && kindOfChar == QUOTE) {
-            inString = false;
-            tokens.push_back({STRING, currentString, 0, 0});
-            continue;
-        } else if (inString) {
-            currentString.append(currentChar);
-            continue;
-        }
-        if (
-                (isName && !std::regex_match(currentReadValue + currentChar, nameRegex)) ||
-                (isNumber && !std::regex_match(currentReadValue + currentChar, intRegex) &&
-                !std::regex_match(currentReadValue + currentChar, floatRegex)))
-        {
-            isName = false; isNumber = false;
-            Token result = convertToken(currentReadValue);
-            result.line = currentLine; result.pos = currentPos;
-            tokens.push_back(result);
-            currentReadValue.clear();
-        }
-        if (currentReadValue.empty() && kindOfChar == WHITESPACE) {
-            if (currentChar == "\n") { pos = 0; line++; }
+    size_t i = 0;
+    size_t pos = 0;
+    size_t line = 1;
+
+    auto pushToken = [&](TokenKind kind, const std::string& value, size_t p, size_t l) {
+        tokens.push_back({kind, value, (int)p, (int)l});
+    };
+
+    while (i < parseData.size()) {
+
+        char c = parseData[i];
+
+        // ---------- WHITESPACE ----------
+        if (c == ' ' || c == '\t' || c == '\r') {
+            i++;
+            pos++;
             continue;
         }
-        if (kindOfChar != WHITESPACE) {
-            if (currentReadValue.empty()) {
-                currentLine = line;
-                currentPos = pos;
+
+        if (c == '\n') {
+            i++;
+            line++;
+            pos = 0;
+            continue;
+        }
+
+        size_t startPos = pos;
+        size_t startLine = line;
+
+        // ---------- STRING ----------
+        if (c == '"') {
+            i++; pos++;
+            std::string value;
+
+            while (i < parseData.size() && parseData[i] != '"') {
+                if (parseData[i] == '\n') {
+                    line++;
+                    pos = 0;
+                } else {
+                    pos++;
+                }
+                value += parseData[i++];
             }
-            currentReadValue.append(currentChar);
-            if (std::regex_match(currentReadValue, nameRegex)) {
-                isName = true;
+
+            // Consume closing quote
+            if (i < parseData.size()) {
+                i++; pos++;
             }
-            if (std::regex_match(currentReadValue, intRegex) || std::regex_match(currentReadValue, floatRegex)) {
-                isNumber = true;
+
+            pushToken(STRING, value, startPos, startLine);
+            continue;
+        }
+
+        // ---------- IDENTIFIER / KEYWORD ----------
+        if (std::isalpha(c) || c == '_' || c == '-') {
+            std::string value;
+            while (i < parseData.size()) {
+                char ch = parseData[i];
+                if (std::isalnum(ch) || ch == '_' || ch == '-') {
+                    value += ch;
+                    i++; pos++;
+                } else {
+                    break;
+                }
+            }
+
+            // Keyword resolution happens HERE, not mid-token
+            auto it = tokenMap.find(value);
+            if (it != tokenMap.end()) {
+                pushToken(it->second, value, startPos, startLine);
+            } else {
+                pushToken(IDENTIFIER, value, startPos, startLine);
+            }
+            continue;
+        }
+
+        // ---------- NUMBER ----------
+        if (std::isdigit(c) || (c == '-' && i + 1 < parseData.size() && std::isdigit(parseData[i + 1]))) {
+            std::string value;
+            bool isFloat = false;
+
+            if (c == '-') {
+                value += c;
+                i++; pos++;
+            }
+
+            while (i < parseData.size() && std::isdigit(parseData[i])) {
+                value += parseData[i++];
+                pos++;
+            }
+
+            if (i < parseData.size() && parseData[i] == '.') {
+                isFloat = true;
+                value += '.';
+                i++; pos++;
+
+                while (i < parseData.size() && std::isdigit(parseData[i])) {
+                    value += parseData[i++];
+                    pos++;
+                }
+            }
+
+            pushToken(isFloat ? FLOAT : INTEGER, value, startPos, startLine);
+            continue;
+        }
+
+        // ---------- OPERATORS / PUNCTUATION ----------
+        // Try longest match first (2-char operators)
+        if (i + 1 < parseData.size()) {
+            std::string two = parseData.substr(i, 2);
+            auto it2 = tokenMap.find(two);
+            if (it2 != tokenMap.end()) {
+                pushToken(it2->second, two, startPos, startLine);
+                i += 2;
+                pos += 2;
+                continue;
             }
         }
-        if (i < data.length() - 1 && tokenMap[currentReadValue + data[i+1]] != NONE) continue;
-        if (tokenMap[currentReadValue] != NONE || kindOfChar == WHITESPACE) {
-            isNumber = false; isName = false;
-            Token result = convertToken(currentReadValue);
-            result.line = currentLine; result.pos = currentPos;
-            tokens.push_back(result);
-            currentReadValue.clear();
+
+        // Fallback to single character
+        std::string one(1, c);
+        auto it1 = tokenMap.find(one);
+        if (it1 != tokenMap.end()) {
+            pushToken(it1->second, one, startPos, startLine);
+            i++;
+            pos++;
+            continue;
         }
+
+        // ---------- UNKNOWN ----------
+        // Skip unknown characters safely
+        i++;
+        pos++;
     }
 
-};
+    pushToken(END_OF_FEED, "", pos, line);
+}
+
 
 Token Lexer::nextToken() {
     if (reader < tokens.size()) {
         return tokens.at(reader++);
     }
     reader++;
-    return {END_OF_FEED, "", 0, 0};
+    return {END_OF_FEED, "", 0, tokens.at(reader-2).line + 1};
 }
 
 void Lexer::defineCharKinds() {
