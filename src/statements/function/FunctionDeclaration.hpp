@@ -19,5 +19,5 @@ public:
 private:
     Token name;
     std::vector<Parameter> parameters;
-    uref<Block> body;
+    reference<Block> body;
 };

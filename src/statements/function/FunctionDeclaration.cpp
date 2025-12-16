@@ -89,7 +89,7 @@ uref<FunctionDeclaration> FunctionDeclaration::parse(Lexer& lexer) {
 Value FunctionDeclaration::execute(Scope& scope) {
     
     Function function;
-    function.body = create_reference<Block>(body);
+    function.body = body;
     function.parameters = {};
     for(auto& param : parameters) {
         FunctionParameter functionParameter;

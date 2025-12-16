@@ -7,6 +7,8 @@ uref<Block> Block::parse(Lexer& lexer) {
 
     Token next = lexer.nextToken();
 
+    std::cout << next.value << std::endl;
+
     // Case 1: Curly-brace block { ... }
     if (next.kind == LEFT_BRACE) {
         while (!lexer.expectToken(RIGHT_BRACE)) {

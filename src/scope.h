@@ -18,9 +18,6 @@ public:
     void addType(const std::string& name, reference<Type> type);
     reference<Type> getType(const std::string& name);
 
-    // scope management
-    reference<Scope> createChild();
-
     void printVariables() const;
 
 private:

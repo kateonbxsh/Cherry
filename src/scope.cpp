@@ -18,13 +18,6 @@ Scope::Scope(reference<Scope> parent)
 }
 
 // =======================
-// Child scope creation
-// =======================
-reference<Scope> Scope::createChild() {
-    return create_reference<Scope>(this);
-}
-
-// =======================
 // Variables
 // =======================
 void Scope::setVariable(const std::string& name, const Value& value) {

@@ -28,7 +28,7 @@ uref<ReturnStatement> ReturnStatement::parse(Lexer& lexer) {
 }
 
 
-Value FunctionCall::execute(Scope& scope) {
+Value ReturnStatement::execute(Scope& scope) {
 
     return NullValue;
 }

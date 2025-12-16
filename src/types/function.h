@@ -1,6 +1,7 @@
 #pragma once
 
 #include "type.h"
+#include <vector>
 
 class Block;
 class Value;

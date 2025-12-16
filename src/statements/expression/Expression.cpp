@@ -18,7 +18,6 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     using ExprParser = std::function<uref<Expression>(Lexer&)>;
     std::vector<ExprParser> parsers = {
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
-        [](Lexer& l) { return FunctionCall::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
     };
 
@@ -52,9 +51,8 @@ uref<Expression> Expression::parse(Lexer &lexer) {
 
     expression->expressionOperator = {NONE, "", 0, 0};
 
-    lexer.savePosition();
-
     if (lexer.expectToken(LEFT_PARENTHESIS)) {
+
         // this is a function call
         std::cout << DEBUG_PREFIX << "Expression is a method call\n";
         auto call = create_unique<FunctionCall>();
@@ -102,10 +100,10 @@ uref<Expression> Expression::parse(Lexer &lexer) {
 
             if (DEBUG) std::cout << DEBUG_PREFIX << "Comma found, parsing next argument\n";
         }
-
         expression->firstOperand = move(call);
     }
 
+    lexer.savePosition();
     auto potentialOperator = lexer.nextToken();
 
     if (isOperator(potentialOperator)) {
@@ -115,6 +113,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
                       << "\n";
         }
         expression->expressionOperator = potentialOperator;
+        lexer.deletePosition();
     } else {
         if (DEBUG) std::cout << DEBUG_PREFIX << "No operator found, single operand expression\n";
 
@@ -126,12 +125,14 @@ uref<Expression> Expression::parse(Lexer &lexer) {
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing second operand\n";
 
+    DEBUG_TABS++;
     auto potentialSecondOperand = Expression::parse(lexer);
+    DEBUG_TABS--;
+    
     if (potentialSecondOperand->valid) {
 
         expression->secondOperand = move(potentialSecondOperand);
         expression->valid = true;
-        lexer.deletePosition();
         lexer.deletePosition();
 
         if (expression->secondOperand->expressionOperator.kind != NONE) {

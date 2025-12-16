@@ -123,12 +123,26 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
                       << " clause\n";
         }
 
-        if (!parseClause(clause.condition, clause.body)) {
-            if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid condition or block in clause\n";
+        DEBUG_TABS++;
+        clause.condition = Expression::parse(lexer);
+        DEBUG_TABS--;
 
+        if (!clause.condition->valid) {
             ifStmt->valid = false;
-            ifStmt->expected = {"condition or block"};
-            ifStmt->lastToken = lexer.nextToken();
+            ifStmt->expected = clause.condition->expected;
+            ifStmt->lastToken = clause.condition->lastToken;
+            lexer.rollPosition();
+            return ifStmt;
+        }
+
+        DEBUG_TABS++;
+        clause.body = Block::parse(lexer);
+        DEBUG_TABS--;
+
+        if (!clause.body->valid) {
+            ifStmt->valid = false;
+            ifStmt->expected = clause.body->expected;
+            ifStmt->lastToken = clause.body->lastToken;
             lexer.rollPosition();
             return ifStmt;
         }

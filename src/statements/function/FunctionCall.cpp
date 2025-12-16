@@ -3,7 +3,9 @@
 #include "types/function.h"
 #include "FunctionDeclaration.hpp"
 
-uref<FunctionCall> FunctionCall::parse(Lexer& lexer) {}
+uref<FunctionCall> FunctionCall::parse(Lexer& lexer) {
+    return create_unique<FunctionCall>();
+}
 
 
 Value FunctionCall::execute(Scope& scope) {
