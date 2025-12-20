@@ -1,13 +1,12 @@
-#include "FunctionCall.hpp"
 #include "types/type.h"
-#include "FunctionStatement.hpp"
+#include "ExpressionStatement.hpp"
 
-uref<FunctionStatement> FunctionStatement::parse(Lexer& lexer) {
+uref<ExpressionStatement> ExpressionStatement::parse(Lexer& lexer) {
     
     lexer.savePosition();
-    auto funcStatement = create_unique<FunctionStatement>();
+    auto funcStatement = create_unique<ExpressionStatement>();
 
-    auto call = FunctionCall::parse(lexer);
+    auto call = Expression::parse(lexer);
     if (!call->valid) {
         funcStatement->valid = false;
         funcStatement->expected = call->expected;
@@ -23,12 +22,12 @@ uref<FunctionStatement> FunctionStatement::parse(Lexer& lexer) {
         lexer.rollPosition();
         return funcStatement;
     }
-    funcStatement->call = move(call);
+    funcStatement->expression = move(call);
     funcStatement->valid = true;
     lexer.deletePosition();
     return funcStatement;
 }
 
-Value FunctionStatement::execute(Scope& scope) {
-    return call->execute(scope);
+Value ExpressionStatement::execute(Scope& scope) {
+    return expression->execute(scope);
 }

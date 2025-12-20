@@ -16,6 +16,13 @@ private:
     uref<Expression> firstOperand = nullptr;
     uref<Expression> secondOperand = nullptr;
     Token expressionOperator;
+
+    bool conditional;
+    bool unlessCondition;
+    bool withElseValue;
+    uref<Expression> condition;
+    uref<Expression> elseValue;
+
 };
 
 class ExpressionParenWrapped : public Statement {

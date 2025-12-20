@@ -5,3 +5,5 @@ reference<Type> RealType = create_reference<Type>(PrimitiveType::PRIMITIVE_REAL)
 reference<Type> StringType = create_reference<Type>(PrimitiveType::PRIMITIVE_STRING);
 reference<Type> BooleanType = create_reference<Type>(PrimitiveType::PRIMITIVE_BOOLEAN);
 reference<Type> FunctionType = create_reference<Type>(PrimitiveType::FUNCTION_TYPE);
+reference<Type> AnonymousType = create_reference<Type>(ANON_TYPE);
+reference<Type> TypeType = create_reference<Type>(PrimitiveType::TYPE_TYPE);

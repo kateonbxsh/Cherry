@@ -21,6 +21,14 @@ uref<ReturnStatement> ReturnStatement::parse(Lexer& lexer) {
         return ret;
     }
 
+    if (!lexer.expectToken(SEMICOLON)) {
+        ret->valid = false;
+        ret->expected = tokenKindsToString({SEMICOLON});
+        ret->lastToken = lexer.nextToken();
+        lexer.rollPosition();
+        return ret;
+    }
+
     ret->expression = move(expr);
     ret->valid = true;
     lexer.deletePosition();
@@ -29,6 +37,7 @@ uref<ReturnStatement> ReturnStatement::parse(Lexer& lexer) {
 
 
 Value ReturnStatement::execute(Scope& scope) {
-
-    return NullValue;
+    auto value = expression->execute(scope);
+    value.returning = true;
+    return value;
 }

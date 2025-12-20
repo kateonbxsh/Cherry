@@ -10,10 +10,10 @@ typedef struct {
     Token type;
 } Parameter;
 
-class FunctionDeclaration : public Statement {
+class FunctionDefinition : public Statement {
 public:
 
-    static uref<FunctionDeclaration> parse(Lexer& lexer);
+    static uref<FunctionDefinition> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:

@@ -10,6 +10,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 
 # Source files
 set(SOURCE_FILES
+    src/types/type.cpp
     src/types/types.cpp
     src/cherry.cpp
     src/expressions.cpp
@@ -26,9 +27,9 @@ set(SOURCE_FILES
     src/statements/variable/VariableDefinition.cpp
     src/statements/variable/VariableAffectation.cpp
     src/statements/expression/Expression.cpp
-    src/statements/function/FunctionDeclaration.cpp
+    src/statements/function/FunctionDefinition.cpp
     src/statements/function/FunctionCall.cpp
-    src/statements/function/FunctionStatement.cpp
+    src/statements/function/ExpressionStatement.cpp
     src/statements/function/ReturnStatement.cpp
     src/statements/conditional/IfStatement.cpp
 )

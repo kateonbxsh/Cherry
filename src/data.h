@@ -18,10 +18,12 @@ struct Value {
     Value(string s);
     Value(Function function);
 
-    boolean initialized = true;
+    static Value Uninitialized(reference<Type>& type);
+
     reference<Type> type;
-    variant<real, string, integer, boolean, Function, void*> value;
+    variant<real, string, integer, boolean, Function, reference<Type>, void*> value;
     reference<Value> thrownException; //non-null when exception is thrown
+    boolean returning = false; // returning from current method
 
 };
 

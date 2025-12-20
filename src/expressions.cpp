@@ -75,6 +75,12 @@ std::string stringify(const Value& value) {
             return std::to_string(getValue<integer>(value));
         case PRIMITIVE_BOOLEAN:
             return getValue<boolean>(value) ? "true" : "false";
+        case FUNCTION_TYPE:
+            return "<function>";
+        case TYPE_TYPE: {
+            auto type = get<reference<Type>>(value.value);
+            return "<type " + type->getName() + ">";
+        }
         default:
             return "null";
     }

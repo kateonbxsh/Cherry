@@ -78,15 +78,31 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
 
 Value VariableDefinition::execute(Scope& scope) {
 
-    reference<Type> type = scope.getType(this->type.value);
+    Value type = scope.getVariable(this->type.value);
     auto name = this->name.value;
+
+    if (!inferred) {
+        if (type.type != TypeType) { // wtf am i doing atp
+            Value ret;
+            ret.thrownException = create_reference<Value>(
+                "type value is not a type"
+            );
+            return ret;
+        }
+        auto typeType = get<reference<Type>>(type.value);
+        if (expression == nullptr) {
+            auto value = Value::Uninitialized(typeType);
+            scope.setVariable(name, value);
+            return value;
+        }
+    }
 
     if (this->expression != nullptr) {
         auto value = this->expression->execute(scope);
         scope.setVariable(name, value);
         return value;
     } else {
-        scope.setVariable(name, Value(type));
+        
         return NullValue;
     }
 

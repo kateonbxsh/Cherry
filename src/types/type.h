@@ -6,6 +6,8 @@
 enum PrimitiveType {
 
     NOT_PRIMITIVE,
+    TYPE_TYPE,
+    ANON_TYPE,
     PRIMITIVE_INTEGER,
     PRIMITIVE_REAL,
     PRIMITIVE_STRING,
@@ -40,3 +42,5 @@ extern reference<Type> RealType;
 extern reference<Type> StringType;
 extern reference<Type> BooleanType;
 extern reference<Type> FunctionType;
+extern reference<Type> TypeType;
+extern reference<Type> AnonymousType;

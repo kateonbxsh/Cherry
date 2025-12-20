@@ -1,6 +1,7 @@
 #include "scope.h"
 #include <iostream>
 #include "expressions.h"
+#include "types/type.h"
 
 // =======================
 // Constructor
@@ -10,10 +11,12 @@ Scope::Scope(reference<Scope> parent)
 
     // Only root scope defines builtins
     if (!parent) {
-        addType("int", IntegerType);
-        addType("boolean", BooleanType);
-        addType("string", StringType);
-        addType("real", RealType);
+        Type::defineTypes();
+        setVariable("int", Value(IntegerType));
+        setVariable("boolean", Value(BooleanType));
+        setVariable("string", Value(StringType));
+        setVariable("real", Value(RealType));
+        setVariable("type", Value(TypeType));
     }
 }
 
@@ -21,6 +24,7 @@ Scope::Scope(reference<Scope> parent)
 // Variables
 // =======================
 void Scope::setVariable(const std::string& name, const Value& value) {
+    if (DEBUG) std::cout << "Setting variable " << name << " of type " << value.type->getName() << std::endl;;
     variables[name] = value;
 }
 
@@ -38,8 +42,6 @@ Value Scope::getVariable(const std::string& name) {
     // local
     if (variables.contains(name)) {
         const Value& val = variables.at(name);
-        if (!val.initialized)
-            return NullValue;
         return val;
     }
 
@@ -49,23 +51,6 @@ Value Scope::getVariable(const std::string& name) {
 
     // undefined
     return makeUndefinedVariableError(name);
-}
-
-// =======================
-// Types
-// =======================
-void Scope::addType(const std::string& name, reference<Type> type) {
-    types[name] = type;
-}
-
-reference<Type> Scope::getType(const std::string& name) {
-    if (types.contains(name))
-        return types[name];
-
-    if (parent)
-        return parent->getType(name);
-
-    return nullptr;
 }
 
 // =======================

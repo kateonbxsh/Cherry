@@ -203,6 +203,7 @@ void Lexer::defineCharKinds() {
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
     tokenMap["unless"] = UNLESS;
+    tokenMap["function"] = FUNCTION;
     tokenMap["method"] = METHOD;
     tokenMap["return"] = RETURN;
     tokenMap["null"] = NULL_TOKEN;

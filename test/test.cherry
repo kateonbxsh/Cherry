@@ -1,6 +1,22 @@
-if (a and some_complex_expression and hoho) {
-    call();
-    dont_do_something(bad, bad, bad + not_so_bad(1 + 3 - BIG_BOMBOCLAAT_METHD(HEHE)));
-
-    but_do_it() unless cock(cocked());
+function make_adder(type t) {
+    function adder(t a, t b) {
+        return a + b;
+    }
+    return adder;
 }
+
+function helloFactory(string name) {
+    string hello = "Hello, ";
+    function func() {
+        return hello + name + "!";
+    }
+    return func;
+}
+
+int a = make_adder(int)(1, 2);
+
+infer worldMaker = helloFactory("World");
+infer miawMaker = helloFactory("Miaw");
+
+string result1 = worldMaker();
+string result2 = miawMaker();

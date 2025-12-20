@@ -5,6 +5,7 @@
 
 class Block;
 class Value;
+class Scope;
 
 struct FunctionParameter {
     string name;
@@ -14,5 +15,6 @@ struct FunctionParameter {
 struct Function {
     reference<Value> __this;
     std::vector<FunctionParameter> parameters;
-    reference<Block> body; 
+    reference<Scope> closure;
+    reference<Block> body;
 };

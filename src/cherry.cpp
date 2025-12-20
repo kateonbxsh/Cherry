@@ -39,7 +39,6 @@ int main(int argCount, char ** args) {
     Parser parser(lexer); 
     auto block = parser.parse();
     if (block != nullptr) {
-        cout << "Interpreting.." << endl;
         Interpreter interpreter;
         interpreter.interpret(block);
         return 0;

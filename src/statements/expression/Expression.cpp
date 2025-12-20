@@ -51,10 +51,10 @@ uref<Expression> Expression::parse(Lexer &lexer) {
 
     expression->expressionOperator = {NONE, "", 0, 0};
 
-    if (lexer.expectToken(LEFT_PARENTHESIS)) {
+    while (lexer.expectToken(LEFT_PARENTHESIS)) {
 
         // this is a function call
-        std::cout << DEBUG_PREFIX << "Expression is a method call\n";
+        if (DEBUG) std::cout << DEBUG_PREFIX << "Expression is a method call\n";
         auto call = create_unique<FunctionCall>();
         call->function = move(expression);
 
@@ -101,6 +101,44 @@ uref<Expression> Expression::parse(Lexer &lexer) {
             if (DEBUG) std::cout << DEBUG_PREFIX << "Comma found, parsing next argument\n";
         }
         expression->firstOperand = move(call);
+    }
+
+    // conditional
+    if (lexer.expectToken(IF) || lexer.expectToken(UNLESS)) {
+
+        if (DEBUG) std::cout << DEBUG_PREFIX << "Conditional expression\n";
+        expression->conditional = true;
+        expression->unlessCondition = lexer.currentToken().kind == UNLESS;
+
+        if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing expression\n";
+        DEBUG_TABS++;
+        auto condition = Expression::parse(lexer);
+        DEBUG_TABS--;
+        if (!condition->valid) {
+            lexer.rollPosition();
+            expression->valid = false;
+            expression->expected = condition->expected;
+            expression->lastToken = condition->lastToken;
+            return expression;
+        }
+        expression->condition = move(condition);
+
+        expression->withElseValue = false;
+        if (lexer.expectToken(ELSE)) {
+            expression->withElseValue = true;
+            if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing elseValue\n";
+            DEBUG_TABS++;
+            auto elseValue = Expression::parse(lexer);
+            DEBUG_TABS--;
+            if (!elseValue->valid) {
+                lexer.rollPosition();
+                expression->valid = false;
+                expression->expected = elseValue->expected;
+                expression->lastToken = elseValue->lastToken;
+                return expression;
+            }
+            expression->elseValue = move(elseValue);
+        }
     }
 
     lexer.savePosition();
@@ -174,7 +212,7 @@ uref<Expression> ExpressionParenWrapped::parse(Lexer& lexer) {
 
     lexer.savePosition();
 
-    if (DEBUG) std::cout << DEBUG_PREFIX << "Trying ExpressionParenWrapped\n";
+    if (DEBUG) std::cout << DEBUG_PREFIX << "Trying ExpressionParenWrapped\n";  
 
     if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         if (DEBUG) std::cout << DEBUG_WARNING_PREFIX << "No '(' found\n";
@@ -261,6 +299,14 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
 Value Expression::execute(Scope& scope) {
     
     auto value1 = this->firstOperand->execute(scope);
+    if (conditional) {
+        auto cond = isTruthy(condition->execute(scope));
+        if (unlessCondition) cond = !cond;
+        if (!cond) {
+            value1 = NullValue;
+            if (withElseValue) value1 = elseValue->execute(scope); 
+        }
+    }
     if (value1.thrownException != nullptr) return value1;
 
     if (this->expressionOperator.kind != NONE) {
