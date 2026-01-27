@@ -113,11 +113,11 @@ Value FunctionDefinition::execute(Scope& scope) {
             return exc;
         }
         functionParameter.type = get<reference<Type>>(type.value);
-        childScope.setVariable(param.name.value, Value::Uninitialized(functionParameter.type));
+        childScope.addVariable(param.name.value, Value::Uninitialized(functionParameter.type));
         function.parameters.push_back(functionParameter);
     }
     function.closure = create_reference<Scope>(scope);
     auto f = Value(function);
-    scope.setVariable(name.value, f);
+    scope.addVariable(name.value, f);
     return f;
 }

@@ -45,7 +45,7 @@ Value FunctionCall::execute(Scope& scope) {
             );
             return exception;
         }
-        funcScope.setVariable(function.parameters[i].name, argValues[i]);
+        funcScope.addVariable(function.parameters[i].name, argValues[i]);
     }
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Entering main block" << stringify(func) << std::endl;

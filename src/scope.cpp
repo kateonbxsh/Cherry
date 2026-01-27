@@ -12,20 +12,33 @@ Scope::Scope(reference<Scope> parent)
     // Only root scope defines builtins
     if (!parent) {
         Type::defineTypes();
-        setVariable("int", Value(IntegerType));
-        setVariable("boolean", Value(BooleanType));
-        setVariable("string", Value(StringType));
-        setVariable("real", Value(RealType));
-        setVariable("type", Value(TypeType));
+        addVariable("int", Value(IntegerType));
+        addVariable("boolean", Value(BooleanType));
+        addVariable("string", Value(StringType));
+        addVariable("real", Value(RealType));
+        addVariable("type", Value(TypeType));
     }
 }
 
 // =======================
 // Variables
 // =======================
+void Scope::addVariable(const std::string& name, const Value& initial) {
+    if (DEBUG) std::cout << "Adding variable " << name << " of type " << initial.type->getName() << std::endl;;
+    variables[name] = initial;
+}
+
 void Scope::setVariable(const std::string& name, const Value& value) {
     if (DEBUG) std::cout << "Setting variable " << name << " of type " << value.type->getName() << std::endl;;
-    variables[name] = value;
+    if (variables.contains(name)) {
+        variables[name] = value;
+        return;
+    }
+    if (parent) {
+        parent->setVariable(name, value);
+    }
+    return;
+    
 }
 
 bool Scope::hasVariable(const std::string& name) const {
@@ -39,6 +52,8 @@ bool Scope::hasVariable(const std::string& name) const {
 }
 
 Value Scope::getVariable(const std::string& name) {
+    
+    if (DEBUG) std::cout << "Getting variable " << name << std::endl;;
     // local
     if (variables.contains(name)) {
         const Value& val = variables.at(name);

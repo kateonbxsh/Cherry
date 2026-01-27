@@ -317,7 +317,8 @@ const std::vector<std::string> tokenKindStrings = {
     "semicolon",
     "colon",
     "equals",
-    "begin_of_operators",
+    
+    "begin_of_binary_operators",
     "comparative_equals", "comparative_not_equals",
     "bigger_than", "bigger_or_equal",
     "smaller_than", "smaller_or_equal",
@@ -326,9 +327,14 @@ const std::vector<std::string> tokenKindStrings = {
     "plus",
     "minus",
     "bitwise_and", "bitwise_or", "bitwise_xor",
-    "and", "or", "xor", "not",
+    "and", "or", "xor", 
     "modulo", "div",
-    "end_of_operators",
+    "end_of_binary_operators",
+
+    "begin_of_unary_operators",
+    "not",
+    "end_of_unary_operators",
+
     "quote",
     "end_of_feed"
 };

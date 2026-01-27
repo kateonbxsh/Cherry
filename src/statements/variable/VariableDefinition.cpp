@@ -92,14 +92,14 @@ Value VariableDefinition::execute(Scope& scope) {
         auto typeType = get<reference<Type>>(type.value);
         if (expression == nullptr) {
             auto value = Value::Uninitialized(typeType);
-            scope.setVariable(name, value);
+            scope.addVariable(name, value);
             return value;
         }
     }
 
     if (this->expression != nullptr) {
         auto value = this->expression->execute(scope);
-        scope.setVariable(name, value);
+        scope.addVariable(name, value);
         return value;
     } else {
         

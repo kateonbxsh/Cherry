@@ -23,7 +23,7 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
     varAff->selfOperation = NONE;
 
     next = lexer.nextToken();
-    if (isOperator(next)) {
+    if (isBinaryOperator(next.kind)) {
         varAff->selfOperation = next.kind;
     } else {
         lexer.back();
@@ -72,7 +72,7 @@ Value VariableAffectation::execute(Scope& scope) {
     if (value.thrownException != nullptr) return value;
 
     if (selfOperation != NONE) {
-        value = performOperator(scope.getVariable(name.value), value, selfOperation);
+        value = performBinaryOperator(scope.getVariable(name.value), value, selfOperation);
     }
     scope.setVariable(name.value, value);
     return value;

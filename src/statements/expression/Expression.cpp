@@ -17,6 +17,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
 
     using ExprParser = std::function<uref<Expression>(Lexer&)>;
     std::vector<ExprParser> parsers = {
+        [](Lexer& l) { return UnaryExpression::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
     };
@@ -144,10 +145,10 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     lexer.savePosition();
     auto potentialOperator = lexer.nextToken();
 
-    if (isOperator(potentialOperator)) {
+    if (isBinaryOperator(potentialOperator.kind)) {
         if (DEBUG) {
             std::cout << DEBUG_PREFIX
-                      << "Operator found: " << potentialOperator.value
+                      << "Binary operator found: " << potentialOperator.value
                       << "\n";
         }
         expression->expressionOperator = potentialOperator;
@@ -295,6 +296,36 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
     return expression;
 }
 
+uref<Expression> UnaryExpression::parse(Lexer& lexer) {
+
+    lexer.savePosition();
+    auto notExpr = create_unique<Expression>();
+
+    Token op = lexer.nextToken();
+
+    if (!isUnaryOperator(op.kind)) {
+        lexer.rollPosition();
+        notExpr->expected = {"unary operator"};
+        notExpr->valid = false;
+        return notExpr;
+    }
+
+    auto expr = Expression::parse(lexer);
+    if (!expr->valid) {
+        notExpr->valid = false;
+        notExpr->lastToken = expr->lastToken;
+        notExpr->expected = expr->expected;
+        lexer.rollPosition();
+        return notExpr;
+    }
+
+    lexer.deletePosition();
+    notExpr->firstOperand = move(expr);
+    notExpr->expressionOperator = op;
+    notExpr->valid = true;
+    return notExpr;
+
+}
 
 Value Expression::execute(Scope& scope) {
     
@@ -310,10 +341,15 @@ Value Expression::execute(Scope& scope) {
     if (value1.thrownException != nullptr) return value1;
 
     if (this->expressionOperator.kind != NONE) {
+        TokenKind opKind = this->expressionOperator.kind;
+        if (isUnaryOperator(opKind)) {
+            return performUnaryOperator(value1, opKind);
+        }
+
         auto value2 = this->secondOperand->execute(scope);
         if (value2.thrownException != nullptr) return value2;
 
-        return performOperator(value1, value2, this->expressionOperator.kind);
+        return performBinaryOperator(value1, value2, opKind);
 
     }
 
@@ -362,5 +398,8 @@ Value ExpressionValue::execute(Scope &scope) {
             return scope.getVariable(token.value);
         }
     }
+}
 
+Value UnaryExpression::execute(Scope &scope) {
+    return Value((boolean) !isTruthy(this->expression->execute(scope)));
 }

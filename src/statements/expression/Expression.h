@@ -11,8 +11,6 @@ public:
     static uref<Expression> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
-private:
-
     uref<Expression> firstOperand = nullptr;
     uref<Expression> secondOperand = nullptr;
     Token expressionOperator;
@@ -43,5 +41,18 @@ public:
 private:
 
     Token identifier;
+
+};
+
+class UnaryExpression : public Expression {
+
+public:
+
+    static uref<Expression> parse(Lexer& lexer);
+    Value execute(Scope& scope) override;
+
+private:
+
+    uref<Expression> expression;
 
 };

@@ -4,12 +4,14 @@
 #include "lexer.h"
 
 
-bool isOperator(const Token& token);
+bool isUnaryOperator(const TokenKind& kind);
+bool isBinaryOperator(const TokenKind& kind);
 bool isTruthy(const Value& value);
 int precedence(const Token& token);
 string stringify(const Value& value);
 
-Value performOperator(const Value& value1, const Value& value2, TokenKind op);
+Value performUnaryOperator(const Value& value1, TokenKind op);
+Value performBinaryOperator(const Value& value1, const Value& value2, TokenKind op);
 
 boolean isNumeric(const Value& value);
 boolean areNumericTypes(const Value& value1, const Value& value2);
