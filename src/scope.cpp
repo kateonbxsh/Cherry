@@ -17,6 +17,7 @@ Scope::Scope(reference<Scope> parent)
         addVariable("string", Value(StringType));
         addVariable("real", Value(RealType));
         addVariable("type", Value(TypeType));
+        addVariable("function", Value(FunctionType));
     }
 }
 

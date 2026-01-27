@@ -27,7 +27,7 @@ set(SOURCE_FILES
     src/statements/variable/VariableDefinition.cpp
     src/statements/variable/VariableAffectation.cpp
     src/statements/expression/Expression.cpp
-    src/statements/function/FunctionDefinition.cpp
+    src/statements/function/LambdaExpression.cpp
     src/statements/function/FunctionCall.cpp
     src/statements/function/ExpressionStatement.cpp
     src/statements/function/ReturnStatement.cpp

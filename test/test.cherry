@@ -1,37 +1,37 @@
-function make_adder(type t) {
-    function adder(t a, t b) {
+function make_adder = (type t) => {
+    function adder = (t a, t b) => {
         return a + b;
-    }
+    };
     return adder;
-}
+};
 
 int cnt = 1;
 
-function helloFactory(string name) {
+function helloFactory = (string name) => {
     string hello = "Hello, ";
-    function func() {
+    function func = () => {
         cnt += 1;
         return hello + name + ", " + cnt + "!";
-    }
+    };
     return func;
-}
+};
 
-function supernest() {
-    function nest1() {
-        function nest2() {
-            function nest3() {
+function supernest = () => {
+    function nest1 = () => {
+        function nest2 = () => {
+            function nest3 = () => {
                 int secret_value = 5;
-                function secret_value_returner() {
+                function secret_value_returner = () => {
                     return secret_value;
-                }
+                };
                 return secret_value_returner;
-            }
+            };
             return nest3;
-        }
+        };
         return nest2;
-    }
+    };
     return nest1;
-}
+};
 
 int a = make_adder(int)(1, 2);
 

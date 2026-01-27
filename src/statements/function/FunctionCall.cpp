@@ -1,7 +1,7 @@
 #include "FunctionCall.hpp"
 #include "types/type.h"
 #include "types/function.h"
-#include "FunctionDefinition.hpp"
+#include "LambdaExpression.hpp"
 #include <expressions.h>
 
 uref<FunctionCall> FunctionCall::parse(Lexer& lexer) {

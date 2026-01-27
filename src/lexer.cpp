@@ -162,6 +162,7 @@ void Lexer::defineCharKinds() {
     tokenMap["}"] = RIGHT_BRACE;
     tokenMap["("] = LEFT_PARENTHESIS;
     tokenMap[")"] = RIGHT_PARENTHESIS;
+    tokenMap["=>"] = ARROW;
     tokenMap[";"] = SEMICOLON;
     tokenMap[":"] = COLON;
     tokenMap[","] = COMMA;
@@ -203,8 +204,6 @@ void Lexer::defineCharKinds() {
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
     tokenMap["unless"] = UNLESS;
-    tokenMap["function"] = FUNCTION;
-    tokenMap["method"] = METHOD;
     tokenMap["return"] = RETURN;
     tokenMap["null"] = NULL_TOKEN;
     tokenMap["true"] = TRUE;
@@ -304,8 +303,6 @@ const std::vector<std::string> tokenKindStrings = {
     "if",
     "unless",
     "else",
-    "function",
-    "method",
     "return",
     "right_parenthesis",
     "left_parenthesis",
@@ -313,6 +310,7 @@ const std::vector<std::string> tokenKindStrings = {
     "left_bracket",
     "right_brace",
     "left_brace",
+    "arrow",
     "comma",
     "semicolon",
     "colon",

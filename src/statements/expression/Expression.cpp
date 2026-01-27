@@ -1,6 +1,7 @@
 #include <data.h>
 #include "statements/expression/Expression.h"
 #include "statements/function/FunctionCall.hpp"
+#include "statements/function/LambdaExpression.hpp"
 #include <expressions.h>
 #include <functional>
 
@@ -20,6 +21,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
         [](Lexer& l) { return UnaryExpression::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
+        [](Lexer& l) { return LambdaExpression::parse(l); },
     };
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Trying to parse first operand\n";

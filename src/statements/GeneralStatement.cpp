@@ -2,7 +2,6 @@
 #include "GeneralStatement.h"
 #include "variable/VariableDefinition.h"
 #include "variable/VariableAffectation.h"
-#include "function/FunctionDefinition.hpp"
 #include "function/ExpressionStatement.hpp"
 #include "conditional/IfStatement.hpp"
 #include "function/ReturnStatement.hpp"
@@ -20,7 +19,6 @@ uref<Statement> GeneralStatement::parse(Lexer& lexer) {
     std::vector<std::pair<std::string, ParserFunc>> parsers = {
         {"VariableDefinition", [](Lexer& l) { return VariableDefinition::parse(l); }},
         {"VariableAffectation", [](Lexer& l) { return VariableAffectation::parse(l); }},
-        {"FunctionDefinition", [](Lexer& l) { return FunctionDefinition::parse(l); }},
         {"IfStatement", [](Lexer& l) { return IfStatement::parse(l); }},
         {"ExpressionStatement", [](Lexer& l) { return ExpressionStatement::parse(l); }},
         {"ReturnStatement", [](Lexer& l) { return ReturnStatement::parse(l); }}
