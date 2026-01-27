@@ -13,6 +13,10 @@ public:
     Token lastToken;
     std::vector<string> expected;
 
+    void invalidExpected(std::initializer_list<TokenKind> kinds, Lexer& lex);
+    void invalidExpected(const std::vector<TokenKind>& kinds, Lexer& lex);
+    void invalidFrom(const Statement& other);
+
 };
 
 class NotAStatement : public Statement {

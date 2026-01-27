@@ -301,31 +301,31 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
 uref<Expression> UnaryExpression::parse(Lexer& lexer) {
 
     lexer.savePosition();
-    auto notExpr = create_unique<Expression>();
+    auto unaryExpr = create_unique<Expression>();
 
     Token op = lexer.nextToken();
 
     if (!isUnaryOperator(op.kind)) {
         lexer.rollPosition();
-        notExpr->expected = {"unary operator"};
-        notExpr->valid = false;
-        return notExpr;
+        unaryExpr->expected = {"unary operator"};
+        unaryExpr->valid = false;
+        return unaryExpr;
     }
 
     auto expr = Expression::parse(lexer);
     if (!expr->valid) {
-        notExpr->valid = false;
-        notExpr->lastToken = expr->lastToken;
-        notExpr->expected = expr->expected;
+        unaryExpr->valid = false;
+        unaryExpr->lastToken = expr->lastToken;
+        unaryExpr->expected = expr->expected;
         lexer.rollPosition();
-        return notExpr;
+        return unaryExpr;
     }
 
     lexer.deletePosition();
-    notExpr->firstOperand = move(expr);
-    notExpr->expressionOperator = op;
-    notExpr->valid = true;
-    return notExpr;
+    unaryExpr->firstOperand = move(expr);
+    unaryExpr->expressionOperator = op;
+    unaryExpr->valid = true;
+    return unaryExpr;
 
 }
 
@@ -344,9 +344,6 @@ Value Expression::execute(Scope& scope) {
 
     if (this->expressionOperator.kind != NONE) {
         TokenKind opKind = this->expressionOperator.kind;
-        if (isUnaryOperator(opKind)) {
-            return performUnaryOperator(value1, opKind);
-        }
 
         auto value2 = this->secondOperand->execute(scope);
         if (value2.thrownException != nullptr) return value2;
@@ -403,5 +400,5 @@ Value ExpressionValue::execute(Scope &scope) {
 }
 
 Value UnaryExpression::execute(Scope &scope) {
-    return Value((boolean) !isTruthy(this->expression->execute(scope)));
+    return performUnaryOperator(this->expression->execute(scope), this->expressionOperator.kind);
 }

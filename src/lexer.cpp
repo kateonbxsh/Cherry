@@ -113,8 +113,7 @@ Lexer::Lexer(std::string data) {
             continue;
         }
 
-        // ---------- OPERATORS / PUNCTUATION ----------
-        // Try longest match first (2-char operators)
+        // try longest match first (2-char operators)
         if (i + 1 < parseData.size()) {
             std::string two = parseData.substr(i, 2);
             auto it2 = tokenMap.find(two);
@@ -126,7 +125,6 @@ Lexer::Lexer(std::string data) {
             }
         }
 
-        // Fallback to single character
         std::string one(1, c);
         auto it1 = tokenMap.find(one);
         if (it1 != tokenMap.end()) {
@@ -136,8 +134,6 @@ Lexer::Lexer(std::string data) {
             continue;
         }
 
-        // ---------- UNKNOWN ----------
-        // Skip unknown characters safely
         i++;
         pos++;
     }
@@ -204,10 +200,16 @@ void Lexer::defineCharKinds() {
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
     tokenMap["unless"] = UNLESS;
+    tokenMap["repeat"] = REPEAT;
     tokenMap["return"] = RETURN;
     tokenMap["null"] = NULL_TOKEN;
     tokenMap["true"] = TRUE;
     tokenMap["false"] = FALSE;
+    tokenMap["for"] = FOR;
+    tokenMap["while"] = WHILE;
+    tokenMap["do"] = DO;
+    tokenMap["until"] = UNTIL;
+    tokenMap["times"] = REPEAT_TIMES;
 
     tokenMap[""] = END_OF_FEED;
 
@@ -304,6 +306,12 @@ const std::vector<std::string> tokenKindStrings = {
     "unless",
     "else",
     "return",
+    "for",
+    "while",
+    "repeat",
+    "do",
+    "until",
+    "times",
     "right_parenthesis",
     "left_parenthesis",
     "right_bracket",

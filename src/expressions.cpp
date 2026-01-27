@@ -216,6 +216,16 @@ static Value le(const Value& a, const Value& b) {
     return Value((boolean) !firstIsBigger(a, b));
 }
 
+static Value negative(const Value& a) {
+    if (a.type == IntegerType)
+        return Value(- getNumericValueAsInt(a));
+    return Value(- getNumericValueAsReal(a));
+}
+
+static Value positive(const Value& a) {
+    return a;
+}
+
 }
 
 /* ────────────────────────────────────────────────────────────── *
@@ -283,6 +293,12 @@ static std::unordered_map<TokenKind, BinaryOp> numericBinaryTable = {
     {SMALLER_OR_EQUAL, numeric_ops::le},
 };
 
+static std::unordered_map<TokenKind, UnaryOp> numericUnaryTable = {
+    {PLUS, numeric_ops::positive},
+    {MINUS, numeric_ops::negative}
+};
+
+
 static std::unordered_map<TokenKind, BinaryOp> stringBinaryTable = {
     {PLUS, string_ops::add},
     {TIMES, string_ops::multiply},
@@ -305,6 +321,9 @@ static std::unordered_map<TokenKind, UnaryOp> booleanUnaryTable = {
 Value performUnaryOperator(const Value& a, TokenKind op) {
     if (booleanUnaryTable.count(op) && (a.type == BooleanType)) {
         return booleanUnaryTable[op](a);
+    }
+    if (numericUnaryTable.count(op) && (isNumeric(a))) {
+        return numericUnaryTable[op](a);
     }
     return op_error(op, a);
 }
@@ -335,7 +354,7 @@ bool isBinaryOperator(const TokenKind& kind) {
 }
 
 bool isUnaryOperator(const TokenKind& kind) {
-    return (kind > BEGIN_OF_UNARY_OPERATORS && kind < END_OF_UNARY_OPERATORS);
+    return (kind > BEGIN_OF_UNARY_OPERATORS && kind < END_OF_UNARY_OPERATORS) || kind == MINUS || kind == PLUS;
 }
 
 int precedence(const Token& token) {

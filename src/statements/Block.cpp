@@ -5,10 +5,7 @@ uref<Block> Block::parse(Lexer& lexer) {
     lexer.savePosition();
     auto block = create_unique<Block>();
 
-    Token next = lexer.nextToken();
-
-    // Case 1: Curly-brace block { ... }
-    if (next.kind == LEFT_BRACE) {
+    if (lexer.expectToken(LEFT_BRACE)) {
         while (!lexer.expectToken(RIGHT_BRACE)) {
 
             auto stmt = GeneralStatement::parse(lexer);
@@ -28,8 +25,6 @@ uref<Block> Block::parse(Lexer& lexer) {
         return block;
     }
 
-    // Case 2: Inline single statement
-    lexer.back(); // put back the token for statement parsing
     auto stmt = GeneralStatement::parse(lexer);
 
     if (!stmt->valid) {

@@ -21,6 +21,25 @@ uref<Statement> getFurthestInvalidStatement(const std::vector<uref<Statement>>& 
     return furthestStatement;
 }
 
+void Statement::invalidExpected(std::initializer_list<TokenKind> kinds, Lexer& lex) {
+    valid = false;
+    expected = tokenKindsToString(std::vector<TokenKind>(kinds));
+    lastToken = lex.currentToken();
+}
+
+void Statement::invalidExpected(const std::vector<TokenKind>& kinds, Lexer& lex) {
+    valid = false;
+    expected = tokenKindsToString(kinds);
+    lastToken = lex.currentToken();
+}
+
+
+void Statement::invalidFrom(const Statement& other) {
+    valid = false;
+    expected = other.expected;
+    lastToken = other.lastToken;
+}
+
 Value NotAStatement::execute(Scope&)
 {
     return NullValue;
