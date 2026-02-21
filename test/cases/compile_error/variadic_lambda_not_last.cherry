@@ -1,0 +1,3 @@
+function bad = (int ...rest, int x) => {
+  return x;
+};

@@ -34,6 +34,22 @@
       }
     },
     {
+      "name": "success_variadic_lambda",
+      "file": "cases/success/variadic_lambda.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK variadic_lambda 0 4 10"]
+      }
+    },
+    {
+      "name": "success_variadic_method",
+      "file": "cases/success/variadic_method.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK variadic_method 0 10"]
+      }
+    },
+    {
       "name": "success_return_null",
       "file": "cases/success/return_null.cherry",
       "allowed_exit_codes": [0],
@@ -132,6 +148,14 @@
     {
       "name": "compile_variadic_not_last",
       "file": "cases/compile_error/variadic_not_last.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["right_parenthesis", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "compile_variadic_lambda_not_last",
+      "file": "cases/compile_error/variadic_lambda_not_last.cherry",
       "allowed_exit_codes": [1, 2],
       "expect": {
         "stderr_contains": ["right_parenthesis", "COMPILE ERROR"]
