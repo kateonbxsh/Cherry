@@ -91,7 +91,7 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
         // Try method
         auto method = MethodDefinition::parse(lexer);
         if (method->valid) {
-            klass->methods[method->name.value] = move(method);
+            klass->methods[method->name.value].push_back(move(method));
             lexer.deletePosition();
             continue;
         }
@@ -132,6 +132,7 @@ FieldDefinition FieldDefinition::parse(Lexer& lexer) {
         if (token.kind == PUBLIC) fieldDef.flags |= FieldFlags::Public;
         else if (token.kind == PRIVATE) fieldDef.flags |= FieldFlags::Private;
         else fieldDef.flags |= FieldFlags::Protected;
+        lexer.nextToken();
     } else fieldDef.flags |= FieldFlags::Private;
 
     if (lexer.expectToken(STATIC)) {
@@ -162,7 +163,7 @@ FieldDefinition FieldDefinition::parse(Lexer& lexer) {
         fieldDef.value = move(expr);
     }
 
-    if (lexer.expectToken(SEMICOLON)) {
+    if (!lexer.expectToken(SEMICOLON)) {
         fieldDef.invalidExpected({SEMICOLON}, lexer);
         return fieldDef;
     }
@@ -203,6 +204,8 @@ Value ClassDeclaration::execute(Scope& scope) {
         Field f;
         f.name = field.name.value;
         f.type = move(field.type);
+        f.flags = field.flags;
+        f.hasDefaultValue = false;
 
         if (field.withValue) {
             f.hasDefaultValue = true;
@@ -215,17 +218,18 @@ Value ClassDeclaration::execute(Scope& scope) {
     /* =========================
        Methods
        ========================= */
-    for (auto& [methodName, methodDef] : methods) {
-
-        Value methodValue = methodDef->execute(scope);
-        if (methodValue.thrownException != nullptr) return methodValue;
-
-        if (classType->methods. > 0)
+    for (auto& [methodName, methodDefinitions] : methods) {
 
         Method method;
-        method.overloads.push_back(get<Function>(methodValue.value));
 
-        [methodName] = method;
+        for (auto& methodDef : methodDefinitions) {
+            Value methodValue = methodDef->execute(scope);
+            if (methodValue.thrownException != nullptr) return methodValue;
+
+            method.overloads.push_back(get<Function>(methodValue.value));
+        }
+
+        classType->methods[methodName] = move(method);
     }
 
     /* =========================
@@ -237,7 +241,7 @@ Value ClassDeclaration::execute(Scope& scope) {
 }
 
 
-reference<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
+uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
 
     lexer.savePosition();
     auto method = create_unique<MethodDefinition>();
