@@ -238,6 +238,7 @@ Value ClassDeclaration::execute(Scope& scope) {
     // Create class type
     auto classType = create_reference<Type>(TypeKind::Class);
     classType->setName(name);
+    scope.addVariable(name, Value(classType));
 
     /* =========================
        Type parameters
@@ -275,7 +276,31 @@ Value ClassDeclaration::execute(Scope& scope) {
             f.value = move(field.value);
         }
 
-        classType->fields.push_back(f);
+        if ((f.flags & MemberFlags::Static) != 0) {
+            classType->staticFields.push_back(f);
+
+            Value staticValue;
+            if (f.hasDefaultValue) {
+                staticValue = f.value->execute(scope);
+            } else {
+                Value fieldTypeValue = f.type->execute(scope);
+                if (fieldTypeValue.thrownException != nullptr) return fieldTypeValue;
+                if (fieldTypeValue.type != TypeType) {
+                    Value err;
+                    err.thrownException = create_reference<Value>(
+                        Value("static field type is not a type")
+                    );
+                    return err;
+                }
+                auto staticFieldType = get<reference<Type>>(fieldTypeValue.value);
+                staticValue = Value::Uninitialized(staticFieldType);
+            }
+
+            if (staticValue.thrownException != nullptr) return staticValue;
+            classType->staticFieldValues[f.name] = create_reference<Value>(staticValue);
+        } else {
+            classType->fields.push_back(f);
+        }
     }
 
     /* =========================
@@ -314,14 +339,18 @@ Value ClassDeclaration::execute(Scope& scope) {
             method.overloads.push_back(get<Function>(methodValue.value));
         }
 
-        classType->methods[methodName] = move(method);
-        if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Registered overload count: " << classType->methods[methodName].overloads.size() << "\n";
+        if ((method.flags & MemberFlags::Static) != 0) {
+            classType->staticMethods[methodName] = move(method);
+            if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Registered static overload count: " << classType->staticMethods[methodName].overloads.size() << "\n";
+        } else {
+            classType->methods[methodName] = move(method);
+            if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Registered overload count: " << classType->methods[methodName].overloads.size() << "\n";
+        }
     }
 
     /* =========================
        Register class in scope
        ========================= */
-    scope.addVariable(name, Value(classType));
     if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Class registered in scope: " << name << "\n";
 
     return Value(classType);

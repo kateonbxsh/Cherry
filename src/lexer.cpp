@@ -219,6 +219,9 @@ void Lexer::defineCharKinds() {
     tokenMap["protected"] = PROTECTED;
     tokenMap["sealed"] = SEALED;
     tokenMap["static"] = STATIC;
+    tokenMap["new"] = NEW;
+    tokenMap["."] = DOT;
+    tokenMap["this"] = THIS;
 
     tokenMap[""] = END_OF_FEED;
 
@@ -344,6 +347,9 @@ const std::vector<std::string> tokenKindStrings = {
     "protected",
     "sealed",
     "static",
+    "new",
+    "dot",
+    "this",
     
     "begin_of_binary_operators",
     "comparative_equals", "comparative_not_equals",

@@ -40,8 +40,8 @@ struct TypeParameter {
 
 class ClassInstance {
 
-private:
-
+public:
+    reference<Type> classType;
     std::unordered_map<string, Value> fieldValues;
 
 };
@@ -79,7 +79,10 @@ public:
 
     Method constructor;
     std::unordered_map<string, Method> methods;
+    std::unordered_map<string, Method> staticMethods;
     std::vector<Field> fields;
+    std::vector<Field> staticFields;
+    std::unordered_map<string, reference<Value>> staticFieldValues;
 
 private:
 

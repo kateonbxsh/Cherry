@@ -38,6 +38,9 @@ Value FunctionCall::execute(Scope& scope) {
 
     // Execute function body in a new scope
     Scope funcScope(function.closure); // child scope
+    if (function.__this != nullptr) {
+        funcScope.addVariable("this", *function.__this);
+    }
     for (size_t i = 0; i < function.parameters.size(); ++i) {
         auto expectedType = function.parameters[i].type;
         if (argValues[i].type != expectedType) {

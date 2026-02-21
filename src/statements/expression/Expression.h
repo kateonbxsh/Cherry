@@ -4,6 +4,7 @@
 #include "types/type.h"
 #include "lexer.h"
 #include "scope.h"
+#include <vector>
 
 class Expression : public Statement {
 public:
@@ -54,5 +55,28 @@ public:
 private:
 
     uref<Expression> expression;
+
+};
+
+class DotAccessExpression : public Expression {
+public:
+
+    static uref<Expression> parse(Lexer& lexer);
+    Value execute(Scope& scope) override;
+
+    uref<Expression> target;
+    Token member;
+
+};
+
+class ConstructorExpression : public Expression {
+public:
+
+    static uref<Expression> parse(Lexer& lexer);
+    Value execute(Scope& scope) override;
+
+private:
+    Token typeName;
+    std::vector<uref<Expression>> arguments;
 
 };

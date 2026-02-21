@@ -1,17 +1,17 @@
-class A {
-
-    public int a = 5;
-
-    public A(int a) {
-
-    }
-
-    private A(int a, int b) {
-
-    }
-
-    public doSomething() {
-        return 5;
-    }
-
+class B {
+    public int value = 2;
 }
+
+class A {
+    public int x = new B();
+    public A() {}
+
+    public getX() {
+        return this.x;
+    }
+}
+
+A a = new A();
+a.x.value = 25;
+
+int result = a.getX().value;
