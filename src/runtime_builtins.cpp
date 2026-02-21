@@ -168,6 +168,7 @@ void registerBuiltinRuntime(Scope& scope) {
 
     {
         Method pushMethod;
+        pushMethod.flags = MemberFlags::Public;
         FunctionParameter p;
         p.name = "value";
         p.type = AnyType;
@@ -190,6 +191,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method sizeMethod;
+        sizeMethod.flags = MemberFlags::Public;
         sizeMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Array.size missing receiver");
             Value thisValue = *self;
@@ -201,6 +203,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method getMethod;
+        getMethod.flags = MemberFlags::Public;
         FunctionParameter indexParam{"index", IntegerType, false};
         getMethod.overloads.push_back(makeInternal({indexParam}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Array.get missing receiver");
@@ -215,6 +218,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method setMethod;
+        setMethod.flags = MemberFlags::Public;
         FunctionParameter indexParam{"index", IntegerType, false};
         FunctionParameter valueParam{"value", AnyType, false};
         setMethod.overloads.push_back(makeInternal({indexParam, valueParam}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
@@ -238,6 +242,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method popMethod;
+        popMethod.flags = MemberFlags::Public;
         popMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Array.pop missing receiver");
             Value thisValue = *self;
@@ -252,6 +257,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method clearMethod;
+        clearMethod.flags = MemberFlags::Public;
         clearMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Array.clear missing receiver");
             Value thisValue = *self;
@@ -264,6 +270,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method emptyMethod;
+        emptyMethod.flags = MemberFlags::Public;
         emptyMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Array.empty missing receiver");
             Value thisValue = *self;
@@ -275,6 +282,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method containsMethod;
+        containsMethod.flags = MemberFlags::Public;
         FunctionParameter p{"value", AnyType, false};
         containsMethod.overloads.push_back(makeInternal({p}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Array.contains missing receiver");
@@ -298,6 +306,7 @@ void registerBuiltinRuntime(Scope& scope) {
 
     {
         Method setMethod;
+        setMethod.flags = MemberFlags::Public;
         FunctionParameter k{"key", StringType, false};
         FunctionParameter v{"value", AnyType, false};
         setMethod.overloads.push_back(makeInternal({k, v}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
@@ -328,6 +337,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method getMethod;
+        getMethod.flags = MemberFlags::Public;
         FunctionParameter k{"key", StringType, false};
         getMethod.overloads.push_back(makeInternal({k}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.get missing receiver");
@@ -342,6 +352,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method hasMethod;
+        hasMethod.flags = MemberFlags::Public;
         FunctionParameter k{"key", StringType, false};
         hasMethod.overloads.push_back(makeInternal({k}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.has missing receiver");
@@ -354,6 +365,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method removeMethod;
+        removeMethod.flags = MemberFlags::Public;
         FunctionParameter k{"key", StringType, false};
         removeMethod.overloads.push_back(makeInternal({k}, [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.remove missing receiver");
@@ -366,6 +378,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method sizeMethod;
+        sizeMethod.flags = MemberFlags::Public;
         sizeMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.size missing receiver");
             Value thisValue = *self;
@@ -377,6 +390,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method clearMethod;
+        clearMethod.flags = MemberFlags::Public;
         clearMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.clear missing receiver");
             Value thisValue = *self;
@@ -389,6 +403,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method emptyMethod;
+        emptyMethod.flags = MemberFlags::Public;
         emptyMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.empty missing receiver");
             Value thisValue = *self;
@@ -400,6 +415,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method keysMethod;
+        keysMethod.flags = MemberFlags::Public;
         keysMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.keys missing receiver");
             Value thisValue = *self;
@@ -414,6 +430,7 @@ void registerBuiltinRuntime(Scope& scope) {
     }
     {
         Method valuesMethod;
+        valuesMethod.flags = MemberFlags::Public;
         valuesMethod.overloads.push_back(makeInternal({}, [](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
             if (self == nullptr) return runtimeError("Map.values missing receiver");
             Value thisValue = *self;

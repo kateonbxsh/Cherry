@@ -16,6 +16,7 @@ private:
     bool inferred = false;
     uref<Expression> expression;
     Token type;
+    std::vector<Token> typeArguments;
     Token name;
 
 };

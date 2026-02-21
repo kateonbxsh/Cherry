@@ -33,6 +33,39 @@ Lexer::Lexer(std::string data) {
             continue;
         }
 
+        // ---------- COMMENTS ----------
+        if (c == '/' && i + 1 < parseData.size()) {
+            if (parseData[i + 1] == '/') {
+                i += 2;
+                pos += 2;
+                while (i < parseData.size() && parseData[i] != '\n') {
+                    i++;
+                    pos++;
+                }
+                continue;
+            }
+            if (parseData[i + 1] == '*') {
+                i += 2;
+                pos += 2;
+                while (i + 1 < parseData.size()) {
+                    if (parseData[i] == '\n') {
+                        i++;
+                        line++;
+                        pos = 0;
+                        continue;
+                    }
+                    if (parseData[i] == '*' && parseData[i + 1] == '/') {
+                        i += 2;
+                        pos += 2;
+                        break;
+                    }
+                    i++;
+                    pos++;
+                }
+                continue;
+            }
+        }
+
         size_t startPos = pos;
         size_t startLine = line;
 
@@ -226,7 +259,10 @@ void Lexer::defineCharKinds() {
     tokenMap["until"] = UNTIL;
     tokenMap["times"] = REPEAT_TIMES;
     tokenMap["class"] = CLASS;
+    tokenMap["type"] = TYPE;
     tokenMap["extends"] = EXTENDS;
+    tokenMap["when"] = WHEN;
+    tokenMap["default"] = DEFAULT;
     tokenMap["public"] = PUBLIC;
     tokenMap["private"] = PRIVATE;
     tokenMap["protected"] = PROTECTED;
@@ -355,7 +391,10 @@ const std::vector<std::string> tokenKindStrings = {
     "colon",
     "equals",
     "class",
+    "type",
     "extends",
+    "when",
+    "default",
     "public",
     "private",
     "protected",

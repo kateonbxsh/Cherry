@@ -40,7 +40,10 @@ enum TokenKind {
     EQUALS,
 
     CLASS,
+    TYPE,
     EXTENDS,
+    WHEN,
+    DEFAULT,
     PUBLIC,
     PRIVATE,
     PROTECTED,

@@ -1,0 +1,11 @@
+class F {
+  private int p = 1;
+  protected int q = 2;
+  public readonly int r = 3;
+  public getP() { return this.p; }
+}
+
+F f = new F();
+Standard.println("{}", f.getP());
+Standard.println("{}", f.p);
+f.r = 9;

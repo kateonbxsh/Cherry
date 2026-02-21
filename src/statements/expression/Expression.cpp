@@ -226,12 +226,36 @@ static Value instantiateType(reference<Type> baseType, const std::vector<referen
     size_t consumed = 0;
     for (size_t idx : undefinedIndices) {
         if (consumed < args.size()) {
-            specialized->typeParameters[idx].value = args[consumed++];
+            auto candidate = args[consumed++];
+            auto& tp = specialized->typeParameters[idx];
+            if (tp.hasConstraint && tp.constraint != nullptr) {
+                auto probeType = candidate;
+                Value probe = Value::Uninitialized(probeType);
+                probe.type = candidate;
+                if (!tp.constraint->assignableFrom(probe)) {
+                    return makeTypeInstantiationError(
+                        "type argument for " + tp.name + " does not satisfy extends constraint"
+                    );
+                }
+            }
+            tp.value = candidate;
             continue;
         }
 
         if (specialized->typeParameters[idx].hasDefault && specialized->typeParameters[idx].defaultValue != nullptr) {
-            specialized->typeParameters[idx].value = specialized->typeParameters[idx].defaultValue;
+            auto& tp = specialized->typeParameters[idx];
+            auto candidate = tp.defaultValue;
+            if (tp.hasConstraint && tp.constraint != nullptr) {
+                auto probeType = candidate;
+                Value probe = Value::Uninitialized(probeType);
+                probe.type = candidate;
+                if (!tp.constraint->assignableFrom(probe)) {
+                    return makeTypeInstantiationError(
+                        "default type argument for " + tp.name + " does not satisfy extends constraint"
+                    );
+                }
+            }
+            tp.value = candidate;
             continue;
         }
 
@@ -265,6 +289,76 @@ static Value instantiateType(reference<Type> baseType, const std::vector<referen
     }
 
     return Value(specialized);
+}
+
+static bool isSameOrDerivedType(const reference<Type>& maybeChild, const reference<Type>& maybeAncestor) {
+    if (maybeChild == nullptr || maybeAncestor == nullptr) return false;
+    reference<Type> cursor = maybeChild;
+    while (cursor != nullptr) {
+        if (cursor == maybeAncestor) return true;
+        if (!cursor->getName().empty() && cursor->getName() == maybeAncestor->getName()) return true;
+        cursor = cursor->parent;
+    }
+    return false;
+}
+
+static bool hasThisAccess(Scope& scope, const reference<Type>& ownerType, bool allowDerived) {
+    if (!scope.hasVariable("this")) return false;
+    Value thisValue = scope.getVariable("this");
+    if (thisValue.thrownException != nullptr || thisValue.type == nullptr || thisValue.type->kind != TypeKind::Class) {
+        return false;
+    }
+    if (allowDerived) return isSameOrDerivedType(thisValue.type, ownerType);
+    return thisValue.type == ownerType || thisValue.type->getName() == ownerType->getName();
+}
+
+static bool canAccessMember(unsigned int flags, const reference<Type>& ownerType, Scope& scope) {
+    if ((flags & MemberFlags::Public) != 0) return true;
+    if ((flags & MemberFlags::Private) != 0) return hasThisAccess(scope, ownerType, false);
+    if ((flags & MemberFlags::Protected) != 0) return hasThisAccess(scope, ownerType, true);
+    return hasThisAccess(scope, ownerType, false);
+}
+
+static bool findFieldInHierarchy(
+    const reference<Type>& startType,
+    const std::string& name,
+    bool staticField,
+    Field& outField,
+    reference<Type>& outOwnerType
+) {
+    reference<Type> cursor = startType;
+    while (cursor != nullptr) {
+        const auto& fields = staticField ? cursor->staticFields : cursor->fields;
+        for (const auto& f : fields) {
+            if (f.name == name) {
+                outField = f;
+                outOwnerType = cursor;
+                return true;
+            }
+        }
+        cursor = cursor->parent;
+    }
+    return false;
+}
+
+static bool findMethodInHierarchy(
+    const reference<Type>& startType,
+    const std::string& name,
+    bool staticMethod,
+    Method& outMethod,
+    reference<Type>& outOwnerType
+) {
+    reference<Type> cursor = startType;
+    while (cursor != nullptr) {
+        const auto& methods = staticMethod ? cursor->staticMethods : cursor->methods;
+        if (methods.contains(name)) {
+            outMethod = methods.at(name);
+            outOwnerType = cursor;
+            return true;
+        }
+        cursor = cursor->parent;
+    }
+    return false;
 }
 
 uref<Expression> Expression::parse(Lexer &lexer) {
@@ -785,15 +879,45 @@ Value DotAccessExpression::execute(Scope& scope) {
     Value base = target->execute(scope);
     if (base.thrownException != nullptr) return base;
 
+    if (base.type == StringType) {
+        if (member.value == "length") {
+            Function fn;
+            fn.kind = FunctionKind::Internal;
+            fn.internalHandler = [](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
+                if (!args.empty()) {
+                    return makeExpressionError("string.length expects no arguments");
+                }
+                if (self == nullptr || self->type != StringType) {
+                    return makeExpressionError("string.length receiver is not a string");
+                }
+                return Value((integer)get<string>(self->value).size());
+            };
+            fn.__this = create_reference<Value>(base);
+            return Value(fn);
+        }
+
+        return makeExpressionError("unknown string member: " + member.value);
+    }
+
     if (base.type == TypeType) {
         auto typeRef = get<reference<Type>>(base.value);
 
-        if (typeRef->staticFieldValues.contains(member.value)) {
-            return *typeRef->staticFieldValues[member.value];
+        Field fieldMeta;
+        reference<Type> ownerType;
+        if (findFieldInHierarchy(typeRef, member.value, true, fieldMeta, ownerType)) {
+            if (!canAccessMember(fieldMeta.flags, ownerType, scope)) {
+                return makeExpressionError("cannot access static field: " + member.value);
+            }
+            if (ownerType->staticFieldValues.contains(member.value)) {
+                return *ownerType->staticFieldValues[member.value];
+            }
         }
 
-        if (typeRef->staticMethods.contains(member.value)) {
-            const auto& method = typeRef->staticMethods[member.value];
+        Method method;
+        if (findMethodInHierarchy(typeRef, member.value, true, method, ownerType)) {
+            if (!canAccessMember(method.flags, ownerType, scope)) {
+                return makeExpressionError("cannot access static method: " + member.value);
+            }
             if (method.overloads.empty()) {
                 Value err;
                 err.thrownException = create_reference<Value>(
@@ -814,12 +938,23 @@ Value DotAccessExpression::execute(Scope& scope) {
     if (base.type != nullptr && base.type->kind == TypeKind::Class) {
         auto instance = get<ClassInstance>(base.value);
 
-        if (instance.fieldValues.contains(member.value)) {
-            return instance.fieldValues[member.value];
+        Field fieldMeta;
+        reference<Type> ownerType;
+        if (findFieldInHierarchy(base.type, member.value, false, fieldMeta, ownerType)) {
+            if (!canAccessMember(fieldMeta.flags, ownerType, scope)) {
+                return makeExpressionError("cannot access field: " + member.value);
+            }
+            if (instance.fieldValues.contains(member.value)) {
+                return instance.fieldValues[member.value];
+            }
+            return NullValue;
         }
 
-        if (base.type->methods.contains(member.value)) {
-            const auto& method = base.type->methods[member.value];
+        Method method;
+        if (findMethodInHierarchy(base.type, member.value, false, method, ownerType)) {
+            if (!canAccessMember(method.flags, ownerType, scope)) {
+                return makeExpressionError("cannot access method: " + member.value);
+            }
             if (method.overloads.empty()) {
                 Value err;
                 err.thrownException = create_reference<Value>(
@@ -876,11 +1011,16 @@ Value IndexAccessExpression::execute(Scope& scope) {
 
     if (base.type != nullptr && base.type->kind == TypeKind::Class) {
         auto typeRef = base.type;
-        if (!typeRef->methods.contains("get")) {
+        Method getMethod;
+        reference<Type> ownerType;
+        if (!findMethodInHierarchy(typeRef, "get", false, getMethod, ownerType)) {
             return makeExpressionError("type does not implement get[...] operator");
         }
+        if (!canAccessMember(getMethod.flags, ownerType, scope)) {
+            return makeExpressionError("cannot access get[...] operator");
+        }
 
-        const auto& overloads = typeRef->methods["get"].overloads;
+        const auto& overloads = getMethod.overloads;
         Function* selected = nullptr;
         for (const auto& overload : overloads) {
             if (!overload.validArguments(args)) continue;
@@ -1010,7 +1150,15 @@ Value ConstructorExpression::execute(Scope& scope) {
         }
     }
 
-    for (const auto& field : classType->fields) {
+    std::vector<Field> allFields;
+    std::function<void(reference<Type>)> collectFields = [&](reference<Type> t) {
+        if (t == nullptr) return;
+        collectFields(t->parent);
+        for (const auto& f : t->fields) allFields.push_back(f);
+    };
+    collectFields(classType);
+
+    for (const auto& field : allFields) {
         Value fieldValue;
         if (field.hasDefaultValue) {
             fieldValue = field.value->execute(typeScope);
