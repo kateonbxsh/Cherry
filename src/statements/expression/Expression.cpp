@@ -6,6 +6,90 @@
 #include <expressions.h>
 #include <functional>
 
+static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
+    lexer.savePosition();
+    if (!lexer.expectToken(SMALLER_THAN)) {
+        lexer.rollPosition();
+        return false;
+    }
+
+    while (true) {
+        Token arg = lexer.nextToken();
+        if (arg.kind != IDENTIFIER) {
+            lexer.rollPosition();
+            return false;
+        }
+        outArgs.push_back(arg);
+
+        Token sep = lexer.nextToken();
+        if (sep.kind == BIGGER_THAN) {
+            lexer.deletePosition();
+            return true;
+        }
+        if (sep.kind != COMMA) {
+            lexer.rollPosition();
+            return false;
+        }
+    }
+}
+
+static Value makeTypeInstantiationError(const std::string& message) {
+    Value err;
+    err.thrownException = create_reference<Value>(Value(message));
+    return err;
+}
+
+static Value instantiateType(reference<Type> baseType, const std::vector<reference<Type>>& args, bool strictMissing) {
+    if (baseType == nullptr) {
+        return makeTypeInstantiationError("cannot instantiate null type");
+    }
+
+    std::vector<size_t> undefinedIndices;
+    for (size_t i = 0; i < baseType->typeParameters.size(); ++i) {
+        if (baseType->typeParameters[i].value == nullptr) {
+            undefinedIndices.push_back(i);
+        }
+    }
+
+    if (args.size() > undefinedIndices.size()) {
+        return makeTypeInstantiationError("too many type arguments for " + baseType->getName());
+    }
+
+    auto specialized = create_reference<Type>(*baseType);
+    specialized->parent = baseType;
+    specialized->typeBindings = baseType->typeBindings;
+
+    size_t consumed = 0;
+    for (size_t idx : undefinedIndices) {
+        if (consumed < args.size()) {
+            specialized->typeParameters[idx].value = args[consumed++];
+            continue;
+        }
+
+        if (specialized->typeParameters[idx].hasDefault && specialized->typeParameters[idx].defaultValue != nullptr) {
+            specialized->typeParameters[idx].value = specialized->typeParameters[idx].defaultValue;
+            continue;
+        }
+
+        if (strictMissing) {
+            return makeTypeInstantiationError(
+                "missing type argument for " + specialized->typeParameters[idx].name + " in " + baseType->getName()
+            );
+        }
+    }
+
+    std::vector<TypeParameter> remaining;
+    for (auto& tp : specialized->typeParameters) {
+        specialized->typeBindings[tp.name] = tp.value;
+        if (tp.value == nullptr) {
+            remaining.push_back(tp);
+        }
+    }
+    specialized->typeParameters = move(remaining);
+
+    return Value(specialized);
+}
+
 uref<Expression> Expression::parse(Lexer &lexer) {
 
     lexer.savePosition();
@@ -307,6 +391,13 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
 
         lexer.deletePosition();
         expression->identifier = nextToken;
+        if (nextToken.kind == IDENTIFIER) {
+            std::vector<Token> parsedArgs;
+            if (parseTypeArgumentList(lexer, parsedArgs)) {
+                expression->hasTypeArguments = true;
+                expression->typeArguments = move(parsedArgs);
+            }
+        }
         expression->valid = true;
         return expression;
     }
@@ -426,8 +517,30 @@ Value ExpressionValue::execute(Scope &scope) {
 
         default: 
         {
-            //TO-DO: return this when token is identifier and throw on default
-            return scope.getVariable(token.value);
+            Value base = scope.getVariable(token.value);
+            if (base.thrownException != nullptr) return base;
+
+            if (!hasTypeArguments) {
+                return base;
+            }
+
+            if (base.type != TypeType) {
+                return makeTypeInstantiationError("type arguments can only be used on types");
+            }
+
+            std::vector<reference<Type>> args;
+            args.reserve(typeArguments.size());
+            for (auto& argToken : typeArguments) {
+                Value argValue = scope.getVariable(argToken.value);
+                if (argValue.thrownException != nullptr) return argValue;
+                if (argValue.type != TypeType) {
+                    return makeTypeInstantiationError("type argument is not a type: " + argToken.value);
+                }
+                args.push_back(get<reference<Type>>(argValue.value));
+            }
+
+            auto baseType = get<reference<Type>>(base.value);
+            return instantiateType(baseType, args, false);
         }
     }
 }
@@ -530,6 +643,7 @@ uref<Expression> ConstructorExpression::parse(Lexer& lexer) {
         return expr;
     }
     expr->typeName = typeToken;
+    parseTypeArgumentList(lexer, expr->typeArguments);
 
     if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         expr->valid = false;
@@ -580,6 +694,27 @@ Value ConstructorExpression::execute(Scope& scope) {
     }
 
     auto classType = get<reference<Type>>(classValue.value);
+    if (!typeArguments.empty()) {
+        std::vector<reference<Type>> args;
+        args.reserve(typeArguments.size());
+        for (auto& argToken : typeArguments) {
+            Value argValue = scope.getVariable(argToken.value);
+            if (argValue.thrownException != nullptr) return argValue;
+            if (argValue.type != TypeType) {
+                return makeTypeInstantiationError("type argument is not a type: " + argToken.value);
+            }
+            args.push_back(get<reference<Type>>(argValue.value));
+        }
+
+        Value specialized = instantiateType(classType, args, true);
+        if (specialized.thrownException != nullptr) return specialized;
+        classType = get<reference<Type>>(specialized.value);
+    } else if (!classType->typeParameters.empty()) {
+        Value specialized = instantiateType(classType, {}, true);
+        if (specialized.thrownException != nullptr) return specialized;
+        classType = get<reference<Type>>(specialized.value);
+    }
+
     if (classType->kind != TypeKind::Class) {
         Value err;
         err.thrownException = create_reference<Value>(
@@ -590,13 +725,19 @@ Value ConstructorExpression::execute(Scope& scope) {
 
     ClassInstance instance;
     instance.classType = classType;
+    Scope typeScope(scope);
+    for (auto& [tpName, tpType] : classType->typeBindings) {
+        if (tpType != nullptr) {
+            typeScope.addVariable(tpName, Value(tpType));
+        }
+    }
 
     for (const auto& field : classType->fields) {
         Value fieldValue;
         if (field.hasDefaultValue) {
-            fieldValue = field.value->execute(scope);
+            fieldValue = field.value->execute(typeScope);
         } else {
-            Value fieldTypeValue = field.type->execute(scope);
+            Value fieldTypeValue = field.type->execute(typeScope);
             if (fieldTypeValue.thrownException != nullptr) return fieldTypeValue;
             if (fieldTypeValue.type != TypeType) {
                 Value err;

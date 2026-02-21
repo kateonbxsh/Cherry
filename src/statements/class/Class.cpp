@@ -33,6 +33,7 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
        ========================= */
     if (lexer.expectToken(SMALLER_THAN)) {
         if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing class type parameters\n";
+        bool seenDefault = false;
 
         while (true) {
 
@@ -52,21 +53,29 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
 
             if (lexer.expectToken(EQUALS)) {
                 if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing type parameter default value\n";
-                auto def = Expression::parse(lexer);
-                if (!def->valid) {
-                    if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid type parameter default value\n";
+                Token def = lexer.nextToken();
+                if (def.kind != IDENTIFIER) {
+                    if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid type parameter default type\n";
                     klass->valid = false;
-                    klass->expected = def->expected;
-                    klass->lastToken = def->lastToken;
+                    klass->expected = {"type identifier"};
+                    klass->lastToken = def;
                     lexer.rollPosition();
                     return klass;
                 }
 
                 param.withDefaultValue = true;
-                param.defaultValue = move(def);
+                param.defaultValue = def;
+                seenDefault = true;
+            } else if (seenDefault) {
+                if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Non-default type parameter after default\n";
+                klass->valid = false;
+                klass->expected = {"type parameter with default value"};
+                klass->lastToken = typeName;
+                lexer.rollPosition();
+                return klass;
             }
 
-            klass->typeParameters[param.name.value] = move(param);
+            klass->typeParameters.push_back(move(param));
             if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Added type parameter: " << typeName.value << "\n";
 
             Token sep = lexer.nextToken();
@@ -240,10 +249,14 @@ Value ClassDeclaration::execute(Scope& scope) {
     classType->setName(name);
     scope.addVariable(name, Value(classType));
 
+    Scope classScope = scope.createChild();
+    classScope.addVariable(name, Value(classType));
+
     /* =========================
        Type parameters
        ========================= */
-    for (auto& [paramName, param] : typeParameters) {
+    for (auto& param : typeParameters) {
+        auto paramName = param.name.value;
         if (DEBUG) std::cout << DEBUG_PREFIX << "Resolving type parameter: " << paramName << "\n";
 
         TypeParameter tp;
@@ -251,14 +264,19 @@ Value ClassDeclaration::execute(Scope& scope) {
         tp.hasDefault = param.withDefaultValue;
 
         if (param.withDefaultValue) {
-            Value def = param.defaultValue->execute(scope);
-            if (def.type != TypeType) return Value{};
+            Value def = classScope.getVariable(param.defaultValue.value);
             if (def.thrownException != nullptr) return def;
+            if (def.type != TypeType) return Value{};
             tp.defaultValue = get<reference<Type>>(def.value);
             if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Resolved type parameter default: " << paramName << "\n";
         }
 
         classType->typeParameters.push_back(tp);
+        classType->typeBindings[paramName] = nullptr;
+
+        auto placeholderType = create_reference<Type>(TypeKind::Dynamic);
+        placeholderType->setName(paramName);
+        classScope.addVariable(paramName, Value(placeholderType));
     }
 
 
@@ -281,9 +299,9 @@ Value ClassDeclaration::execute(Scope& scope) {
 
             Value staticValue;
             if (f.hasDefaultValue) {
-                staticValue = f.value->execute(scope);
+                staticValue = f.value->execute(classScope);
             } else {
-                Value fieldTypeValue = f.type->execute(scope);
+                Value fieldTypeValue = f.type->execute(classScope);
                 if (fieldTypeValue.thrownException != nullptr) return fieldTypeValue;
                 if (fieldTypeValue.type != TypeType) {
                     Value err;
@@ -313,7 +331,7 @@ Value ClassDeclaration::execute(Scope& scope) {
         constructor.flags = constructors.front()->flags;
 
         for (auto& constructorDef : constructors) {
-            Value constructorValue = constructorDef->execute(scope);
+            Value constructorValue = constructorDef->execute(classScope);
             if (constructorValue.thrownException != nullptr) return constructorValue;
 
             constructor.overloads.push_back(get<Function>(constructorValue.value));
@@ -333,7 +351,7 @@ Value ClassDeclaration::execute(Scope& scope) {
         method.flags = methodDefinitions.empty() ? MemberFlags::Private : methodDefinitions.front()->flags;
 
         for (auto& methodDef : methodDefinitions) {
-            Value methodValue = methodDef->execute(scope);
+            Value methodValue = methodDef->execute(classScope);
             if (methodValue.thrownException != nullptr) return methodValue;
 
             method.overloads.push_back(get<Function>(methodValue.value));
@@ -497,5 +515,4 @@ Value MethodDefinition::execute(Scope& scope) {
 
     return Value(function);
 }
-
 

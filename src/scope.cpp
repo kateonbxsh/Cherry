@@ -77,6 +77,11 @@ Value Scope::getVariable(const std::string& name) {
     return makeUndefinedVariableError(name);
 }
 
+Scope Scope::createChild() {
+    reference<Scope> self(this, [](Scope*) {});
+    return Scope(self);
+}
+
 // =======================
 // Errors
 // =======================

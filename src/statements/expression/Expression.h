@@ -42,6 +42,8 @@ public:
 private:
 
     Token identifier;
+    std::vector<Token> typeArguments;
+    bool hasTypeArguments = false;
 
 };
 
@@ -77,6 +79,7 @@ public:
 
 private:
     Token typeName;
+    std::vector<Token> typeArguments;
     std::vector<uref<Expression>> arguments;
 
 };

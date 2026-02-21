@@ -2,16 +2,10 @@ class B {
     public int value = 2;
 }
 
-class A {
-    public int x = new B();
-    public A() {}
-
-    public getX() {
-        return this.x;
-    }
+class A<U, T = int> {
+    public T x;
 }
 
-A a = new A();
-a.x.value = 25;
+type C = A<int>;
 
-int result = a.getX().value;
+A a = new A<string>();

@@ -13,6 +13,7 @@ public:
     void setVariable(const std::string& name, const Value& value);
     bool hasVariable(const std::string& name) const;
     Value getVariable(const std::string& name);
+    Scope createChild();
 
     void printVariables() const;
 

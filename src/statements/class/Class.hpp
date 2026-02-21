@@ -3,13 +3,14 @@
 #include "../expression/Expression.h"
 #include "../variable/VariableDefinition.h"
 #include "../Block.hpp"
+#include <vector>
 #include <unordered_map>
 
 struct ClassDeclarationTypeParameter {
 
     Token name;
     bool withDefaultValue;
-    reference<Expression> defaultValue;
+    Token defaultValue;
 
 };
 
@@ -51,7 +52,7 @@ struct ClassDeclaration : public Statement {
 
     string name;
 
-    std::unordered_map<string, ClassDeclarationTypeParameter> typeParameters;
+    std::vector<ClassDeclarationTypeParameter> typeParameters;
     std::vector<FieldDefinition> fields;
     std::unordered_map<string, std::vector<uref<MethodDefinition>>> methods;
     std::vector<uref<MethodDefinition>> constructors;
