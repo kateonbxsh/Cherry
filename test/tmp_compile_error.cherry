@@ -1,0 +1,6 @@
+class X<T = string> {
+  public f(T a) {}
+  public f(int a) {}
+}
+
+type C = X<string>;

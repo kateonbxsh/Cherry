@@ -25,6 +25,11 @@ uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
         }
 
         Token name = lexer.nextToken();
+        bool variadic = false;
+        if (name.kind == ELLIPSIS) {
+            variadic = true;
+            name = lexer.nextToken();
+        }
         if (name.kind != IDENTIFIER) {
             lambda->valid = false;
             lambda->expected = {"parameter name"};
@@ -33,10 +38,19 @@ uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
             return lambda;
         }
 
-        lambda->parameters.push_back({type, name});
+        lambda->parameters.push_back({type, name, variadic});
 
         Token sep = lexer.nextToken();
         if (sep.kind == RIGHT_PARENTHESIS) break;
+
+        if (variadic) {
+            lambda->valid = false;
+            lambda->expected = tokenKindsToString({RIGHT_PARENTHESIS});
+            lambda->lastToken = sep;
+            lambda->errorMessage = "variadic parameter must be the last parameter";
+            lexer.rollPosition();
+            return lambda;
+        }
 
         if (sep.kind != COMMA) {
             lambda->valid = false;
@@ -87,6 +101,7 @@ Value LambdaDefinition::execute(Scope& scope) {
 
         FunctionParameter fp;
         fp.name = param.name.value;
+        fp.variadic = param.variadic;
 
         Value typeVal = childScope->getVariable(param.type.value);
         if (typeVal.type != TypeType) {

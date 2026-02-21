@@ -36,7 +36,7 @@ int main(int argCount, char ** args) {
     string fileContent((std::istreambuf_iterator<char>(fileToParse)), std::istreambuf_iterator<char>());
     fileToParse.close();
     Lexer lexer(fileContent);
-    Parser parser(lexer); 
+    Parser parser(lexer, fileName); 
     auto block = parser.parse();
     if (block != nullptr) {
         Interpreter interpreter;

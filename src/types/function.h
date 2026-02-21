@@ -1,6 +1,7 @@
 #pragma once
 
 #include "macros.h"
+#include <functional>
 #include <vector>
 
 class Block;
@@ -11,6 +12,12 @@ class Type;
 struct FunctionParameter {
     string name;
     reference<Type> type;
+    bool variadic = false;
+};
+
+enum class FunctionKind {
+    User,
+    Internal
 };
 
 struct Function {
@@ -18,6 +25,8 @@ struct Function {
     std::vector<FunctionParameter> parameters;
     reference<Scope> closure;
     reference<Block> body;
+    FunctionKind kind = FunctionKind::User;
+    std::function<Value(Scope&, const std::vector<Value>&, const reference<Value>&)> internalHandler;
 
-    bool validArguments(const std::vector<Value>& arguments);
+    bool validArguments(const std::vector<Value>& arguments) const;
 };

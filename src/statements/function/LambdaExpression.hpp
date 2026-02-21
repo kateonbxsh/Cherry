@@ -5,6 +5,7 @@
 struct LambdaParameter {
     Token type;
     Token name;
+    bool variadic = false;
 };
 
 struct LambdaDefinition : public Expression {

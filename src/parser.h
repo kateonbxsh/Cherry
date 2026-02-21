@@ -10,11 +10,12 @@ class Parser {
 
 public:
 
-    explicit Parser(Lexer& inputLexer);
+    Parser(Lexer& inputLexer, std::string filePath);
     uref<GlobalBlock> parse();
 
 private:
 
     Lexer lexer;
+    std::string filePath;
 
 };

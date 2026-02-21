@@ -1,5 +1,82 @@
 #include "Class.hpp"
 
+namespace {
+
+Value makeClassRegistrationError(const string& message) {
+    Value err;
+    err.thrownException = create_reference<Value>(Value(message));
+    return err;
+}
+
+bool acceptsParamType(const reference<Type>& targetType, const reference<Type>& sourceType) {
+    if (targetType == nullptr || sourceType == nullptr) return false;
+    auto sourceCopy = sourceType;
+    Value probe = Value::Uninitialized(sourceCopy);
+    probe.type = sourceType;
+    return targetType->assignableFrom(probe);
+}
+
+reference<Type> resolveParameterType(const reference<Type>& ownerType, const reference<Type>& parameterType) {
+    if (ownerType == nullptr || parameterType == nullptr) return parameterType;
+    if (parameterType->kind != TypeKind::Dynamic) return parameterType;
+    auto paramName = parameterType->getName();
+    reference<Type> cursor = ownerType;
+    while (cursor != nullptr) {
+        if (cursor->typeBindings.contains(paramName)) {
+            auto bound = cursor->typeBindings.at(paramName);
+            if (bound != nullptr) return bound;
+            break;
+        }
+        cursor = cursor->parent;
+    }
+    return parameterType;
+}
+
+bool overloadDirectionallyCovers(const reference<Type>& ownerType, const Function& a, const Function& b) {
+    const bool aVariadic = !a.parameters.empty() && a.parameters.back().variadic;
+    const bool bVariadic = !b.parameters.empty() && b.parameters.back().variadic;
+    if (aVariadic != bVariadic) return false;
+
+    size_t aFixed = a.parameters.size() - (aVariadic ? 1 : 0);
+    size_t bFixed = b.parameters.size() - (bVariadic ? 1 : 0);
+    if (aFixed != bFixed) return false;
+
+    for (size_t i = 0; i < aFixed; ++i) {
+        auto aType = resolveParameterType(ownerType, a.parameters[i].type);
+        auto bType = resolveParameterType(ownerType, b.parameters[i].type);
+        if (aType != nullptr && aType == a.parameters[i].type && aType->kind == TypeKind::Dynamic) return false;
+        if (bType != nullptr && bType == b.parameters[i].type && bType->kind == TypeKind::Dynamic) return false;
+        if (!acceptsParamType(aType, bType)) return false;
+    }
+
+    if (aVariadic) {
+        auto aType = resolveParameterType(ownerType, a.parameters.back().type);
+        auto bType = resolveParameterType(ownerType, b.parameters.back().type);
+        if (aType != nullptr && aType == a.parameters.back().type && aType->kind == TypeKind::Dynamic) return false;
+        if (bType != nullptr && bType == b.parameters.back().type && bType->kind == TypeKind::Dynamic) return false;
+        if (!acceptsParamType(aType, bType)) return false;
+    }
+
+    return true;
+}
+
+Value ensureNoCompatibleOverloads(const reference<Type>& ownerType, const Method& method, const string& owner, const string& methodName) {
+    for (size_t i = 0; i < method.overloads.size(); ++i) {
+        for (size_t j = i + 1; j < method.overloads.size(); ++j) {
+            const auto& a = method.overloads[i];
+            const auto& b = method.overloads[j];
+            if (overloadDirectionallyCovers(ownerType, a, b) || overloadDirectionallyCovers(ownerType, b, a)) {
+                return makeClassRegistrationError(
+                    "ambiguous overloads for " + owner + "." + methodName + ": signatures are directionally compatible"
+                );
+            }
+        }
+    }
+    return NullValue;
+}
+
+}
+
 uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
 
     lexer.savePosition();
@@ -71,6 +148,7 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
                 klass->valid = false;
                 klass->expected = {"type parameter with default value"};
                 klass->lastToken = typeName;
+                klass->errorMessage = "type parameters with default values must be at the end of the list";
                 lexer.rollPosition();
                 return klass;
             }
@@ -170,11 +248,20 @@ FieldDefinition FieldDefinition::parse(Lexer& lexer) {
     fieldDef.withValue = false;
 
     bool hasAccessModifier = false;
+    TokenKind accessKind = NONE;
     while (true) {
         Token token = lexer.peekToken();
 
         if (token.kind == PUBLIC || token.kind == PRIVATE || token.kind == PROTECTED) {
+            if (hasAccessModifier && token.kind != accessKind) {
+                fieldDef.valid = false;
+                fieldDef.expected = {"single access modifier"};
+                fieldDef.lastToken = token;
+                fieldDef.errorMessage = "cannot combine multiple access modifiers";
+                return fieldDef;
+            }
             hasAccessModifier = true;
+            accessKind = token.kind;
             if (token.kind == PUBLIC) fieldDef.flags |= MemberFlags::Public;
             else if (token.kind == PRIVATE) fieldDef.flags |= MemberFlags::Private;
             else fieldDef.flags |= MemberFlags::Protected;
@@ -274,9 +361,13 @@ Value ClassDeclaration::execute(Scope& scope) {
         classType->typeParameters.push_back(tp);
         classType->typeBindings[paramName] = nullptr;
 
-        auto placeholderType = create_reference<Type>(TypeKind::Dynamic);
-        placeholderType->setName(paramName);
-        classScope.addVariable(paramName, Value(placeholderType));
+        if (tp.hasDefault && tp.defaultValue != nullptr) {
+            classScope.addVariable(paramName, Value(tp.defaultValue));
+        } else {
+            auto placeholderType = create_reference<Type>(TypeKind::Dynamic);
+            placeholderType->setName(paramName);
+            classScope.addVariable(paramName, Value(placeholderType));
+        }
     }
 
 
@@ -321,6 +412,13 @@ Value ClassDeclaration::execute(Scope& scope) {
         }
     }
 
+    Scope methodScope = classScope.createChild();
+    for (const auto& tp : classType->typeParameters) {
+        auto placeholderType = create_reference<Type>(TypeKind::Dynamic);
+        placeholderType->setName(tp.name);
+        methodScope.addVariable(tp.name, Value(placeholderType));
+    }
+
     /* =========================
        Constructor
        ========================= */
@@ -331,11 +429,14 @@ Value ClassDeclaration::execute(Scope& scope) {
         constructor.flags = constructors.front()->flags;
 
         for (auto& constructorDef : constructors) {
-            Value constructorValue = constructorDef->execute(classScope);
+            Value constructorValue = constructorDef->execute(methodScope);
             if (constructorValue.thrownException != nullptr) return constructorValue;
 
             constructor.overloads.push_back(get<Function>(constructorValue.value));
         }
+
+        Value overloadCheck = ensureNoCompatibleOverloads(classType, constructor, name, name);
+        if (overloadCheck.thrownException != nullptr) return overloadCheck;
 
         classType->constructor = move(constructor);
         if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Registered constructor overload count: " << classType->constructor.overloads.size() << "\n";
@@ -351,11 +452,14 @@ Value ClassDeclaration::execute(Scope& scope) {
         method.flags = methodDefinitions.empty() ? MemberFlags::Private : methodDefinitions.front()->flags;
 
         for (auto& methodDef : methodDefinitions) {
-            Value methodValue = methodDef->execute(classScope);
+            Value methodValue = methodDef->execute(methodScope);
             if (methodValue.thrownException != nullptr) return methodValue;
 
             method.overloads.push_back(get<Function>(methodValue.value));
         }
+
+        Value overloadCheck = ensureNoCompatibleOverloads(classType, method, name, methodName);
+        if (overloadCheck.thrownException != nullptr) return overloadCheck;
 
         if ((method.flags & MemberFlags::Static) != 0) {
             classType->staticMethods[methodName] = move(method);
@@ -383,11 +487,21 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
 
     method->flags = 0;
     bool hasAccessModifier = false;
+    TokenKind accessKind = NONE;
     while (true) {
         Token token = lexer.peekToken();
 
         if (token.kind == PUBLIC || token.kind == PRIVATE || token.kind == PROTECTED) {
+            if (hasAccessModifier && token.kind != accessKind) {
+                method->valid = false;
+                method->expected = {"single access modifier"};
+                method->lastToken = token;
+                method->errorMessage = "cannot combine multiple access modifiers";
+                lexer.rollPosition();
+                return method;
+            }
             hasAccessModifier = true;
+            accessKind = token.kind;
             if (token.kind == PUBLIC) method->flags |= MemberFlags::Public;
             else if (token.kind == PRIVATE) method->flags |= MemberFlags::Private;
             else method->flags |= MemberFlags::Protected;
@@ -441,6 +555,11 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
         }
 
         Token paramName = lexer.nextToken();
+        bool variadic = false;
+        if (paramName.kind == ELLIPSIS) {
+            variadic = true;
+            paramName = lexer.nextToken();
+        }
         if (paramName.kind != IDENTIFIER) {
             if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected parameter name\n";
             method->valid = false;
@@ -450,11 +569,20 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
             return method;
         }
 
-        method->parameters.push_back({type, paramName});
+        method->parameters.push_back({type, paramName, variadic});
         if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Parsed method parameter: " << paramName.value << "\n";
 
         Token sep = lexer.nextToken();
         if (sep.kind == RIGHT_PARENTHESIS) break;
+
+        if (variadic) {
+            method->valid = false;
+            method->expected = tokenKindsToString({RIGHT_PARENTHESIS});
+            method->lastToken = sep;
+            method->errorMessage = "variadic parameter must be the last parameter";
+            lexer.rollPosition();
+            return method;
+        }
 
         if (sep.kind != COMMA) {
             if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected ',' or ')' in parameter list\n";
@@ -497,6 +625,7 @@ Value MethodDefinition::execute(Scope& scope) {
 
         FunctionParameter fp;
         fp.name = param.name.value;
+        fp.variadic = param.variadic;
 
         Value typeVal = childScope.getVariable(param.type.value);
         if (typeVal.type != TypeType) {
@@ -515,4 +644,3 @@ Value MethodDefinition::execute(Scope& scope) {
 
     return Value(function);
 }
-

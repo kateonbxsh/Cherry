@@ -12,6 +12,7 @@ public:
     bool valid = true;
     Token lastToken;
     std::vector<string> expected;
+    std::string errorMessage;
 
     void invalidExpected(std::initializer_list<TokenKind> kinds, Lexer& lex);
     void invalidExpected(const std::vector<TokenKind>& kinds, Lexer& lex);

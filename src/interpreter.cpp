@@ -13,6 +13,6 @@ void Interpreter::interpret(uref<GlobalBlock>& block)
         std::cerr << "Exception: " << stringify(*returned.thrownException) << std::endl;
         return;
     }
-    mainScope.printVariables();
+    if (DEBUG) mainScope.printVariables();
 
 }
