@@ -113,7 +113,19 @@ Lexer::Lexer(std::string data) {
             continue;
         }
 
-        // try longest match first (2-char operators)
+        // try longest match first (3-char operators)
+        if (i + 2 < parseData.size()) {
+            std::string three = parseData.substr(i, 3);
+            auto it3 = tokenMap.find(three);
+            if (it3 != tokenMap.end()) {
+                pushToken(it3->second, three, startPos, startLine);
+                i += 3;
+                pos += 3;
+                continue;
+            }
+        }
+
+        // then 2-char operators
         if (i + 1 < parseData.size()) {
             std::string two = parseData.substr(i, 2);
             auto it2 = tokenMap.find(two);
@@ -221,6 +233,7 @@ void Lexer::defineCharKinds() {
     tokenMap["static"] = STATIC;
     tokenMap["new"] = NEW;
     tokenMap["."] = DOT;
+    tokenMap["..."] = ELLIPSIS;
     tokenMap["this"] = THIS;
 
     tokenMap[""] = END_OF_FEED;
@@ -349,6 +362,7 @@ const std::vector<std::string> tokenKindStrings = {
     "static",
     "new",
     "dot",
+    "ellipsis",
     "this",
     
     "begin_of_binary_operators",

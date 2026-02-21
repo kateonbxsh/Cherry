@@ -43,6 +43,7 @@ class ClassInstance {
 public:
     reference<Type> classType;
     std::unordered_map<string, Value> fieldValues;
+    reference<void> nativeData;
 
 };
 
@@ -97,4 +98,5 @@ extern reference<Type> StringType;
 extern reference<Type> BooleanType;
 extern reference<Type> FunctionType;
 extern reference<Type> TypeType;
+extern reference<Type> AnyType;
 extern reference<Type> AnonymousType;

@@ -48,6 +48,7 @@ enum TokenKind {
     STATIC,
     NEW,
     DOT,
+    ELLIPSIS,
     THIS,
 
     BEGIN_OF_BINARY_OPERATORS,

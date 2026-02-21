@@ -10,7 +10,7 @@ void Type::defineTypes()
     FunctionType->setName("function");
     TypeType->setName("type");
     AnonymousType->setName("anon");
-    AnonymousType->setName("any");
+    AnyType->setName("any");
 
     IntegerType->setDefaultValue(Value((integer) 0));
     RealType->setDefaultValue(Value((real) 0.0));
@@ -40,6 +40,12 @@ Value Type::getDefaultValue()
 }
 
 bool Type::assignableFrom(const Value& other) {
+    if (this->kind == TypeKind::Dynamic) {
+        return true;
+    }
+    if (other.type == nullptr) {
+        return false;
+    }
     switch(other.type->kind) {
         case TypeKind::Primitive:
             return other.type->getName() == this->getName();

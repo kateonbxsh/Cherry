@@ -5,6 +5,7 @@
 #include "types/function.h"
 #include <expressions.h>
 #include <functional>
+#include "runtime_builtins.h"
 
 static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
     lexer.savePosition();
@@ -37,6 +38,108 @@ static Value makeTypeInstantiationError(const std::string& message) {
     Value err;
     err.thrownException = create_reference<Value>(Value(message));
     return err;
+}
+
+static reference<Type> resolveParameterType(const reference<Type>& ownerType, const reference<Type>& parameterType) {
+    if (ownerType == nullptr || parameterType == nullptr) return parameterType;
+    if (parameterType->kind != TypeKind::Dynamic) return parameterType;
+    auto paramName = parameterType->getName();
+    reference<Type> cursor = ownerType;
+    while (cursor != nullptr) {
+        if (cursor->typeBindings.contains(paramName)) {
+            auto bound = cursor->typeBindings.at(paramName);
+            if (bound != nullptr) return bound;
+            break;
+        }
+        cursor = cursor->parent;
+    }
+    return parameterType;
+}
+
+static bool acceptsParamType(const reference<Type>& targetType, const reference<Type>& sourceType) {
+    if (targetType == nullptr || sourceType == nullptr) return false;
+    auto sourceCopy = sourceType;
+    Value probe = Value::Uninitialized(sourceCopy);
+    probe.type = sourceType;
+    return targetType->assignableFrom(probe);
+}
+
+static bool overloadDirectionallyCovers(const reference<Type>& ownerType, const Function& a, const Function& b) {
+    const bool aVariadic = !a.parameters.empty() && a.parameters.back().variadic;
+    const bool bVariadic = !b.parameters.empty() && b.parameters.back().variadic;
+    if (aVariadic != bVariadic) return false;
+
+    size_t aFixed = a.parameters.size() - (aVariadic ? 1 : 0);
+    size_t bFixed = b.parameters.size() - (bVariadic ? 1 : 0);
+    if (aFixed != bFixed) return false;
+
+    for (size_t i = 0; i < aFixed; ++i) {
+        auto aType = resolveParameterType(ownerType, a.parameters[i].type);
+        auto bType = resolveParameterType(ownerType, b.parameters[i].type);
+        if (aType != nullptr && aType == a.parameters[i].type && aType->kind == TypeKind::Dynamic) return false;
+        if (bType != nullptr && bType == b.parameters[i].type && bType->kind == TypeKind::Dynamic) return false;
+        if (!acceptsParamType(aType, bType)) return false;
+    }
+
+    if (aVariadic) {
+        auto aType = resolveParameterType(ownerType, a.parameters.back().type);
+        auto bType = resolveParameterType(ownerType, b.parameters.back().type);
+        if (aType != nullptr && aType == a.parameters.back().type && aType->kind == TypeKind::Dynamic) return false;
+        if (bType != nullptr && bType == b.parameters.back().type && bType->kind == TypeKind::Dynamic) return false;
+        if (!acceptsParamType(aType, bType)) return false;
+    }
+
+    return true;
+}
+
+static Value ensureNoCompatibleOverloads(const reference<Type>& ownerType, const Method& method, const string& ownerName, const string& methodName) {
+    for (size_t i = 0; i < method.overloads.size(); ++i) {
+        for (size_t j = i + 1; j < method.overloads.size(); ++j) {
+            const auto& a = method.overloads[i];
+            const auto& b = method.overloads[j];
+            if (overloadDirectionallyCovers(ownerType, a, b) || overloadDirectionallyCovers(ownerType, b, a)) {
+                return makeTypeInstantiationError(
+                    "ambiguous overloads for " + ownerName + "." + methodName + " after specialization"
+                );
+            }
+        }
+    }
+    return NullValue;
+}
+
+static bool bindArgumentsForFunction(
+    const Function& fn,
+    const std::vector<Value>& args,
+    std::vector<Value>& bound,
+    Value& error
+) {
+    if (!fn.validArguments(args)) {
+        error = makeTypeInstantiationError("constructor arguments are not compatible with signature");
+        return false;
+    }
+
+    size_t fixedCount = fn.parameters.size();
+    bool variadic = !fn.parameters.empty() && fn.parameters.back().variadic;
+    if (variadic) fixedCount--;
+
+    bound.clear();
+    bound.reserve(fn.parameters.size());
+    for (size_t i = 0; i < fixedCount; ++i) bound.push_back(args[i]);
+
+    if (variadic) {
+        std::vector<Value> tail;
+        for (size_t i = fixedCount; i < args.size(); ++i) {
+            tail.push_back(args[i]);
+        }
+        Value packed = makeArrayFromValues(tail);
+        if (packed.thrownException != nullptr) {
+            error = packed;
+            return false;
+        }
+        bound.push_back(packed);
+    }
+
+    return true;
 }
 
 static Value instantiateType(reference<Type> baseType, const std::vector<reference<Type>>& args, bool strictMissing) {
@@ -86,6 +189,19 @@ static Value instantiateType(reference<Type> baseType, const std::vector<referen
         }
     }
     specialized->typeParameters = move(remaining);
+
+    if (!specialized->constructor.overloads.empty()) {
+        Value check = ensureNoCompatibleOverloads(specialized, specialized->constructor, specialized->getName(), specialized->getName());
+        if (check.thrownException != nullptr) return check;
+    }
+    for (const auto& [methodName, method] : specialized->methods) {
+        Value check = ensureNoCompatibleOverloads(specialized, method, specialized->getName(), methodName);
+        if (check.thrownException != nullptr) return check;
+    }
+    for (const auto& [methodName, method] : specialized->staticMethods) {
+        Value check = ensureNoCompatibleOverloads(specialized, method, specialized->getName(), methodName);
+        if (check.thrownException != nullptr) return check;
+    }
 
     return Value(specialized);
 }
@@ -725,6 +841,7 @@ Value ConstructorExpression::execute(Scope& scope) {
 
     ClassInstance instance;
     instance.classType = classType;
+    initializeBuiltinInstance(instance);
     Scope typeScope(scope);
     for (auto& [tpName, tpType] : classType->typeBindings) {
         if (tpType != nullptr) {
@@ -764,17 +881,13 @@ Value ConstructorExpression::execute(Scope& scope) {
 
     if (!classType->constructor.overloads.empty()) {
         Function* selected = nullptr;
+        std::vector<Value> boundCtorArgs;
         for (auto& overload : classType->constructor.overloads) {
-            if (overload.parameters.size() != argValues.size()) continue;
-            bool compatible = true;
-            for (size_t i = 0; i < argValues.size(); ++i) {
-                if (argValues[i].type != overload.parameters[i].type) {
-                    compatible = false;
-                    break;
-                }
-            }
-            if (compatible) {
+            Value bindErr;
+            std::vector<Value> candidate;
+            if (bindArgumentsForFunction(overload, argValues, candidate, bindErr)) {
                 selected = &overload;
+                boundCtorArgs = std::move(candidate);
                 break;
             }
         }
@@ -793,17 +906,26 @@ Value ConstructorExpression::execute(Scope& scope) {
         thisValue.value = instance;
         ctorFunction.__this = create_reference<Value>(thisValue);
 
-        Scope ctorScope(ctorFunction.closure);
-        ctorScope.addVariable("this", *ctorFunction.__this);
-        for (size_t i = 0; i < ctorFunction.parameters.size(); ++i) {
-            ctorScope.addVariable(ctorFunction.parameters[i].name, argValues[i]);
-        }
+        if (ctorFunction.kind == FunctionKind::Internal) {
+            Value ctorResult = ctorFunction.internalHandler(scope, boundCtorArgs, ctorFunction.__this);
+            if (ctorResult.thrownException != nullptr) return ctorResult;
+            if (ctorFunction.__this != nullptr) {
+                thisValue = *ctorFunction.__this;
+                instance = get<ClassInstance>(thisValue.value);
+            }
+        } else {
+            Scope ctorScope(ctorFunction.closure);
+            ctorScope.addVariable("this", *ctorFunction.__this);
+            for (size_t i = 0; i < ctorFunction.parameters.size(); ++i) {
+                ctorScope.addVariable(ctorFunction.parameters[i].name, boundCtorArgs[i]);
+            }
 
-        Value ctorResult = ctorFunction.body->execute(ctorScope);
-        if (ctorResult.thrownException != nullptr) return ctorResult;
-        thisValue = ctorScope.getVariable("this");
-        if (thisValue.thrownException != nullptr) return thisValue;
-        instance = get<ClassInstance>(thisValue.value);
+            Value ctorResult = ctorFunction.body->execute(ctorScope);
+            if (ctorResult.thrownException != nullptr) return ctorResult;
+            thisValue = ctorScope.getVariable("this");
+            if (thisValue.thrownException != nullptr) return thisValue;
+            instance = get<ClassInstance>(thisValue.value);
+        }
     } else if (!argValues.empty()) {
         Value err;
         err.thrownException = create_reference<Value>(

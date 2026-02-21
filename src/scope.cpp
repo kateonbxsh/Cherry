@@ -2,6 +2,7 @@
 #include <iostream>
 #include "expressions.h"
 #include "types/type.h"
+#include "runtime_builtins.h"
 
 // =======================
 // Constructor
@@ -18,6 +19,8 @@ Scope::Scope(reference<Scope> parent)
         addVariable("real", Value(RealType));
         addVariable("type", Value(TypeType));
         addVariable("function", Value(FunctionType));
+        addVariable("any", Value(AnyType));
+        registerBuiltinRuntime(*this);
     }
 }
 

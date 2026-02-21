@@ -30,6 +30,7 @@ struct FieldDefinition : public Statement {
 struct LambdaParameter {
     Token type;
     Token name;
+    bool variadic = false;
 };
 
 struct MethodDefinition : public Expression {

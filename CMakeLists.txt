@@ -11,6 +11,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 # Source files
 set(SOURCE_FILES
     src/types/type.cpp
+    src/types/function.cpp
     src/types/types.cpp
     src/cherry.cpp
     src/expressions.cpp
@@ -20,6 +21,8 @@ set(SOURCE_FILES
     src/scope.cpp
     src/data.cpp
     src/flags.cpp
+    src/compile_error.cpp
+    src/runtime_builtins.cpp
     src/statement.cpp
     src/statements/Block.cpp
     src/statements/GlobalBlock.cpp

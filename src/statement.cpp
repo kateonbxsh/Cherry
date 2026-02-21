@@ -12,6 +12,7 @@ uref<Statement> getFurthestInvalidStatement(const std::vector<uref<Statement>>& 
             c = st->lastToken.pos;
             furthestStatement->lastToken = st->lastToken;
             furthestStatement->expected = st->expected;
+            furthestStatement->errorMessage = st->errorMessage;
             furthestStatement->valid = false;
         } else if (st->lastToken.line == line && st->lastToken.pos == c && furthestStatement != nullptr) {
             furthestStatement->expected.append_range(st->expected);
@@ -38,6 +39,7 @@ void Statement::invalidFrom(const Statement& other) {
     valid = false;
     expected = other.expected;
     lastToken = other.lastToken;
+    errorMessage = other.errorMessage;
 }
 
 Value NotAStatement::execute(Scope&)
