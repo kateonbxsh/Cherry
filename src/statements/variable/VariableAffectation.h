@@ -14,8 +14,8 @@ public:
 
 private:
 
+    uref<Expression> leftTarget;
     uref<Expression> expression;
-    std::vector<Token> path;
     TokenKind selfOperation;
 
 };

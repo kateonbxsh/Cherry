@@ -8,6 +8,10 @@ Value makeClassRegistrationError(const string& message) {
     return err;
 }
 
+bool isOverloadableBinaryOperator(TokenKind kind) {
+    return kind > BEGIN_OF_BINARY_OPERATORS && kind < END_OF_BINARY_OPERATORS && kind != IS;
+}
+
 bool acceptsParamType(const reference<Type>& targetType, const reference<Type>& sourceType) {
     if (targetType == nullptr || sourceType == nullptr) return false;
     auto sourceCopy = sourceType;
@@ -530,19 +534,39 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
         return method;
     }
 
-    method->name = name;
+    bool isOperatorOverload = false;
+    if (name.value == "operator") {
+        Token opToken = lexer.nextToken();
+        if (!isOverloadableBinaryOperator(opToken.kind)) {
+            method->valid = false;
+            method->expected = {"binary operator"};
+            method->lastToken = opToken;
+            method->errorMessage = "operator overload must use a binary operator token";
+            lexer.rollPosition();
+            return method;
+        }
+        method->name = Token{IDENTIFIER, "operator" + opToken.value, name.pos, name.line};
+        isOperatorOverload = true;
+    } else {
+        method->name = name;
+    }
     if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing method: " << method->name.value << "\n";
 
-    if (!lexer.expectToken(LEFT_PARENTHESIS)) {
+    TokenKind listClose = RIGHT_PARENTHESIS;
+    bool isIndexer = false;
+    if ((method->name.value == "get" || method->name.value == "set") && lexer.expectToken(LEFT_BRACKET)) {
+        listClose = RIGHT_BRACKET;
+        isIndexer = true;
+    } else if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected '(' after method name\n";
         method->valid = false;
-        method->expected = {"("};
+        method->expected = tokenKindsToString({LEFT_PARENTHESIS, LEFT_BRACKET});
         method->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return method;
     }
 
-    while (!lexer.expectToken(RIGHT_PARENTHESIS)) {
+    while (!lexer.expectToken(listClose)) {
 
         Token type = lexer.nextToken();
         if (type.kind != IDENTIFIER) {
@@ -573,11 +597,11 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
         if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Parsed method parameter: " << paramName.value << "\n";
 
         Token sep = lexer.nextToken();
-        if (sep.kind == RIGHT_PARENTHESIS) break;
+        if (sep.kind == listClose) break;
 
         if (variadic) {
             method->valid = false;
-            method->expected = tokenKindsToString({RIGHT_PARENTHESIS});
+            method->expected = tokenKindsToString({listClose});
             method->lastToken = sep;
             method->errorMessage = "variadic parameter must be the last parameter";
             lexer.rollPosition();
@@ -587,11 +611,39 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
         if (sep.kind != COMMA) {
             if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected ',' or ')' in parameter list\n";
             method->valid = false;
-            method->expected = tokenKindsToString({COMMA, RIGHT_PARENTHESIS});
+            method->expected = tokenKindsToString({COMMA, listClose});
             method->lastToken = sep;
             lexer.rollPosition();
             return method;
         }
+    }
+
+    if (isOperatorOverload) {
+        if ((method->flags & MemberFlags::Static) == 0) {
+            method->valid = false;
+            method->expected = {"static operator declaration"};
+            method->lastToken = method->name;
+            method->errorMessage = "binary operator overloads must be static";
+            lexer.rollPosition();
+            return method;
+        }
+        if (method->parameters.size() != 2 || method->parameters[0].variadic || method->parameters[1].variadic) {
+            method->valid = false;
+            method->expected = {"two non-variadic parameters"};
+            method->lastToken = method->name;
+            method->errorMessage = "binary operator overloads must take exactly two non-variadic parameters";
+            lexer.rollPosition();
+            return method;
+        }
+    }
+
+    if (isIndexer && method->name.value == "set" && method->parameters.empty()) {
+        method->valid = false;
+        method->expected = {"at least one index parameter"};
+        method->lastToken = method->name;
+        method->errorMessage = "set[...] must declare at least one index parameter; assigned value is available as 'value'";
+        lexer.rollPosition();
+        return method;
     }
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing method body\n";

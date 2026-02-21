@@ -1,5 +1,6 @@
 #include "IfStatement.hpp"
 #include <expressions.h>
+#include "../GeneralStatement.h"
 
 uref<IfStatement> IfStatement::parse(Lexer& lexer) {
     lexer.savePosition();
@@ -46,10 +47,35 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
             return ifStmt;
         }
 
-        if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing block\n";
+        auto parseClauseBody = [&]() -> uref<Block> {
+            lexer.savePosition();
+            auto block = Block::parse(lexer);
+            if (block->valid) {
+                lexer.deletePosition();
+                return block;
+            }
+            lexer.rollPosition();
 
+            lexer.savePosition();
+            auto stmt = GeneralStatement::parse(lexer);
+            if (!stmt->valid) {
+                auto invalid = create_unique<Block>();
+                invalid->valid = false;
+                invalid->expected = stmt->expected;
+                invalid->lastToken = stmt->lastToken;
+                lexer.rollPosition();
+                return invalid;
+            }
+            auto single = create_unique<Block>();
+            single->valid = true;
+            single->statements.push_back(move(stmt));
+            lexer.deletePosition();
+            return single;
+        };
+
+        if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing if/unless body\n";
         DEBUG_TABS++;
-        clause.body = Block::parse(lexer);
+        clause.body = parseClauseBody();
         DEBUG_TABS--;
 
         if (!clause.body->valid) {
@@ -78,7 +104,7 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
             } else {
                 if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing else block\n";
 
-                auto elseBlock = Block::parse(lexer);
+                auto elseBlock = parseClauseBody();
                 if (!elseBlock->valid) {
                     if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid else block\n";
 

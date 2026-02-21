@@ -1,0 +1,9 @@
+class Box {
+  public int v = 0;
+  public get[int i] { return this.v; }
+  public set[int i] { this.v = value; }
+}
+let b = new Box();
+b[0] = 5;
+Standard.println("dot {}", b.v);
+Standard.println("idx {}", b[0]);

@@ -5,9 +5,91 @@
 #include "parser.h"
 #include "expressions.h"
 #include "data.h"
+#include "scope.h"
+#include "statements/Block.hpp"
 
 using BinaryOp = std::function<Value(const Value&, const Value&)>;
 using UnaryOp = std::function<Value(const Value&)>;
+
+static std::string getOperatorMethodName(TokenKind op) {
+    switch (op) {
+        case PLUS: return "operator+";
+        case MINUS: return "operator-";
+        case TIMES: return "operator*";
+        case DIVIDE: return "operator/";
+        case EXPONENT: return "operator^";
+        case MODULO: return "operatormod";
+        case DIV: return "operatordiv";
+        case COMPARATIVE_EQUALS: return "operator==";
+        case COMPARATIVE_NOT_EQUALS: return "operator!=";
+        case BIGGER_THAN: return "operator>";
+        case BIGGER_OR_EQUAL: return "operator>=";
+        case SMALLER_THAN: return "operator<";
+        case SMALLER_OR_EQUAL: return "operator<=";
+        case AND: return "operatorand";
+        case OR: return "operatoror";
+        case XOR: return "operatorxor";
+        case BITWISE_AND: return "operator&";
+        case BITWISE_OR: return "operator|";
+        case BITWISE_XOR: return "operator!|";
+        default: return "";
+    }
+}
+
+static Value invokeOverload(
+    const Function& fn,
+    const std::vector<Value>& args,
+    const reference<Type>& ownerType = nullptr
+) {
+    if (fn.kind == FunctionKind::Internal) {
+        Scope internalScope(fn.closure);
+        if (!fn.internalHandler) {
+            Value err;
+            err.thrownException = create_reference<Value>(Value("internal function is missing implementation"));
+            return err;
+        }
+        return fn.internalHandler(internalScope, args, fn.__this);
+    }
+
+    Scope funcScope(fn.closure);
+    if (ownerType != nullptr && !ownerType->getName().empty()) {
+        auto ownerTypeCopy = ownerType;
+        funcScope.addVariable(ownerType->getName(), Value(ownerTypeCopy));
+    }
+    if (fn.__this != nullptr) {
+        funcScope.addVariable("this", *fn.__this);
+    }
+    for (size_t i = 0; i < fn.parameters.size(); ++i) {
+        funcScope.addVariable(fn.parameters[i].name, args[i]);
+    }
+    return fn.body->execute(funcScope);
+}
+
+struct ClassOperatorResult {
+    bool handled = false;
+    Value value = NullValue;
+};
+
+static ClassOperatorResult tryClassBinaryOperator(const Value& a, const Value& b, TokenKind op) {
+    auto methodName = getOperatorMethodName(op);
+    if (methodName.empty()) return {};
+
+    std::vector<reference<Type>> candidates;
+    if (a.type != nullptr && a.type->kind == TypeKind::Class) candidates.push_back(a.type);
+    if (b.type != nullptr && b.type->kind == TypeKind::Class && b.type != a.type) candidates.push_back(b.type);
+
+    std::vector<Value> args = {a, b};
+    for (const auto& ownerType : candidates) {
+        if (!ownerType->staticMethods.contains(methodName)) continue;
+        const auto& method = ownerType->staticMethods.at(methodName);
+        for (const auto& overload : method.overloads) {
+            if (!overload.validArguments(args)) continue;
+            return {true, invokeOverload(overload, args, ownerType)};
+        }
+    }
+
+    return {};
+}
 
 /* ────────────────────────────────────────────────────────────── *
  *  VALUE HELPERS
@@ -343,6 +425,18 @@ Value performUnaryOperator(const Value& a, TokenKind op) {
 }
 
 Value performBinaryOperator(const Value& a, const Value& b, TokenKind op) {
+    if (op == IS) {
+        if (b.type != TypeType) {
+            return op_error(op, a, b);
+        }
+        auto checkType = get<reference<Type>>(b.value);
+        return Value((boolean)checkType->assignableFrom(a));
+    }
+
+    ClassOperatorResult classOperatorResult = tryClassBinaryOperator(a, b, op);
+    if (classOperatorResult.handled) {
+        return classOperatorResult.value;
+    }
 
     // boolean?
     if (booleanBinaryTable.count(op) && (a.type == BooleanType || b.type == BooleanType)) {
