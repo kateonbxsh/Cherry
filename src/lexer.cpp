@@ -194,6 +194,7 @@ void Lexer::defineCharKinds() {
     tokenMap["<="] = SMALLER_OR_EQUAL;
     tokenMap["mod"] = MODULO;
     tokenMap["div"] = DIV;
+    tokenMap["is"] = IS;
     tokenMap["||"] = OR;
     tokenMap["or"] = OR;
     tokenMap["and"] = AND;
@@ -375,7 +376,7 @@ const std::vector<std::string> tokenKindStrings = {
     "minus",
     "bitwise_and", "bitwise_or", "bitwise_xor",
     "and", "or", "xor", 
-    "modulo", "div",
+    "modulo", "div", "is",
     "end_of_binary_operators",
 
     "begin_of_unary_operators",

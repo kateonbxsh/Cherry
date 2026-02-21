@@ -40,6 +40,67 @@ static Value makeTypeInstantiationError(const std::string& message) {
     return err;
 }
 
+static Value makeExpressionError(const std::string& message) {
+    Value err;
+    err.thrownException = create_reference<Value>(Value(message));
+    return err;
+}
+
+static bool bindCallArguments(
+    const Function& function,
+    const std::vector<Value>& args,
+    std::vector<Value>& bound,
+    std::string& error
+) {
+    if (!function.validArguments(args)) {
+        error = "arguments are not compatible with function signature";
+        return false;
+    }
+
+    size_t fixedCount = function.parameters.size();
+    bool variadic = !function.parameters.empty() && function.parameters.back().variadic;
+    if (variadic) fixedCount--;
+
+    bound.clear();
+    bound.reserve(function.parameters.size());
+    for (size_t i = 0; i < fixedCount; ++i) bound.push_back(args[i]);
+
+    if (variadic) {
+        std::vector<Value> tail;
+        for (size_t i = fixedCount; i < args.size(); ++i) tail.push_back(args[i]);
+        Value packed = makeArrayFromValues(tail);
+        if (packed.thrownException != nullptr) {
+            error = stringify(*packed.thrownException);
+            return false;
+        }
+        bound.push_back(packed);
+    }
+
+    return true;
+}
+
+static Value invokeFunction(const Function& function, Scope& scope, const std::vector<Value>& args) {
+    std::vector<Value> boundArgs;
+    std::string bindError;
+    if (!bindCallArguments(function, args, boundArgs, bindError)) {
+        return makeExpressionError(bindError);
+    }
+
+    if (function.kind == FunctionKind::Internal) {
+        if (!function.internalHandler) return makeExpressionError("internal function is missing implementation");
+        return function.internalHandler(scope, boundArgs, function.__this);
+    }
+
+    Scope funcScope(function.closure);
+    if (function.__this != nullptr) {
+        funcScope.addVariable("this", *function.__this);
+    }
+    for (size_t i = 0; i < function.parameters.size(); ++i) {
+        funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
+    }
+    return function.body->execute(funcScope);
+}
+
 static reference<Type> resolveParameterType(const reference<Type>& ownerType, const reference<Type>& parameterType) {
     if (ownerType == nullptr || parameterType == nullptr) return parameterType;
     if (parameterType->kind != TypeKind::Dynamic) return parameterType;
@@ -331,6 +392,38 @@ uref<Expression> Expression::parse(Lexer &lexer) {
             continue;
         }
 
+        if (lexer.expectToken(LEFT_BRACKET)) {
+            auto idx = create_unique<IndexAccessExpression>();
+            idx->target = move(expression);
+
+            while (!lexer.expectToken(RIGHT_BRACKET)) {
+                auto arg = Expression::parse(lexer);
+                if (!arg->valid) {
+                    idx->valid = false;
+                    idx->expected = arg->expected;
+                    idx->lastToken = arg->lastToken;
+                    lexer.rollPosition();
+                    return idx;
+                }
+                idx->arguments.push_back(move(arg));
+
+                Token sep = lexer.nextToken();
+                if (sep.kind == RIGHT_BRACKET) break;
+                if (sep.kind != COMMA) {
+                    idx->valid = false;
+                    idx->expected = tokenKindsToString({COMMA, RIGHT_BRACKET});
+                    idx->lastToken = sep;
+                    lexer.rollPosition();
+                    return idx;
+                }
+            }
+
+            idx->valid = true;
+            expression = create_unique<Expression>();
+            expression->firstOperand = move(idx);
+            continue;
+        }
+
         break;
     }
 
@@ -534,6 +627,13 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
     return expression;
 }
 
+bool ExpressionValue::isPlainIdentifier(Token* outIdentifier) const {
+    if (identifier.kind != IDENTIFIER && identifier.kind != THIS) return false;
+    if (hasTypeArguments) return false;
+    if (outIdentifier != nullptr) *outIdentifier = identifier;
+    return true;
+}
+
 uref<Expression> UnaryExpression::parse(Lexer& lexer) {
 
     lexer.savePosition();
@@ -673,6 +773,14 @@ uref<Expression> DotAccessExpression::parse(Lexer& lexer) {
     return expr;
 }
 
+uref<Expression> IndexAccessExpression::parse(Lexer& lexer) {
+    auto expr = create_unique<IndexAccessExpression>();
+    expr->valid = false;
+    expr->expected = {"index access"};
+    expr->lastToken = lexer.peekToken();
+    return expr;
+}
+
 Value DotAccessExpression::execute(Scope& scope) {
     Value base = target->execute(scope);
     if (base.thrownException != nullptr) return base;
@@ -736,6 +844,59 @@ Value DotAccessExpression::execute(Scope& scope) {
         Value("dot access requires class type or instance")
     );
     return err;
+}
+
+Value IndexAccessExpression::execute(Scope& scope) {
+    Value base = target->execute(scope);
+    if (base.thrownException != nullptr) return base;
+
+    std::vector<Value> args;
+    args.reserve(arguments.size());
+    for (auto& argExpr : arguments) {
+        Value argValue = argExpr->execute(scope);
+        if (argValue.thrownException != nullptr) return argValue;
+        args.push_back(argValue);
+    }
+
+    if (base.type == StringType) {
+        if (args.size() != 1 || args[0].type != IntegerType) {
+            return makeExpressionError("string indexing expects one integer index");
+        }
+        const auto& s = get<string>(base.value);
+        integer idx = get<integer>(args[0].value);
+        if (idx < 0 || (size_t)idx >= s.size()) {
+            return makeExpressionError("string index out of range");
+        }
+        return Value(string(1, s[(size_t)idx]));
+    }
+
+    if (base.type == TypeType) {
+        return makeExpressionError("cannot index type value");
+    }
+
+    if (base.type != nullptr && base.type->kind == TypeKind::Class) {
+        auto typeRef = base.type;
+        if (!typeRef->methods.contains("get")) {
+            return makeExpressionError("type does not implement get[...] operator");
+        }
+
+        const auto& overloads = typeRef->methods["get"].overloads;
+        Function* selected = nullptr;
+        for (const auto& overload : overloads) {
+            if (!overload.validArguments(args)) continue;
+            selected = const_cast<Function*>(&overload);
+            break;
+        }
+        if (selected == nullptr) {
+            return makeExpressionError("no matching get[...] overload");
+        }
+
+        Function fn = *selected;
+        fn.__this = create_reference<Value>(base);
+        return invokeFunction(fn, scope, args);
+    }
+
+    return makeExpressionError("index access is not supported on this value");
 }
 
 uref<Expression> ConstructorExpression::parse(Lexer& lexer) {

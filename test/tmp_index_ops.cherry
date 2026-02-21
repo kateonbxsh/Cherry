@@ -1,0 +1,7 @@
+let a = new Array<int>();
+a.push(1);
+a[0] = 7;
+Standard.println("{}", a[0]);
+let m = new Map<string, int>();
+m["k"] = 4;
+Standard.println("{}", m["k"]);

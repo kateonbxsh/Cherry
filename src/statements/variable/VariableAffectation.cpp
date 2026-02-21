@@ -1,6 +1,8 @@
 #include "VariableAffectation.h"
-#include "statements/expression/Expression.h"
 #include "types/type.h"
+#include "types/function.h"
+#include "runtime_builtins.h"
+#include "statements/Block.hpp"
 #include <expressions.h>
 
 static Value makeAssignmentError(const std::string& message) {
@@ -9,41 +11,78 @@ static Value makeAssignmentError(const std::string& message) {
     return err;
 }
 
-static Value readMember(const Value& owner, const std::string& name) {
-    if (owner.type == TypeType) {
-        auto typeRef = get<reference<Type>>(owner.value);
-        if (typeRef->staticFieldValues.contains(name)) {
-            return *typeRef->staticFieldValues[name];
-        }
-        return makeAssignmentError("unknown static member: " + name);
+static bool bindCallArguments(
+    const Function& function,
+    const std::vector<Value>& args,
+    std::vector<Value>& bound,
+    std::string& error
+) {
+    if (!function.validArguments(args)) {
+        error = "arguments are not compatible with function signature";
+        return false;
     }
 
-    if (owner.type != nullptr && owner.type->kind == TypeKind::Class) {
-        auto instance = get<ClassInstance>(owner.value);
-        if (instance.fieldValues.contains(name)) {
-            return instance.fieldValues[name];
+    size_t fixedCount = function.parameters.size();
+    bool variadic = !function.parameters.empty() && function.parameters.back().variadic;
+    if (variadic) fixedCount--;
+
+    bound.clear();
+    bound.reserve(function.parameters.size());
+    for (size_t i = 0; i < fixedCount; ++i) bound.push_back(args[i]);
+
+    if (variadic) {
+        std::vector<Value> tail;
+        for (size_t i = fixedCount; i < args.size(); ++i) tail.push_back(args[i]);
+        Value packed = makeArrayFromValues(tail);
+        if (packed.thrownException != nullptr) {
+            error = stringify(*packed.thrownException);
+            return false;
         }
-        return makeAssignmentError("unknown instance member: " + name);
+        bound.push_back(packed);
     }
 
-    return makeAssignmentError("dot access requires class type or instance");
+    return true;
 }
 
-static Value resolvePathValue(Scope& scope, const std::vector<Token>& path) {
-    if (path.empty()) return makeAssignmentError("empty assignment path");
-
-    Value current = scope.getVariable(path.front().value);
-    if (current.thrownException != nullptr) return current;
-
-    for (size_t i = 1; i < path.size(); ++i) {
-        current = readMember(current, path[i].value);
-        if (current.thrownException != nullptr) return current;
+static Value invokeFunction(
+    const Function& function,
+    Scope& scope,
+    const std::vector<Value>& args,
+    const Value* implicitAssignedValue = nullptr
+) {
+    std::vector<Value> boundArgs;
+    std::string bindError;
+    if (!bindCallArguments(function, args, boundArgs, bindError)) {
+        return makeAssignmentError(bindError);
     }
 
-    return current;
+    if (function.kind == FunctionKind::Internal) {
+        if (!function.internalHandler) return makeAssignmentError("internal function is missing implementation");
+        return function.internalHandler(scope, boundArgs, function.__this);
+    }
+
+    Scope funcScope(function.closure);
+    if (function.__this != nullptr) {
+        funcScope.addVariable("this", *function.__this);
+    }
+    for (size_t i = 0; i < function.parameters.size(); ++i) {
+        funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
+    }
+    if (implicitAssignedValue != nullptr) {
+        funcScope.addVariable("value", *implicitAssignedValue);
+    }
+    Value result = function.body->execute(funcScope);
+    if (result.thrownException != nullptr) return result;
+
+    if (function.__this != nullptr) {
+        Value updatedThis = funcScope.getVariable("this");
+        if (updatedThis.thrownException != nullptr) return updatedThis;
+        *function.__this = updatedThis;
+    }
+    return result;
 }
 
-static Value setMember(Value& owner, const std::string& name, const Value& newValue) {
+static Value setStaticMember(Value& owner, const std::string& name, const Value& newValue) {
     if (owner.type == TypeType) {
         auto typeRef = get<reference<Type>>(owner.value);
         auto applyToType = [&](reference<Type> current) {
@@ -63,50 +102,134 @@ static Value setMember(Value& owner, const std::string& name, const Value& newVa
         return newValue;
     }
 
-    if (owner.type != nullptr && owner.type->kind == TypeKind::Class) {
-        auto instance = get<ClassInstance>(owner.value);
-        instance.fieldValues[name] = newValue;
-        owner.value = instance;
-        return newValue;
+    return makeAssignmentError("dot assignment on type requires static field target");
+}
+
+static Value assignToTarget(Expression* target, Scope& scope, const Value& value);
+
+static Expression* unwrapAssignableTarget(Expression* target) {
+    Expression* current = target;
+    while (current != nullptr) {
+        auto expr = dynamic_cast<Expression*>(current);
+        if (expr == nullptr) break;
+        if (expr->expressionOperator.kind != NONE) break;
+        if (expr->conditional) break;
+        if (expr->firstOperand == nullptr) break;
+        current = expr->firstOperand.get();
+    }
+    return current;
+}
+
+static Value assignToIndex(IndexAccessExpression* idx, Scope& scope, const Value& value) {
+    Value base = idx->target->execute(scope);
+    if (base.thrownException != nullptr) return base;
+
+    std::vector<Value> indexArgs;
+    indexArgs.reserve(idx->arguments.size());
+    for (auto& argExpr : idx->arguments) {
+        Value argValue = argExpr->execute(scope);
+        if (argValue.thrownException != nullptr) return argValue;
+        indexArgs.push_back(argValue);
     }
 
-    return makeAssignmentError("dot assignment requires class type or instance");
+    if (base.type != nullptr && base.type->kind == TypeKind::Class) {
+        auto typeRef = base.type;
+        if (!typeRef->methods.contains("set")) {
+            return makeAssignmentError("type does not implement set[...] operator");
+        }
+        Function* selected = nullptr;
+        bool selectedWithAssignedParameter = false;
+        for (const auto& overload : typeRef->methods["set"].overloads) {
+            std::vector<Value> fullArgs = indexArgs;
+            fullArgs.push_back(value);
+
+            bool matchesIndexOnly = overload.validArguments(indexArgs);
+            bool matchesWithAssigned = overload.validArguments(fullArgs);
+            bool matches = matchesIndexOnly || matchesWithAssigned;
+            if (!matches) continue;
+            selected = const_cast<Function*>(&overload);
+            selectedWithAssignedParameter = matchesWithAssigned && !matchesIndexOnly;
+            break;
+        }
+        if (selected == nullptr) return makeAssignmentError("no matching set[...] overload");
+
+        Function fn = *selected;
+        fn.__this = create_reference<Value>(base);
+        std::vector<Value> callArgs = indexArgs;
+        if (fn.kind == FunctionKind::Internal || selectedWithAssignedParameter) {
+            callArgs.push_back(value);
+        }
+        Value callResult = invokeFunction(fn, scope, callArgs, &value);
+        if (callResult.thrownException != nullptr) return callResult;
+
+        if (fn.__this != nullptr) {
+            Value persistedOwner = assignToTarget(idx->target.get(), scope, *fn.__this);
+            if (persistedOwner.thrownException != nullptr) return persistedOwner;
+        }
+        return callResult;
+    }
+
+    return makeAssignmentError("index assignment is not supported on this value");
+}
+
+static Value assignToTarget(Expression* target, Scope& scope, const Value& value) {
+    target = unwrapAssignableTarget(target);
+
+    if (auto id = dynamic_cast<ExpressionValue*>(target)) {
+        Token t;
+        if (!id->isPlainIdentifier(&t)) {
+            return makeAssignmentError("assignment target must be assignable");
+        }
+        if (t.kind == THIS) {
+            scope.setVariable("this", value);
+        } else {
+            scope.setVariable(t.value, value);
+        }
+        return value;
+    }
+
+    if (auto dot = dynamic_cast<DotAccessExpression*>(target)) {
+        Value owner = dot->target->execute(scope);
+        if (owner.thrownException != nullptr) return owner;
+        if (owner.type == TypeType) {
+            return setStaticMember(owner, dot->member.value, value);
+        }
+        if (owner.type != nullptr && owner.type->kind == TypeKind::Class) {
+            auto instance = get<ClassInstance>(owner.value);
+            instance.fieldValues[dot->member.value] = value;
+            owner.value = instance;
+
+            Value persistedOwner = assignToTarget(dot->target.get(), scope, owner);
+            if (persistedOwner.thrownException != nullptr) return persistedOwner;
+            return value;
+        }
+        return makeAssignmentError("dot assignment requires class type or instance");
+    }
+
+    if (auto idx = dynamic_cast<IndexAccessExpression*>(target)) {
+        return assignToIndex(idx, scope, value);
+    }
+
+    return makeAssignmentError("invalid assignment target");
 }
 
 uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
-
     lexer.savePosition();
 
     auto varAff = create_unique<VariableAffectation>();
-
-    Token next = lexer.nextToken();
-    if (next.kind == IDENTIFIER || next.kind == THIS) {
-        varAff->path.push_back(next);
-    } else {
+    auto lhs = Expression::parse(lexer);
+    if (!lhs->valid) {
         varAff->valid = false;
-        varAff->expected = {"variable name"};
-        varAff->lastToken = next;
+        varAff->expected = lhs->expected;
+        varAff->lastToken = lhs->lastToken;
         lexer.rollPosition();
         return varAff;
     }
 
-    while (lexer.expectToken(DOT)) {
-        Token member = lexer.nextToken();
-        if (member.kind != IDENTIFIER) {
-            varAff->valid = false;
-            varAff->expected = {"member name"};
-            varAff->lastToken = member;
-            lexer.rollPosition();
-            return varAff;
-        }
-        varAff->path.push_back(member);
-    }
-
     varAff->selfOperation = NONE;
-
-    next = lexer.nextToken();
-    if (isBinaryOperator(next.kind)) {
-        varAff->selfOperation = next.kind;
+    Token op = lexer.nextToken();
+    if (isBinaryOperator(op.kind)) {
+        varAff->selfOperation = op.kind;
     } else {
         lexer.back();
     }
@@ -119,17 +242,14 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
         return varAff;
     }
 
-    auto potentialExpr = Expression::parse(lexer);
-    
-    if (!potentialExpr->valid) {
+    auto rhs = Expression::parse(lexer);
+    if (!rhs->valid) {
         varAff->valid = false;
-        varAff->expected = potentialExpr->expected;
-        varAff->lastToken = potentialExpr->lastToken;
+        varAff->expected = rhs->expected;
+        varAff->lastToken = rhs->lastToken;
         lexer.rollPosition();
         return varAff;
     }
-
-    varAff->expression = move(potentialExpr);
 
     if (!lexer.expectToken(SEMICOLON)) {
         varAff->valid = false;
@@ -139,60 +259,23 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
         return varAff;
     }
 
+    varAff->leftTarget = move(lhs);
+    varAff->expression = move(rhs);
     varAff->valid = true;
+    lexer.deletePosition();
     return varAff;
-
 }
 
 Value VariableAffectation::execute(Scope& scope) {
-
-    if (path.empty()) return NullValue;
-
-    if (!scope.hasVariable(path.front().value)) return NullValue;
-
     Value value = expression->execute(scope);
     if (value.thrownException != nullptr) return value;
 
     if (selfOperation != NONE) {
-        Value current = resolvePathValue(scope, path);
+        Value current = leftTarget->execute(scope);
         if (current.thrownException != nullptr) return current;
         value = performBinaryOperator(current, value, selfOperation);
         if (value.thrownException != nullptr) return value;
     }
 
-    if (path.size() == 1) {
-        scope.setVariable(path.front().value, value);
-        return value;
-    }
-
-    // Build owner/value chain for nested assignment:
-    // path: a.b.c = v  -> nodes: [a, a.b]
-    std::vector<Value> nodes;
-    nodes.reserve(path.size());
-
-    Value root = scope.getVariable(path.front().value);
-    if (root.thrownException != nullptr) return root;
-    nodes.push_back(root);
-
-    for (size_t i = 1; i + 1 < path.size(); ++i) {
-        Value next = readMember(nodes.back(), path[i].value);
-        if (next.thrownException != nullptr) return next;
-        nodes.push_back(next);
-    }
-
-    // Assign leaf on the deepest owner
-    Value writeResult = setMember(nodes.back(), path.back().value, value);
-    if (writeResult.thrownException != nullptr) return writeResult;
-
-    // Propagate updated nested objects back to root
-    for (size_t i = nodes.size(); i > 1; --i) {
-        Value child = nodes[i - 1];
-        Value& parent = nodes[i - 2];
-        Value linkResult = setMember(parent, path[i - 1].value, child);
-        if (linkResult.thrownException != nullptr) return linkResult;
-    }
-
-    scope.setVariable(path.front().value, nodes.front());
-    return value;
-
+    return assignToTarget(leftTarget.get(), scope, value);
 }
