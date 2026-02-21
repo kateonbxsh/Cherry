@@ -146,8 +146,9 @@ Token Lexer::nextToken() {
     if (reader < tokens.size()) {
         return tokens.at(reader++);
     }
-    reader++;
-    return {END_OF_FEED, "", 0, tokens.at(reader-2).line + 1};
+    const int fallbackLine = tokens.empty() ? 1 : tokens.back().line + 1;
+    reader = tokens.size();
+    return {END_OF_FEED, "", 0, fallbackLine};
 }
 
 void Lexer::defineCharKinds() {
@@ -196,6 +197,7 @@ void Lexer::defineCharKinds() {
     tokenMap["\t"] = WHITESPACE;
     tokenMap["\n"] = WHITESPACE;
     tokenMap[" "] = WHITESPACE;
+    tokenMap["let"] = INFER;
     tokenMap["infer"] = INFER;
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
@@ -210,6 +212,13 @@ void Lexer::defineCharKinds() {
     tokenMap["do"] = DO;
     tokenMap["until"] = UNTIL;
     tokenMap["times"] = REPEAT_TIMES;
+    tokenMap["class"] = CLASS;
+    tokenMap["extends"] = EXTENDS;
+    tokenMap["public"] = PUBLIC;
+    tokenMap["private"] = PRIVATE;
+    tokenMap["protected"] = PROTECTED;
+    tokenMap["sealed"] = SEALED;
+    tokenMap["static"] = STATIC;
 
     tokenMap[""] = END_OF_FEED;
 
@@ -253,7 +262,9 @@ TokenList Lexer::getTokenList() {
 }
 
 void Lexer::back() {
-    --reader;
+    if (reader > 0) {
+        --reader;
+    }
 }
 
 Token Lexer::peekToken() {
@@ -263,6 +274,9 @@ Token Lexer::peekToken() {
 }
 
 Token Lexer::currentToken() {
+    if (reader == 0) {
+        return peekToken();
+    }
     back();
     return nextToken();
 }
@@ -323,6 +337,13 @@ const std::vector<std::string> tokenKindStrings = {
     "semicolon",
     "colon",
     "equals",
+    "class",
+    "extends",
+    "public",
+    "private",
+    "protected",
+    "sealed",
+    "static",
     
     "begin_of_binary_operators",
     "comparative_equals", "comparative_not_equals",

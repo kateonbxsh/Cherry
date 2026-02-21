@@ -15,6 +15,8 @@ Value FunctionCall::execute(Scope& scope) {
     auto func = function->execute(scope);
     if (DEBUG) std::cout << DEBUG_PREFIX << "Got function value: " << stringify(func) << std::endl;
 
+    if (func.thrownException != nullptr) return func;
+
     if (func.type != FunctionType) {
         auto exception = create_reference<Value>(Value("value is not a function"));
         Value v;

@@ -33,6 +33,7 @@ set(SOURCE_FILES
     src/statements/function/ReturnStatement.cpp
     src/statements/conditional/IfStatement.cpp
     src/statements/loop/LoopStatement.cpp
+    src/statements/class/Class.cpp
 )
 
 add_executable(Cherry ${SOURCE_FILES})

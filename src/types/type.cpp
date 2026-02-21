@@ -1,5 +1,5 @@
 #include "type.h"
-#include "data.h"
+#include <data.h>
 
 void Type::defineTypes()
 {
@@ -11,6 +11,11 @@ void Type::defineTypes()
     TypeType->setName("type");
     AnonymousType->setName("anon");
     AnonymousType->setName("any");
+
+    IntegerType->setDefaultValue(Value((integer) 0));
+    RealType->setDefaultValue(Value((real) 0.0));
+    StringType->setDefaultValue(Value(string("")));
+    BooleanType->setDefaultValue(Value((boolean) false));
 }
 
 void Type::setName(const string &name)
@@ -21,6 +26,17 @@ void Type::setName(const string &name)
 string Type::getName()
 {
     return name;
+}
+
+void Type::setDefaultValue(const Value &value)
+{
+    defaultValue = create_reference<Value>(value);
+}
+
+Value Type::getDefaultValue()
+{
+    if (defaultValue == nullptr) return Value();
+    return *defaultValue;
 }
 
 bool Type::assignableFrom(const Value& other) {

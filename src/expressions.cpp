@@ -31,74 +31,53 @@ boolean areNumericTypes(const Value& value1, const Value& value2) {
 real getNumericValueAsReal(const Value& value) {
     if (!isNumeric(value)) return 0;
 
-    switch (value.type->primitiveType) {
-        case PRIMITIVE_REAL:   return std::get<real>(value.value);
-        case PRIMITIVE_INTEGER:return static_cast<real>(std::get<integer>(value.value));
-        case PRIMITIVE_BOOLEAN:return static_cast<real>(std::get<boolean>(value.value));
-        default:               return 0;
-    }
+    if (value.type == RealType) return std::get<real>(value.value);
+    if (value.type == IntegerType) return static_cast<real>(std::get<integer>(value.value));
+    if (value.type == BooleanType) return static_cast<real>(std::get<boolean>(value.value));
+    return 0;
 }
 
 integer getNumericValueAsInt(const Value& value) {
     if (!isNumeric(value)) return 0;
 
-    switch (value.type->primitiveType) {
-        case PRIMITIVE_REAL:   return static_cast<integer>(std::get<real>(value.value));
-        case PRIMITIVE_INTEGER:return std::get<integer>(value.value);
-        case PRIMITIVE_BOOLEAN:return static_cast<integer>(std::get<boolean>(value.value));
-        default:               return 0;
-    }
+    if (value.type == RealType) return static_cast<integer>(std::get<real>(value.value));
+    if (value.type == IntegerType) return std::get<integer>(value.value);
+    if (value.type == BooleanType) return static_cast<integer>(std::get<boolean>(value.value));
+    return 0;
 }
 
 bool isTruthy(const Value& value) {
 
     if (value.type == nullptr) return false;
-    if (!value.type->primitive) return true;
-
-    switch (value.type->primitiveType) {
-        case PRIMITIVE_REAL:
-            return getValue<real>(value) > 0.5f;
-        case PRIMITIVE_STRING:
-            return !getValue<string>(value).empty();
-        case PRIMITIVE_INTEGER:
-            return getValue<integer>(value) > 0;
-        case PRIMITIVE_BOOLEAN:
-            return getValue<boolean>(value);
-        default:
-            return false;
-    }
+    if (value.type->kind != TypeKind::Primitive) return true;
+    if (value.type == RealType) return getValue<real>(value) > 0.5f;
+    if (value.type == StringType) return !getValue<string>(value).empty();
+    if (value.type == IntegerType) return getValue<integer>(value) > 0;
+    if (value.type == BooleanType) return getValue<boolean>(value);
+    return false;
 }
 
 std::string stringify(const Value& value) {
 
     if (value.type == nullptr) return "null";
-    if (!value.type->primitive) return "<Object>";
-
-    switch (value.type->primitiveType) {
-        case PRIMITIVE_REAL:
-            return std::to_string(getValue<real>(value));
-        case PRIMITIVE_STRING:
-            return getValue<string>(value);
-        case PRIMITIVE_INTEGER:
-            return std::to_string(getValue<integer>(value));
-        case PRIMITIVE_BOOLEAN:
-            return getValue<boolean>(value) ? "true" : "false";
-        case FUNCTION_TYPE:
-            return "<function>";
-        case TYPE_TYPE: {
-            auto type = get<reference<Type>>(value.value);
-            return "<type " + type->getName() + ">";
-        }
-        default:
-            return "null";
+    if (value.type->kind != TypeKind::Primitive) return "<Object>";
+    if (value.type == RealType) return std::to_string(getValue<real>(value));
+    if (value.type == StringType) return getValue<string>(value);
+    if (value.type == IntegerType) return std::to_string(getValue<integer>(value));
+    if (value.type == BooleanType) return getValue<boolean>(value) ? "true" : "false";
+    if (value.type == FunctionType) return "<function>";
+    if (value.type == TypeType) {
+        auto type = get<reference<Type>>(value.value);
+        return "<type " + type->getName() + ">";
     }
+    return "null";
 }
 
 boolean compareValues(const Value& value1, const Value& value2) {
     
     if (value1.type != value2.type && !areNumericTypes(value1, value2)) return false;
     if (value1.type == nullptr) return false;
-    if (!value1.type->primitive) return false;
+    if (value1.type->kind != TypeKind::Primitive) return false;
 
     if (value1.type == RealType || value2.type == RealType)
         return getNumericValueAsReal(value1) == getNumericValueAsReal(value2);
@@ -112,7 +91,7 @@ boolean firstIsBigger(const Value& value1, const Value& value2) {
 
     if (value1.type != value2.type && !areNumericTypes(value1, value2)) return false;
     if (value1.type == nullptr) return false;
-    if (!value1.type->primitive) return false;
+    if (value1.type->kind != TypeKind::Primitive) return false;
 
     if (value1.type == RealType || value2.type == RealType)
         return getNumericValueAsReal(value1) > getNumericValueAsReal(value2);

@@ -3,17 +3,18 @@
 #include "../expression/Expression.h"
 #include "../variable/VariableDefinition.h"
 #include "../Block.hpp"
+#include <unordered_map>
 
 struct ClassDeclarationTypeParameter {
 
     Token name;
     bool withDefaultValue;
-    reference<Expression> defaultValue; 
+    reference<Expression> defaultValue;
 
 };
 
 struct FieldDefinition : public Statement {
-    
+
     Token name;
     int flags;
     reference<Expression> type;
@@ -25,8 +26,23 @@ struct FieldDefinition : public Statement {
 
 };
 
+struct LambdaParameter {
+    Token type;
+    Token name;
+};
 
-struct MethodDefinition;
+struct MethodDefinition : public Expression {
+
+    Token name;
+    int flags;
+    bool isConstructor = false;
+    std::vector<LambdaParameter> parameters;
+    reference<Block> body;
+
+    static uref<MethodDefinition> parse(Lexer& lexer);
+    Value execute(Scope& scope) override;
+
+};
 
 struct ClassDeclaration : public Statement {
 
@@ -34,25 +50,10 @@ struct ClassDeclaration : public Statement {
     Value execute(Scope& scope) override;
 
     string name;
-    
+
     std::unordered_map<string, ClassDeclarationTypeParameter> typeParameters;
     std::vector<FieldDefinition> fields;
     std::unordered_map<string, std::vector<uref<MethodDefinition>>> methods;
-
-};
-
-struct MethodParameter {
-    Token type;
-    Token name;
-};
-
-struct MethodDefinition : public Expression {
-    
-    Token name;
-    std::vector<MethodParameter> parameters;
-    reference<Block> body;
-
-    static uref<MethodDefinition> parse(Lexer& lexer);
-    Value execute(Scope& scope) override;
+    std::vector<uref<MethodDefinition>> constructors;
 
 };

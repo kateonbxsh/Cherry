@@ -25,12 +25,20 @@ Scope::Scope(reference<Scope> parent)
 // Variables
 // =======================
 void Scope::addVariable(const std::string& name, const Value& initial) {
-    if (DEBUG) std::cout << "Adding variable " << name << " of type " << initial.type->getName() << std::endl;;
+    if (DEBUG) {
+        std::cout << "Adding variable " << name << " of type "
+                  << (initial.type ? initial.type->getName() : "<null>")
+                  << std::endl;
+    }
     variables[name] = initial;
 }
 
 void Scope::setVariable(const std::string& name, const Value& value) {
-    if (DEBUG) std::cout << "Setting variable " << name << " of type " << value.type->getName() << std::endl;;
+    if (DEBUG) {
+        std::cout << "Setting variable " << name << " of type "
+                  << (value.type ? value.type->getName() : "<null>")
+                  << std::endl;
+    }
     if (variables.contains(name)) {
         variables[name] = value;
         return;

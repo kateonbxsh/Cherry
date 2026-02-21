@@ -1,10 +1,10 @@
 #include "LambdaExpression.hpp"
 #include "types/function.h"
 
-uref<Expression> MethodDefinition::parse(Lexer& lexer) {
+uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
 
     lexer.savePosition();
-    auto lambda = create_unique<MethodDefinition>();
+    auto lambda = create_unique<LambdaDefinition>();
 
     if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         lambda->valid = false;
@@ -74,20 +74,21 @@ uref<Expression> MethodDefinition::parse(Lexer& lexer) {
     return lambda;
 }
 
-Value MethodDefinition::execute(Scope& scope) {
+Value LambdaDefinition::execute(Scope& scope) {
 
     Function function;
     function.body = body;
     function.parameters = {};
 
-    auto childScope = Scope(scope);
+    reference<Scope> parentRef(&scope, [](Scope*){});
+    auto childScope = create_reference<Scope>(Scope(parentRef));
 
     for (auto& param : parameters) {
 
         FunctionParameter fp;
         fp.name = param.name.value;
 
-        Value typeVal = childScope.getVariable(param.type.value);
+        Value typeVal = childScope->getVariable(param.type.value);
         if (typeVal.type != TypeType) {
             Value exc;
             exc.thrownException = create_reference<Value>(Value("unknown type"));
@@ -95,12 +96,12 @@ Value MethodDefinition::execute(Scope& scope) {
         }
 
         fp.type = get<reference<Type>>(typeVal.value);
-        childScope.addVariable(fp.name, Value::Uninitialized(fp.type));
+        childScope->addVariable(fp.name, Value::Uninitialized(fp.type));
 
         function.parameters.push_back(fp);
     }
 
-    function.closure = create_reference<Scope>(scope);
+    function.closure = childScope;
 
     return Value(function);
 }

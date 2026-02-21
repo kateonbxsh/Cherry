@@ -1,11 +1,12 @@
 #pragma once
 
-#include "type.h"
+#include "macros.h"
 #include <vector>
 
 class Block;
 class Value;
 class Scope;
+class Type;
 
 struct FunctionParameter {
     string name;

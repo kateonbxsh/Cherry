@@ -1,5 +1,4 @@
 #include "function.h"
-#include "class.h"
 #include "data.h"
 
 bool Function::validArguments(const std::vector<Value>& arguments) {
