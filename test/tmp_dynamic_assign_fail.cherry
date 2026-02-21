@@ -1,0 +1,4 @@
+type B<T> = T | string | 5;
+type C = B<Array>;
+Standard.println("{}", 6 is C);
+C c = true;

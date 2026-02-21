@@ -107,6 +107,74 @@ static Value setStaticMember(Value& owner, const std::string& name, const Value&
 
 static Value assignToTarget(Expression* target, Scope& scope, const Value& value);
 
+static bool isSameOrDerivedType(const reference<Type>& maybeChild, const reference<Type>& maybeAncestor) {
+    if (maybeChild == nullptr || maybeAncestor == nullptr) return false;
+    reference<Type> cursor = maybeChild;
+    while (cursor != nullptr) {
+        if (cursor == maybeAncestor) return true;
+        if (!cursor->getName().empty() && cursor->getName() == maybeAncestor->getName()) return true;
+        cursor = cursor->parent;
+    }
+    return false;
+}
+
+static bool hasThisAccess(Scope& scope, const reference<Type>& ownerType, bool allowDerived) {
+    if (!scope.hasVariable("this")) return false;
+    Value thisValue = scope.getVariable("this");
+    if (thisValue.thrownException != nullptr || thisValue.type == nullptr || thisValue.type->kind != TypeKind::Class) {
+        return false;
+    }
+    if (allowDerived) return isSameOrDerivedType(thisValue.type, ownerType);
+    return thisValue.type == ownerType || thisValue.type->getName() == ownerType->getName();
+}
+
+static bool canAccessMember(unsigned int flags, const reference<Type>& ownerType, Scope& scope) {
+    if ((flags & MemberFlags::Public) != 0) return true;
+    if ((flags & MemberFlags::Private) != 0) return hasThisAccess(scope, ownerType, false);
+    if ((flags & MemberFlags::Protected) != 0) return hasThisAccess(scope, ownerType, true);
+    return hasThisAccess(scope, ownerType, false);
+}
+
+static bool findFieldInHierarchy(
+    const reference<Type>& startType,
+    const std::string& name,
+    bool staticField,
+    Field& outField,
+    reference<Type>& outOwnerType
+) {
+    reference<Type> cursor = startType;
+    while (cursor != nullptr) {
+        const auto& fields = staticField ? cursor->staticFields : cursor->fields;
+        for (const auto& f : fields) {
+            if (f.name == name) {
+                outField = f;
+                outOwnerType = cursor;
+                return true;
+            }
+        }
+        cursor = cursor->parent;
+    }
+    return false;
+}
+
+static bool findMethodInHierarchy(
+    const reference<Type>& startType,
+    const std::string& name,
+    Method& outMethod,
+    reference<Type>& outOwnerType
+) {
+    reference<Type> cursor = startType;
+    while (cursor != nullptr) {
+        if (cursor->methods.contains(name)) {
+            outMethod = cursor->methods[name];
+            outOwnerType = cursor;
+            return true;
+        }
+        cursor = cursor->parent;
+    }
+    return false;
+}
+
 static Expression* unwrapAssignableTarget(Expression* target) {
     Expression* current = target;
     while (current != nullptr) {
@@ -134,12 +202,17 @@ static Value assignToIndex(IndexAccessExpression* idx, Scope& scope, const Value
 
     if (base.type != nullptr && base.type->kind == TypeKind::Class) {
         auto typeRef = base.type;
-        if (!typeRef->methods.contains("set")) {
+        Method setMethodMeta;
+        reference<Type> methodOwner;
+        if (!findMethodInHierarchy(typeRef, "set", setMethodMeta, methodOwner)) {
             return makeAssignmentError("type does not implement set[...] operator");
+        }
+        if (!canAccessMember(setMethodMeta.flags, methodOwner, scope)) {
+            return makeAssignmentError("cannot access set[...] operator");
         }
         Function* selected = nullptr;
         bool selectedWithAssignedParameter = false;
-        for (const auto& overload : typeRef->methods["set"].overloads) {
+        for (const auto& overload : setMethodMeta.overloads) {
             std::vector<Value> fullArgs = indexArgs;
             fullArgs.push_back(value);
 
@@ -192,9 +265,30 @@ static Value assignToTarget(Expression* target, Scope& scope, const Value& value
         Value owner = dot->target->execute(scope);
         if (owner.thrownException != nullptr) return owner;
         if (owner.type == TypeType) {
+            Field fieldMeta;
+            reference<Type> fieldOwner;
+            if (findFieldInHierarchy(get<reference<Type>>(owner.value), dot->member.value, true, fieldMeta, fieldOwner)) {
+                if (!canAccessMember(fieldMeta.flags, fieldOwner, scope)) {
+                    return makeAssignmentError("cannot assign static field: " + dot->member.value);
+                }
+                if ((fieldMeta.flags & MemberFlags::Readonly) != 0) {
+                    return makeAssignmentError("cannot assign readonly static field: " + dot->member.value);
+                }
+            }
             return setStaticMember(owner, dot->member.value, value);
         }
         if (owner.type != nullptr && owner.type->kind == TypeKind::Class) {
+            Field fieldMeta;
+            reference<Type> fieldOwner;
+            if (!findFieldInHierarchy(owner.type, dot->member.value, false, fieldMeta, fieldOwner)) {
+                return makeAssignmentError("unknown field: " + dot->member.value);
+            }
+            if (!canAccessMember(fieldMeta.flags, fieldOwner, scope)) {
+                return makeAssignmentError("cannot assign field: " + dot->member.value);
+            }
+            if ((fieldMeta.flags & MemberFlags::Readonly) != 0) {
+                return makeAssignmentError("cannot assign readonly field: " + dot->member.value);
+            }
             auto instance = get<ClassInstance>(owner.value);
             instance.fieldValues[dot->member.value] = value;
             owner.value = instance;

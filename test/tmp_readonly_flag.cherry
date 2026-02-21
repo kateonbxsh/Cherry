@@ -1,0 +1,6 @@
+class F {
+  public readonly int r = 3;
+}
+
+F f = new F();
+f.r = 9;

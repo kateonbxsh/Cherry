@@ -109,6 +109,19 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
     klass->name = name.value;
     if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Parsing class: " << klass->name << "\n";
 
+    if (lexer.expectToken(EXTENDS)) {
+        Token baseType = lexer.nextToken();
+        if (baseType.kind != IDENTIFIER) {
+            klass->valid = false;
+            klass->expected = {"base class name"};
+            klass->lastToken = baseType;
+            lexer.rollPosition();
+            return klass;
+        }
+        klass->hasBaseType = true;
+        klass->baseType = baseType;
+    }
+
     /* =========================
        Type parameters
        ========================= */
@@ -131,6 +144,20 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
             ClassDeclarationTypeParameter param;
             param.name = typeName;
             param.withDefaultValue = false;
+            param.withConstraint = false;
+
+            if (lexer.expectToken(EXTENDS)) {
+                Token constraintToken = lexer.nextToken();
+                if (constraintToken.kind != IDENTIFIER) {
+                    klass->valid = false;
+                    klass->expected = {"type constraint"};
+                    klass->lastToken = constraintToken;
+                    lexer.rollPosition();
+                    return klass;
+                }
+                param.withConstraint = true;
+                param.constraintType = constraintToken;
+            }
 
             if (lexer.expectToken(EQUALS)) {
                 if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing type parameter default value\n";
@@ -172,6 +199,19 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
                 return klass;
             }
         }
+    }
+
+    if (!klass->hasBaseType && lexer.expectToken(EXTENDS)) {
+        Token baseType = lexer.nextToken();
+        if (baseType.kind != IDENTIFIER) {
+            klass->valid = false;
+            klass->expected = {"base class name"};
+            klass->lastToken = baseType;
+            lexer.rollPosition();
+            return klass;
+        }
+        klass->hasBaseType = true;
+        klass->baseType = baseType;
     }
 
     /* =========================
@@ -343,6 +383,27 @@ Value ClassDeclaration::execute(Scope& scope) {
     Scope classScope = scope.createChild();
     classScope.addVariable(name, Value(classType));
 
+    if (hasBaseType) {
+        Value parentTypeValue = classScope.getVariable(baseType.value);
+        if (parentTypeValue.thrownException != nullptr) return parentTypeValue;
+        if (parentTypeValue.type != TypeType) {
+            Value err;
+            err.thrownException = create_reference<Value>(
+                Value("extended type is not a type: " + baseType.value)
+            );
+            return err;
+        }
+        auto parentType = get<reference<Type>>(parentTypeValue.value);
+        if (parentType == nullptr || parentType->kind != TypeKind::Class) {
+            Value err;
+            err.thrownException = create_reference<Value>(
+                Value("class can only extend class type: " + baseType.value)
+            );
+            return err;
+        }
+        classType->parent = parentType;
+    }
+
     /* =========================
        Type parameters
        ========================= */
@@ -353,6 +414,7 @@ Value ClassDeclaration::execute(Scope& scope) {
         TypeParameter tp;
         tp.name = paramName;
         tp.hasDefault = param.withDefaultValue;
+        tp.hasConstraint = param.withConstraint;
 
         if (param.withDefaultValue) {
             Value def = classScope.getVariable(param.defaultValue.value);
@@ -360,6 +422,19 @@ Value ClassDeclaration::execute(Scope& scope) {
             if (def.type != TypeType) return Value{};
             tp.defaultValue = get<reference<Type>>(def.value);
             if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Resolved type parameter default: " << paramName << "\n";
+        }
+
+        if (param.withConstraint) {
+            Value constraint = classScope.getVariable(param.constraintType.value);
+            if (constraint.thrownException != nullptr) return constraint;
+            if (constraint.type != TypeType) {
+                Value err;
+                err.thrownException = create_reference<Value>(
+                    Value("type parameter constraint is not a type: " + param.constraintType.value)
+                );
+                return err;
+            }
+            tp.constraint = get<reference<Type>>(constraint.value);
         }
 
         classType->typeParameters.push_back(tp);

@@ -36,6 +36,8 @@ struct TypeParameter {
     reference<Type> value;
     bool hasDefault;
     reference<Type> defaultValue;
+    bool hasConstraint = false;
+    reference<Type> constraint;
 };
 
 class ClassInstance {
@@ -85,6 +87,13 @@ public:
     std::vector<Field> staticFields;
     std::unordered_map<string, reference<Value>> staticFieldValues;
     std::unordered_map<string, reference<Type>> typeBindings;
+
+    // Dynamic type metadata
+    std::vector<reference<Type>> dynamicUnionTypes;
+    std::vector<reference<Value>> dynamicUnionLiterals;
+    reference<Type> dynamicBaseType = nullptr;
+    string dynamicVariableName;
+    reference<Expression> dynamicPredicate = nullptr;
 
 private:
 

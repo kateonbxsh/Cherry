@@ -1,5 +1,21 @@
 #include "type.h"
 #include <data.h>
+#include "scope.h"
+#include "statements/expression/Expression.h"
+
+namespace {
+
+bool literalValueEquals(const Value& a, const Value& b) {
+    if (a.type != b.type) return false;
+    if (a.type == nullptr) return true;
+    if (a.type == StringType) return std::get<string>(a.value) == std::get<string>(b.value);
+    if (a.type == IntegerType) return std::get<integer>(a.value) == std::get<integer>(b.value);
+    if (a.type == BooleanType) return std::get<boolean>(a.value) == std::get<boolean>(b.value);
+    if (a.type == RealType) return std::get<real>(a.value) == std::get<real>(b.value);
+    return false;
+}
+
+}
 
 void Type::defineTypes()
 {
@@ -41,6 +57,41 @@ Value Type::getDefaultValue()
 
 bool Type::assignableFrom(const Value& other) {
     if (this->kind == TypeKind::Dynamic) {
+        auto resolveDynamicBinding = [&](const reference<Type>& maybeDynamic) -> reference<Type> {
+            if (maybeDynamic == nullptr) return nullptr;
+            if (maybeDynamic->kind != TypeKind::Dynamic) return maybeDynamic;
+            const auto& dynName = maybeDynamic->getName();
+            if (dynName.empty()) return maybeDynamic;
+            auto it = typeBindings.find(dynName);
+            if (it != typeBindings.end() && it->second != nullptr) return it->second;
+            return maybeDynamic;
+        };
+
+        if (dynamicBaseType != nullptr) {
+            auto baseType = resolveDynamicBinding(dynamicBaseType);
+            if (baseType == nullptr || !baseType->assignableFrom(other)) return false;
+        }
+
+        if (dynamicPredicate != nullptr && !dynamicVariableName.empty()) {
+            Scope evalScope;
+            evalScope.addVariable(dynamicVariableName, other);
+            Value predicate = dynamicPredicate->execute(evalScope);
+            if (predicate.thrownException != nullptr) return false;
+            if (predicate.type == BooleanType) return std::get<boolean>(predicate.value);
+            return predicate.type != nullptr;
+        }
+
+        if (!dynamicUnionTypes.empty() || !dynamicUnionLiterals.empty()) {
+            for (auto& t : dynamicUnionTypes) {
+                auto candidate = resolveDynamicBinding(t);
+                if (candidate != nullptr && candidate->assignableFrom(other)) return true;
+            }
+            for (auto& lit : dynamicUnionLiterals) {
+                if (lit != nullptr && literalValueEquals(*lit, other)) return true;
+            }
+            return false;
+        }
+
         return true;
     }
     if (other.type == nullptr) {
@@ -50,17 +101,22 @@ bool Type::assignableFrom(const Value& other) {
         case TypeKind::Primitive:
             return other.type->getName() == this->getName();
         case TypeKind::Class:
-            if (this->getName() == other.type->getName()) {
-                auto a = typeParameters;
-                auto b = other.type->typeParameters;
-                return a.size() == b.size() &&
-                    std::equal(a.begin(), a.end(), b.begin(),
-                        [](const TypeParameter& x, const TypeParameter& y) {
-                            return x.value->assignableFrom(y.value->getDefaultValue());
-                        });
-            }
-            if (parent) {
-                return parent->assignableFrom(other);
+            {
+                reference<Type> cursor = other.type;
+                while (cursor != nullptr) {
+                    if (cursor.get() == this || (!this->getName().empty() && this->getName() == cursor->getName())) {
+                        auto a = typeParameters;
+                        auto b = cursor->typeParameters;
+                        if (a.size() != b.size()) return true;
+                        return std::equal(a.begin(), a.end(), b.begin(),
+                            [](const TypeParameter& x, const TypeParameter& y) {
+                                if (x.value == nullptr || y.value == nullptr) return true;
+                                return x.value->assignableFrom(y.value->getDefaultValue());
+                            });
+                    }
+                    cursor = cursor->parent;
+                }
+                return false;
             }
         case TypeKind::Dynamic:
             return false;

@@ -11,6 +11,8 @@ struct ClassDeclarationTypeParameter {
     Token name;
     bool withDefaultValue;
     Token defaultValue;
+    bool withConstraint = false;
+    Token constraintType;
 
 };
 
@@ -52,6 +54,8 @@ struct ClassDeclaration : public Statement {
     Value execute(Scope& scope) override;
 
     string name;
+    bool hasBaseType = false;
+    Token baseType;
 
     std::vector<ClassDeclarationTypeParameter> typeParameters;
     std::vector<FieldDefinition> fields;

@@ -1,0 +1,4 @@
+// line comment
+/* block
+   comment */
+Standard.println("comments-ok");

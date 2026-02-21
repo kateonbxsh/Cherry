@@ -1,0 +1,7 @@
+class F {
+  protected int q = 2;
+  public readonly int r = 3;
+}
+
+F f = new F();
+Standard.println("{}", f.q);
