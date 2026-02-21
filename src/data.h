@@ -5,7 +5,6 @@
 #include <variant>
 #include "types/type.h"
 #include "types/function.h"
-#include "types/class.h"
 
 struct Value {
 

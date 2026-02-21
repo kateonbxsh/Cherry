@@ -2,8 +2,14 @@
 #include "types/function.h"
 
 Value Value::Uninitialized(reference<Type>& type) {
+    if (type && type->defaultValue != nullptr) {
+        return *type->defaultValue;
+    }
 
-    return type->getDefaultValue();
+    Value value;
+    value.type = type;
+    value.value = nullptr;
+    return value;
 
 }
 

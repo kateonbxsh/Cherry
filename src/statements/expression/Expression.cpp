@@ -21,7 +21,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
         [](Lexer& l) { return UnaryExpression::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
-        [](Lexer& l) { return MethodDefinition::parse(l); },
+        [](Lexer& l) { return LambdaDefinition::parse(l); },
     };
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Trying to parse first operand\n";

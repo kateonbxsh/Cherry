@@ -1,0 +1,17 @@
+class A {
+
+    public int a = 5;
+
+    public A(int a) {
+
+    }
+
+    private A(int a, int b) {
+
+    }
+
+    public doSomething() {
+        return 5;
+    }
+
+}
