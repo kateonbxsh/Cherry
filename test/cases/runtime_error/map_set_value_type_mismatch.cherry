@@ -1,0 +1,2 @@
+Map<string, int> m = new Map<string, int>();
+m.set("a", "bad");

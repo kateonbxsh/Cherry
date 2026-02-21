@@ -1,0 +1,9 @@
+function noop = () => { return; };
+function pick = (boolean f) => {
+  if f { return 7; }
+  return;
+};
+infer a = noop();
+infer b = pick(true);
+infer c = pick(false);
+Standard.println("OK return_null {} {} {}", a == null, b, c == null);

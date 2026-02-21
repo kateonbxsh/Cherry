@@ -8,6 +8,8 @@
 #include "loop/LoopStatement.hpp"
 #include "class/Class.hpp"
 #include "type/TypeDefinition.hpp"
+#include "exception/ThrowStatement.hpp"
+#include "exception/TryCatchFinallyStatement.hpp"
 #include <iostream>
 #include "macros.h"
 #include <functional>
@@ -23,6 +25,8 @@ uref<Statement> GeneralStatement::parse(Lexer& lexer) {
         {"VariableDefinition", [](Lexer& l) { return VariableDefinition::parse(l); }},
         {"TypeDefinition", [](Lexer& l) { return TypeDefinition::parse(l); }},
         {"VariableAffectation", [](Lexer& l) { return VariableAffectation::parse(l); }},
+        {"TryCatchFinallyStatement", [](Lexer& l) { return TryCatchFinallyStatement::parse(l); }},
+        {"ThrowStatement", [](Lexer& l) { return ThrowStatement::parse(l); }},
         {"IfStatement", [](Lexer& l) { return IfStatement::parse(l); }},
         {"ExpressionStatement", [](Lexer& l) { return ExpressionStatement::parse(l); }},
         {"WhileLoop", [](Lexer& l) { return WhileStatement::parse(l); }},

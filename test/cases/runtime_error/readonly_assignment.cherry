@@ -1,0 +1,6 @@
+class ReadOnlyHolder {
+  public readonly int value = 4;
+}
+
+ReadOnlyHolder x = new ReadOnlyHolder();
+x.value = 9;

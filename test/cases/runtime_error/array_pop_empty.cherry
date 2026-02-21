@@ -1,0 +1,2 @@
+Array<int> xs = new Array<int>();
+xs.pop();

@@ -1,0 +1,3 @@
+class BadVariadic {
+  public f(int ...rest, int x) {}
+}

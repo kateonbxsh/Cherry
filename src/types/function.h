@@ -25,6 +25,7 @@ struct Function {
     std::vector<FunctionParameter> parameters;
     reference<Scope> closure;
     reference<Block> body;
+    std::string debugName = "<lambda>";
     FunctionKind kind = FunctionKind::User;
     std::function<Value(Scope&, const std::vector<Value>&, const reference<Value>&)> internalHandler;
 

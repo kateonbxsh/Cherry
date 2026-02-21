@@ -1,0 +1,5 @@
+class BadOp {
+  public operator+(BadOp a, BadOp b) {
+    return a;
+  }
+}

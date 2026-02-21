@@ -41,7 +41,7 @@ extern int __debug_tabs;
 #define COMPILE_ERROR_PREFIX "\e[41m\e[1;37m COMPILE ERROR \e[0m\e[1;31m "
 
 // Exception thrown prefix: cherry + exception thrown, yellow background, bold white text
-#define EXCEPTION_THROWN_PREFIX "\e[41m\e[1;37m EXCEPTION THROWN \e[0m\e[1;31m "
+#define EXCEPTION_THROWN_PREFIX "\e[41m\e[1;37m"
 #define ERROR_PREFIX "\e[0;31m"
 #define BOLD_ERROR_PREFIX "\e[1;31m"
 

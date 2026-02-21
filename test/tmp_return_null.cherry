@@ -1,4 +1,0 @@
-let f = function() { return; };
-let x = f();
-Standard.println("{}", x is any);
-Standard.println("{}", x);

@@ -1,0 +1,14 @@
+type Label = string x when x.length() > 3 default "testy";
+type Token<T> = T | string;
+type Mix = string | 5;
+
+Label a = "hello";
+Token<int> b = "x";
+Token<int> c = 4;
+boolean c1 = a is Label;
+boolean c2 = b is Token<int>;
+boolean c3 = c is Token<int>;
+boolean c4 = 5 is Mix;
+boolean c5 = "z" is Mix;
+boolean c6 = 8 is Mix;
+Standard.println("OK dynamic_types {} {} {} {} {} {}", c1, c2, c3, c4, c5, c6);

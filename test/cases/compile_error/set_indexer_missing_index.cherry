@@ -1,0 +1,5 @@
+class BadSet {
+  public set[] {
+    return value;
+  }
+}

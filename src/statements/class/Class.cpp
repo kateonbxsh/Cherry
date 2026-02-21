@@ -1,11 +1,10 @@
 #include "Class.hpp"
+#include "runtime_exception.h"
 
 namespace {
 
 Value makeClassRegistrationError(const string& message) {
-    Value err;
-    err.thrownException = create_reference<Value>(Value(message));
-    return err;
+    return makeThrown("TypeException", message);
 }
 
 bool isOverloadableBinaryOperator(TokenKind kind) {
@@ -235,7 +234,20 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
         if (DEBUG) std::cout << DEBUG_PREFIX << "Trying MethodDefinition::parse in class body\n";
         DEBUG_TABS++;
         auto method = MethodDefinition::parse(lexer);
+        auto methodError = create_unique<NotAStatement>();
+        methodError->valid = false;
+        methodError->expected = method->expected;
+        methodError->lastToken = method->lastToken;
+        methodError->errorMessage = method->errorMessage;
         DEBUG_TABS--;
+        if (!method->valid && !method->errorMessage.empty()) {
+            klass->valid = false;
+            klass->expected = method->expected;
+            klass->lastToken = method->lastToken;
+            klass->errorMessage = method->errorMessage;
+            lexer.rollPosition();
+            return klass;
+        }
         if (method->valid) {
             method->isConstructor = (method->name.value == klass->name);
             if (method->isConstructor) {
@@ -256,6 +268,11 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
         if (DEBUG) std::cout << DEBUG_PREFIX << "Trying FieldDefinition::parse in class body\n";
         DEBUG_TABS++;
         auto field = FieldDefinition::parse(lexer);
+        auto fieldError = create_unique<NotAStatement>();
+        fieldError->valid = false;
+        fieldError->expected = field.expected;
+        fieldError->lastToken = field.lastToken;
+        fieldError->errorMessage = field.errorMessage;
         DEBUG_TABS--;
         if (field.valid) {
             klass->fields.push_back(field);
@@ -269,8 +286,18 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
         // Nothing matched
         if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected field or method in class body\n";
         klass->valid = false;
-        klass->expected = {"field or method"};
-        klass->lastToken = lexer.nextToken();
+        std::vector<uref<Statement>> invalids;
+        invalids.push_back(move(methodError));
+        invalids.push_back(move(fieldError));
+        auto furthest = getFurthestInvalidStatement(invalids);
+        if (furthest != nullptr) {
+            klass->expected = furthest->expected;
+            klass->lastToken = furthest->lastToken;
+            klass->errorMessage = furthest->errorMessage;
+        } else {
+            klass->expected = {"field or method"};
+            klass->lastToken = lexer.nextToken();
+        }
         lexer.rollPosition();
         return klass;
     }
@@ -387,19 +414,11 @@ Value ClassDeclaration::execute(Scope& scope) {
         Value parentTypeValue = classScope.getVariable(baseType.value);
         if (parentTypeValue.thrownException != nullptr) return parentTypeValue;
         if (parentTypeValue.type != TypeType) {
-            Value err;
-            err.thrownException = create_reference<Value>(
-                Value("extended type is not a type: " + baseType.value)
-            );
-            return err;
+            return makeClassRegistrationError("extended type is not a type: " + baseType.value);
         }
         auto parentType = get<reference<Type>>(parentTypeValue.value);
         if (parentType == nullptr || parentType->kind != TypeKind::Class) {
-            Value err;
-            err.thrownException = create_reference<Value>(
-                Value("class can only extend class type: " + baseType.value)
-            );
-            return err;
+            return makeClassRegistrationError("class can only extend class type: " + baseType.value);
         }
         classType->parent = parentType;
     }
@@ -428,11 +447,7 @@ Value ClassDeclaration::execute(Scope& scope) {
             Value constraint = classScope.getVariable(param.constraintType.value);
             if (constraint.thrownException != nullptr) return constraint;
             if (constraint.type != TypeType) {
-                Value err;
-                err.thrownException = create_reference<Value>(
-                    Value("type parameter constraint is not a type: " + param.constraintType.value)
-                );
-                return err;
+                return makeClassRegistrationError("type parameter constraint is not a type: " + param.constraintType.value);
             }
             tp.constraint = get<reference<Type>>(constraint.value);
         }
@@ -474,11 +489,7 @@ Value ClassDeclaration::execute(Scope& scope) {
                 Value fieldTypeValue = f.type->execute(classScope);
                 if (fieldTypeValue.thrownException != nullptr) return fieldTypeValue;
                 if (fieldTypeValue.type != TypeType) {
-                    Value err;
-                    err.thrownException = create_reference<Value>(
-                        Value("static field type is not a type")
-                    );
-                    return err;
+                    return makeClassRegistrationError("static field type is not a type");
                 }
                 auto staticFieldType = get<reference<Type>>(fieldTypeValue.value);
                 staticValue = Value::Uninitialized(staticFieldType);
@@ -632,6 +643,10 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
     if ((method->name.value == "get" || method->name.value == "set") && lexer.expectToken(LEFT_BRACKET)) {
         listClose = RIGHT_BRACKET;
         isIndexer = true;
+    } else if ((method->name.value == "get" || method->name.value == "set") && lexer.peekToken().kind == RIGHT_BRACKET) {
+        // tolerate lexer path where '[' has already been consumed before this point
+        listClose = RIGHT_BRACKET;
+        isIndexer = true;
     } else if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected '(' after method name\n";
         method->valid = false;
@@ -696,7 +711,7 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
     if (isOperatorOverload) {
         if ((method->flags & MemberFlags::Static) == 0) {
             method->valid = false;
-            method->expected = {"static operator declaration"};
+            method->expected = {"binary operator overloads must be static"};
             method->lastToken = method->name;
             method->errorMessage = "binary operator overloads must be static";
             lexer.rollPosition();
@@ -714,7 +729,7 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
 
     if (isIndexer && method->name.value == "set" && method->parameters.empty()) {
         method->valid = false;
-        method->expected = {"at least one index parameter"};
+        method->expected = {"set[...] must declare at least one index parameter"};
         method->lastToken = method->name;
         method->errorMessage = "set[...] must declare at least one index parameter; assigned value is available as 'value'";
         lexer.rollPosition();
@@ -745,6 +760,7 @@ Value MethodDefinition::execute(Scope& scope) {
     Function function;
     function.body = body;
     function.parameters = {};
+    function.debugName = name.value;
 
     auto childScope = Scope(scope);
 
@@ -756,9 +772,7 @@ Value MethodDefinition::execute(Scope& scope) {
 
         Value typeVal = childScope.getVariable(param.type.value);
         if (typeVal.type != TypeType) {
-            Value exc;
-            exc.thrownException = create_reference<Value>(Value("unknown type"));
-            return exc;
+            return makeClassRegistrationError("unknown type");
         }
 
         fp.type = get<reference<Type>>(typeVal.value);

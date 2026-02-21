@@ -1,0 +1,19 @@
+class Vec {
+  public int x;
+
+  public Vec(int x) {
+    this.x = x;
+  }
+
+  public static operator + (Vec a, Vec b) {
+    return new Vec(a.x + b.x);
+  }
+}
+
+Vec a = new Vec(4);
+Vec b = new Vec(7);
+Vec c = new Vec(1);
+Vec d = a + b;
+Vec e = d + c;
+Vec f = a + b + c;
+Standard.println("OK operator_plus {} {} {}", d.x, e.x, f.x);

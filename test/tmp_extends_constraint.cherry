@@ -1,6 +1,0 @@
-class Base {}
-class Child extends Base {}
-class Box<T extends Base> {}
-
-Box<Child> ok = new Box<Child>();
-Box<string> bad = new Box<string>();

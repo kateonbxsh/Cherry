@@ -1,3 +1,0 @@
-let a = 1;
-Standard.println("{}", a is int);
-Standard.println("{}", a is string);

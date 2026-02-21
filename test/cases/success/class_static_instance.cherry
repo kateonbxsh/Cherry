@@ -1,0 +1,19 @@
+class Counter {
+  public static int total = 0;
+  public int v;
+
+  public Counter(int v) {
+    this.v = v;
+    Counter.total = Counter.total + 1;
+  }
+
+  public static build(int x) {
+    return new Counter(x);
+  }
+}
+
+Counter a = Counter.build(1);
+Counter b = Counter.build(2);
+a.v = 5;
+Counter c = new Counter(3);
+Standard.println("OK class_static_instance {} {} {}", Counter.total, a.v, c.v);

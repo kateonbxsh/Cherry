@@ -1,0 +1,21 @@
+class Pair<T, U = int> {
+  public T a;
+  public U b;
+
+  public Pair(T a, U b) {
+    this.a = a;
+    this.b = b;
+  }
+}
+
+class Box<T = int> {
+  public T value;
+  public Box(T value) {
+    this.value = value;
+  }
+}
+
+Pair<string> p = new Pair<string>("x", 2);
+Pair<int, string> q = new Pair<int, string>(3, "y");
+Box x = new Box(9);
+Standard.println("OK generics_default {} {} {} {}", p.a, p.b, q.b, x.value);

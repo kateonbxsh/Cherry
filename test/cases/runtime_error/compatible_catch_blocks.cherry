@@ -1,0 +1,7 @@
+try {
+  throw "x";
+} catch (Exception e) {
+  Standard.println("a");
+} catch (RuntimeException e2) {
+  Standard.println("b");
+}

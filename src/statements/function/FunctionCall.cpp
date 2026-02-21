@@ -4,11 +4,10 @@
 #include "LambdaExpression.hpp"
 #include <expressions.h>
 #include "runtime_builtins.h"
+#include "runtime_exception.h"
 
 static Value makeCallError(const std::string& message) {
-    Value v;
-    v.thrownException = create_reference<Value>(Value(message));
-    return v;
+    return makeThrown("ArgumentException", message);
 }
 
 static bool bindCallArguments(
@@ -60,9 +59,7 @@ Value FunctionCall::execute(Scope& scope) {
     if (func.thrownException != nullptr) return func;
 
     if (func.type != FunctionType) {
-        auto exception = create_reference<Value>(Value("value is not a function"));
-        Value v;
-        v.thrownException = exception;
+        Value v = makeThrown("TypeException", "value is not a function");
         return v;
     }
 
@@ -88,7 +85,10 @@ Value FunctionCall::execute(Scope& scope) {
         if (!function.internalHandler) {
             return makeCallError("internal function is missing implementation");
         }
-        return function.internalHandler(scope, boundArgs, function.__this);
+        runtimePushFrame(function.debugName, callToken.line, callToken.pos + 1);
+        Value ret = function.internalHandler(scope, boundArgs, function.__this);
+        runtimePopFrame();
+        return ret;
     }
 
     // Execute function body in a new scope
@@ -101,5 +101,8 @@ Value FunctionCall::execute(Scope& scope) {
     }
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Entering main block" << stringify(func) << std::endl;
-    return function.body->execute(funcScope);
+    runtimePushFrame(function.debugName, callToken.line, callToken.pos + 1);
+    Value ret = function.body->execute(funcScope);
+    runtimePopFrame();
+    return ret;
 }

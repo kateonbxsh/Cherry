@@ -1,0 +1,7 @@
+// single-line comment
+int x = 1;
+/* multi-line
+comment */
+x = x + 2; /* inline block */
+x = x * 3; // trailing comment
+Standard.println("OK comments {}", x);

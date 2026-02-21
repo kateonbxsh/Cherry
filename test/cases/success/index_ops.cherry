@@ -1,0 +1,26 @@
+class Bucket {
+  public Array<int> items = new Array<int>();
+
+  public get[int i] {
+    return this.items.get(i);
+  }
+
+  public set[int i] {
+    this.items.set(i, value);
+    return value;
+  }
+
+  public bump(int i, int d) {
+    this[i] = this[i] + d;
+    return this[i];
+  }
+}
+
+Bucket b = new Bucket();
+b.items.push(1);
+b.items.push(2);
+b[0] = 9;
+b[1] = 7;
+int afterBump = b.bump(1, 3);
+int sum = b[0] + b[1];
+Standard.println("OK index_ops {} {} {}", b[0], afterBump, sum);

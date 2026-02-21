@@ -1,0 +1,2 @@
+Map<int, int> m = new Map<int, int>();
+m.set(1, 2);
