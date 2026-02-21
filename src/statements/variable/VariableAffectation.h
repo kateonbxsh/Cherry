@@ -3,6 +3,7 @@
 #include "statement.h"
 #include "lexer.h"
 #include "statements/expression/Expression.h"
+#include <vector>
 
 class VariableAffectation : public Statement {
 
@@ -14,7 +15,7 @@ public:
 private:
 
     uref<Expression> expression;
-    Token name;
+    std::vector<Token> path;
     TokenKind selfOperation;
 
 };

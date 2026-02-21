@@ -2,6 +2,7 @@
 #include "statements/expression/Expression.h"
 #include "statements/function/FunctionCall.hpp"
 #include "statements/function/LambdaExpression.hpp"
+#include "types/function.h"
 #include <expressions.h>
 #include <functional>
 
@@ -20,6 +21,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     std::vector<ExprParser> parsers = {
         [](Lexer& l) { return UnaryExpression::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
+        [](Lexer& l) { return ConstructorExpression::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
         [](Lexer& l) { return LambdaDefinition::parse(l); },
     };
@@ -54,56 +56,82 @@ uref<Expression> Expression::parse(Lexer &lexer) {
 
     expression->expressionOperator = {NONE, "", 0, 0};
 
-    while (lexer.expectToken(LEFT_PARENTHESIS)) {
+    while (true) {
+        if (lexer.expectToken(LEFT_PARENTHESIS)) {
 
-        // this is a function call
-        if (DEBUG) std::cout << DEBUG_PREFIX << "Expression is a method call\n";
-        auto call = create_unique<FunctionCall>();
-        call->function = move(expression);
+            // this is a function call
+            if (DEBUG) std::cout << DEBUG_PREFIX << "Expression is a function call\n";
+            auto call = create_unique<FunctionCall>();
+            call->function = move(expression);
 
-        expression = create_unique<Expression>();
+            expression = create_unique<Expression>();
 
-        while (!lexer.expectToken(RIGHT_PARENTHESIS)) {
-            auto arg = Expression::parse(lexer);
-            if (!arg->valid) {
-                if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid expression in function arguments\n";
+            while (!lexer.expectToken(RIGHT_PARENTHESIS)) {
+                auto arg = Expression::parse(lexer);
+                if (!arg->valid) {
+                    if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid expression in function arguments\n";
 
-                expression->valid = false;
-                expression->expected = arg->expected;
-                expression->lastToken = arg->lastToken;
-                lexer.rollPosition();
-                return expression;
-            }
-
-            call->arguments.push_back(move(arg));
-
-            if (DEBUG) {
-                std::cout << DEBUG_SUCCESS_PREFIX
-                        << "Parsed argument #" << call->arguments.size() << "\n";
-            }
-
-            Token sep = lexer.nextToken();
-            if (sep.kind == RIGHT_PARENTHESIS) {
-                if (DEBUG) std::cout << DEBUG_PREFIX << "End of argument list\n";
-                break;
-            }
-
-            if (sep.kind != COMMA) {
-                if (DEBUG) {
-                    std::cout << DEBUG_ERROR_PREFIX
-                            << "Expected ',' or ')', got\n";
+                    expression->valid = false;
+                    expression->expected = arg->expected;
+                    expression->lastToken = arg->lastToken;
+                    lexer.rollPosition();
+                    return expression;
                 }
 
-                expression->valid = false;
-                expression->expected = tokenKindsToString({COMMA, RIGHT_PARENTHESIS});
-                expression->lastToken = sep;
+                call->arguments.push_back(move(arg));
+
+                if (DEBUG) {
+                    std::cout << DEBUG_SUCCESS_PREFIX
+                            << "Parsed argument #" << call->arguments.size() << "\n";
+                }
+
+                Token sep = lexer.nextToken();
+                if (sep.kind == RIGHT_PARENTHESIS) {
+                    if (DEBUG) std::cout << DEBUG_PREFIX << "End of argument list\n";
+                    break;
+                }
+
+                if (sep.kind != COMMA) {
+                    if (DEBUG) {
+                        std::cout << DEBUG_ERROR_PREFIX
+                                << "Expected ',' or ')', got\n";
+                    }
+
+                    expression->valid = false;
+                    expression->expected = tokenKindsToString({COMMA, RIGHT_PARENTHESIS});
+                    expression->lastToken = sep;
+                    lexer.rollPosition();
+                    return call;
+                }
+
+                if (DEBUG) std::cout << DEBUG_PREFIX << "Comma found, parsing next argument\n";
+            }
+            expression->firstOperand = move(call);
+            continue;
+        }
+
+        if (lexer.expectToken(DOT)) {
+            auto dot = create_unique<DotAccessExpression>();
+            dot->target = move(expression);
+
+            Token member = lexer.nextToken();
+            if (member.kind != IDENTIFIER) {
+                dot->valid = false;
+                dot->expected = {"member name"};
+                dot->lastToken = member;
                 lexer.rollPosition();
-                return call;
+                return dot;
             }
 
-            if (DEBUG) std::cout << DEBUG_PREFIX << "Comma found, parsing next argument\n";
+            dot->member = member;
+            dot->valid = true;
+
+            expression = create_unique<Expression>();
+            expression->firstOperand = move(dot);
+            continue;
         }
-        expression->firstOperand = move(call);
+
+        break;
     }
 
     // conditional
@@ -266,6 +294,7 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
         nextToken.kind == STRING ||
         nextToken.kind == INTEGER ||
         nextToken.kind == FLOAT ||
+        nextToken.kind == THIS ||
         nextToken.kind == TRUE ||
         nextToken.kind == FALSE ||
         nextToken.kind == NULL_TOKEN
@@ -291,7 +320,7 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
     expression->valid = false;
     expression->lastToken = nextToken;
     expression->expected = tokenKindsToString({
-        IDENTIFIER, STRING, INTEGER, FLOAT, TRUE, FALSE, NULL_TOKEN
+        IDENTIFIER, STRING, INTEGER, FLOAT, THIS, TRUE, FALSE, NULL_TOKEN
     });
     lexer.rollPosition();
 
@@ -389,7 +418,11 @@ Value ExpressionValue::execute(Scope &scope) {
             boolean v = (token.kind == TRUE);
             return Value(v);
         }
-            
+        
+        case THIS:
+        {
+            return scope.getVariable("this");
+        }
 
         default: 
         {
@@ -401,4 +434,245 @@ Value ExpressionValue::execute(Scope &scope) {
 
 Value UnaryExpression::execute(Scope &scope) {
     return performUnaryOperator(this->firstOperand->execute(scope), this->expressionOperator.kind);
+}
+
+uref<Expression> DotAccessExpression::parse(Lexer& lexer) {
+    auto expr = create_unique<DotAccessExpression>();
+    expr->valid = false;
+    expr->expected = {"dot access"};
+    expr->lastToken = lexer.peekToken();
+    return expr;
+}
+
+Value DotAccessExpression::execute(Scope& scope) {
+    Value base = target->execute(scope);
+    if (base.thrownException != nullptr) return base;
+
+    if (base.type == TypeType) {
+        auto typeRef = get<reference<Type>>(base.value);
+
+        if (typeRef->staticFieldValues.contains(member.value)) {
+            return *typeRef->staticFieldValues[member.value];
+        }
+
+        if (typeRef->staticMethods.contains(member.value)) {
+            const auto& method = typeRef->staticMethods[member.value];
+            if (method.overloads.empty()) {
+                Value err;
+                err.thrownException = create_reference<Value>(
+                    Value("static method has no overloads: " + member.value)
+                );
+                return err;
+            }
+            return Value(method.overloads.front());
+        }
+
+        Value err;
+        err.thrownException = create_reference<Value>(
+            Value("unknown static member: " + member.value)
+        );
+        return err;
+    }
+
+    if (base.type != nullptr && base.type->kind == TypeKind::Class) {
+        auto instance = get<ClassInstance>(base.value);
+
+        if (instance.fieldValues.contains(member.value)) {
+            return instance.fieldValues[member.value];
+        }
+
+        if (base.type->methods.contains(member.value)) {
+            const auto& method = base.type->methods[member.value];
+            if (method.overloads.empty()) {
+                Value err;
+                err.thrownException = create_reference<Value>(
+                    Value("method has no overloads: " + member.value)
+                );
+                return err;
+            }
+            Function boundMethod = method.overloads.front();
+            boundMethod.__this = create_reference<Value>(base);
+            return Value(boundMethod);
+        }
+
+        Value err;
+        err.thrownException = create_reference<Value>(
+            Value("unknown instance member: " + member.value)
+        );
+        return err;
+    }
+
+    Value err;
+    err.thrownException = create_reference<Value>(
+        Value("dot access requires class type or instance")
+    );
+    return err;
+}
+
+uref<Expression> ConstructorExpression::parse(Lexer& lexer) {
+    lexer.savePosition();
+    auto expr = create_unique<ConstructorExpression>();
+
+    if (!lexer.expectToken(NEW)) {
+        expr->valid = false;
+        expr->expected = {"new"};
+        expr->lastToken = lexer.peekToken();
+        lexer.rollPosition();
+        return expr;
+    }
+
+    Token typeToken = lexer.nextToken();
+    if (typeToken.kind != IDENTIFIER) {
+        expr->valid = false;
+        expr->expected = {"class name"};
+        expr->lastToken = typeToken;
+        lexer.rollPosition();
+        return expr;
+    }
+    expr->typeName = typeToken;
+
+    if (!lexer.expectToken(LEFT_PARENTHESIS)) {
+        expr->valid = false;
+        expr->expected = tokenKindsToString({LEFT_PARENTHESIS});
+        expr->lastToken = lexer.nextToken();
+        lexer.rollPosition();
+        return expr;
+    }
+
+    while (!lexer.expectToken(RIGHT_PARENTHESIS)) {
+        auto arg = Expression::parse(lexer);
+        if (!arg->valid) {
+            expr->valid = false;
+            expr->expected = arg->expected;
+            expr->lastToken = arg->lastToken;
+            lexer.rollPosition();
+            return expr;
+        }
+        expr->arguments.push_back(move(arg));
+
+        Token sep = lexer.nextToken();
+        if (sep.kind == RIGHT_PARENTHESIS) {
+            break;
+        }
+        if (sep.kind != COMMA) {
+            expr->valid = false;
+            expr->expected = tokenKindsToString({COMMA, RIGHT_PARENTHESIS});
+            expr->lastToken = sep;
+            lexer.rollPosition();
+            return expr;
+        }
+    }
+
+    expr->valid = true;
+    lexer.deletePosition();
+    return expr;
+}
+
+Value ConstructorExpression::execute(Scope& scope) {
+    Value classValue = scope.getVariable(typeName.value);
+    if (classValue.thrownException != nullptr) return classValue;
+    if (classValue.type != TypeType) {
+        Value err;
+        err.thrownException = create_reference<Value>(
+            Value("new target is not a type: " + typeName.value)
+        );
+        return err;
+    }
+
+    auto classType = get<reference<Type>>(classValue.value);
+    if (classType->kind != TypeKind::Class) {
+        Value err;
+        err.thrownException = create_reference<Value>(
+            Value("new target is not a class: " + typeName.value)
+        );
+        return err;
+    }
+
+    ClassInstance instance;
+    instance.classType = classType;
+
+    for (const auto& field : classType->fields) {
+        Value fieldValue;
+        if (field.hasDefaultValue) {
+            fieldValue = field.value->execute(scope);
+        } else {
+            Value fieldTypeValue = field.type->execute(scope);
+            if (fieldTypeValue.thrownException != nullptr) return fieldTypeValue;
+            if (fieldTypeValue.type != TypeType) {
+                Value err;
+                err.thrownException = create_reference<Value>(
+                    Value("field type is not a type: " + field.name)
+                );
+                return err;
+            }
+            auto fieldType = get<reference<Type>>(fieldTypeValue.value);
+            fieldValue = Value::Uninitialized(fieldType);
+        }
+
+        if (fieldValue.thrownException != nullptr) return fieldValue;
+        instance.fieldValues[field.name] = fieldValue;
+    }
+
+    std::vector<Value> argValues;
+    argValues.reserve(arguments.size());
+    for (auto& argExpr : arguments) {
+        Value argValue = argExpr->execute(scope);
+        if (argValue.thrownException != nullptr) return argValue;
+        argValues.push_back(argValue);
+    }
+
+    if (!classType->constructor.overloads.empty()) {
+        Function* selected = nullptr;
+        for (auto& overload : classType->constructor.overloads) {
+            if (overload.parameters.size() != argValues.size()) continue;
+            bool compatible = true;
+            for (size_t i = 0; i < argValues.size(); ++i) {
+                if (argValues[i].type != overload.parameters[i].type) {
+                    compatible = false;
+                    break;
+                }
+            }
+            if (compatible) {
+                selected = &overload;
+                break;
+            }
+        }
+
+        if (selected == nullptr) {
+            Value err;
+            err.thrownException = create_reference<Value>(
+                Value("no matching constructor overload for " + typeName.value)
+            );
+            return err;
+        }
+
+        Function ctorFunction = *selected;
+        Value thisValue;
+        thisValue.type = classType;
+        thisValue.value = instance;
+        ctorFunction.__this = create_reference<Value>(thisValue);
+
+        Scope ctorScope(ctorFunction.closure);
+        ctorScope.addVariable("this", *ctorFunction.__this);
+        for (size_t i = 0; i < ctorFunction.parameters.size(); ++i) {
+            ctorScope.addVariable(ctorFunction.parameters[i].name, argValues[i]);
+        }
+
+        Value ctorResult = ctorFunction.body->execute(ctorScope);
+        if (ctorResult.thrownException != nullptr) return ctorResult;
+        thisValue = ctorScope.getVariable("this");
+        if (thisValue.thrownException != nullptr) return thisValue;
+        instance = get<ClassInstance>(thisValue.value);
+    } else if (!argValues.empty()) {
+        Value err;
+        err.thrownException = create_reference<Value>(
+            Value("class has no constructor overloads: " + typeName.value)
+        );
+        return err;
+    }
+
+    Value ret;
+    ret.type = classType;
+    ret.value = instance;
+    return ret;
 }
