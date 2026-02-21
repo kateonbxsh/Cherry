@@ -1,0 +1,14 @@
+Array<int> xs = new Array<int>();
+boolean e0 = xs.empty();
+xs.push(1);
+xs.push(2);
+xs.push(3);
+int g1 = xs.get(1);
+xs.set(1, 7);
+int g2 = xs.get(1);
+boolean has7 = xs.contains(7);
+int popped = xs.pop();
+int sizeAfterPop = xs.size();
+xs.clear();
+boolean emptyAfter = xs.empty();
+Standard.println("OK array_methods {} {} {} {} {} {} {}", e0, g1, g2, has7, popped, sizeAfterPop, emptyAfter);

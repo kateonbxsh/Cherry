@@ -1,0 +1,245 @@
+{
+  "tests": [
+    {
+      "name": "success_basic_arith",
+      "file": "cases/success/basic_arith.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK basic_arith 7 9 5 2.500000 2 14 -3 true true true true"],
+        "stderr_not_contains": ["COMPILE ERROR", "Exception"]
+      }
+    },
+    {
+      "name": "success_if_unless",
+      "file": "cases/success/if_unless.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK if_unless 7 true"]
+      }
+    },
+    {
+      "name": "success_loops",
+      "file": "cases/success/loops.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK loops 28"]
+      }
+    },
+    {
+      "name": "success_lambda_closure",
+      "file": "cases/success/lambda_closure.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK lambda_closure 15 7"]
+      }
+    },
+    {
+      "name": "success_return_null",
+      "file": "cases/success/return_null.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK return_null true 7 true"]
+      }
+    },
+    {
+      "name": "success_array_methods",
+      "file": "cases/success/array_methods.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK array_methods true 2 7 true 3 2 true"]
+      }
+    },
+    {
+      "name": "success_map_methods",
+      "file": "cases/success/map_methods.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK map_methods true 5 true true false true 1 1 1"]
+      }
+    },
+    {
+      "name": "success_index_ops",
+      "file": "cases/success/index_ops.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK index_ops 9 10 19"]
+      }
+    },
+    {
+      "name": "success_operator_plus",
+      "file": "cases/success/operator_plus.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK operator_plus 11 12 12"]
+      }
+    },
+    {
+      "name": "success_class_static_instance",
+      "file": "cases/success/class_static_instance.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK class_static_instance 3 5 3"]
+      }
+    },
+    {
+      "name": "success_generics_default",
+      "file": "cases/success/generics_default.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK generics_default x 2 y 9"]
+      }
+    },
+    {
+      "name": "success_dynamic_types_and_is",
+      "file": "cases/success/dynamic_types_and_is.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK dynamic_types true true true true true false"]
+      }
+    },
+    {
+      "name": "success_try_catch_finally",
+      "file": "cases/success/try_catch_finally.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK try_catch_finally Exception done ValueException ValueException"]
+      }
+    },
+    {
+      "name": "success_comments",
+      "file": "cases/success/comments.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK comments 9"]
+      }
+    },
+    {
+      "name": "compile_default_type_param_not_last",
+      "file": "cases/compile_error/default_type_param_not_last.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["type parameter with default value", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "compile_multiple_access_modifiers",
+      "file": "cases/compile_error/multiple_access_modifiers.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["single access modifier", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "compile_variadic_not_last",
+      "file": "cases/compile_error/variadic_not_last.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["right_parenthesis", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "compile_operator_not_static",
+      "file": "cases/compile_error/operator_not_static.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["binary operator overloads must be static", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "compile_operator_wrong_arity",
+      "file": "cases/compile_error/operator_wrong_arity.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["two non-variadic parameters", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "compile_set_indexer_missing_index",
+      "file": "cases/compile_error/set_indexer_missing_index.cherry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["set[...] must declare at least one index parameter", "COMPILE ERROR"]
+      }
+    },
+    {
+      "name": "runtime_array_push_type_mismatch",
+      "file": "cases/runtime_error/array_push_type_mismatch.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["Array.push expected value of type string, got int", "RuntimeException"]
+      }
+    },
+    {
+      "name": "runtime_array_index_out_of_range",
+      "file": "cases/runtime_error/array_index_out_of_range.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["Array index out of range", "RuntimeException"]
+      }
+    },
+    {
+      "name": "runtime_array_pop_empty",
+      "file": "cases/runtime_error/array_pop_empty.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["Array.pop on empty array", "RuntimeException"]
+      }
+    },
+    {
+      "name": "runtime_map_set_value_type_mismatch",
+      "file": "cases/runtime_error/map_set_value_type_mismatch.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["Map.set expected value of type integer, got string", "RuntimeException"]
+      }
+    },
+    {
+      "name": "runtime_map_runtime_key_type",
+      "file": "cases/runtime_error/map_runtime_key_type.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["arguments are not compatible with function signature", "ArgumentException"]
+      }
+    },
+    {
+      "name": "runtime_private_field_access",
+      "file": "cases/runtime_error/private_field_access.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["cannot access field: secret", "RuntimeException"]
+      }
+    },
+    {
+      "name": "runtime_readonly_assignment",
+      "file": "cases/runtime_error/readonly_assignment.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["cannot assign readonly field: value", "TypeException"]
+      }
+    },
+    {
+      "name": "runtime_missing_generic_argument",
+      "file": "cases/runtime_error/missing_generic_argument.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["missing type argument for T in Box", "TypeException"]
+      }
+    },
+    {
+      "name": "runtime_extends_constraint_fail",
+      "file": "cases/runtime_error/extends_constraint_fail.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["does not satisfy extends constraint", "TypeException"]
+      }
+    },
+    {
+      "name": "runtime_compatible_catch_blocks",
+      "file": "cases/runtime_error/compatible_catch_blocks.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["compatible catch blocks detected", "TypeException"]
+      }
+    }
+  ]
+}

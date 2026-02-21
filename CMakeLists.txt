@@ -20,6 +20,7 @@ set(SOURCE_FILES
     src/parser.cpp
     src/scope.cpp
     src/data.cpp
+    src/runtime_exception.cpp
     src/flags.cpp
     src/compile_error.cpp
     src/runtime_builtins.cpp
@@ -34,6 +35,8 @@ set(SOURCE_FILES
     src/statements/function/FunctionCall.cpp
     src/statements/function/ExpressionStatement.cpp
     src/statements/function/ReturnStatement.cpp
+    src/statements/exception/ThrowStatement.cpp
+    src/statements/exception/TryCatchFinallyStatement.cpp
     src/statements/conditional/IfStatement.cpp
     src/statements/loop/LoopStatement.cpp
     src/statements/class/Class.cpp

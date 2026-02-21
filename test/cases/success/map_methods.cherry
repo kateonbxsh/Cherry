@@ -1,0 +1,14 @@
+Map<string, int> m = new Map<string, int>();
+boolean e0 = m.empty();
+m.set("a", 1);
+m.set("b", 2);
+m.set("a", 5);
+int ga = m.get("a");
+boolean hasA = m.has("a");
+boolean removedA = m.remove("a");
+boolean removedA2 = m.remove("a");
+boolean missingIsNull = m.get("zzz") == null;
+int size = m.size();
+Array<string> ks = m.keys();
+Array<int> vs = m.values();
+Standard.println("OK map_methods {} {} {} {} {} {} {} {} {}", e0, ga, hasA, removedA, removedA2, missingIsNull, size, ks.size(), vs.size());

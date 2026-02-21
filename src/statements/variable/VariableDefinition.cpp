@@ -1,13 +1,12 @@
 #include "VariableDefinition.h"
 #include "statements/expression/Expression.h"
 #include "types/type.h"
+#include "runtime_exception.h"
 
 namespace {
 
 Value makeVarDefError(const std::string& message) {
-    Value err;
-    err.thrownException = create_reference<Value>(Value(message));
-    return err;
+    return makeThrown("TypeException", message);
 }
 
 Value instantiateGenericType(reference<Type> baseType, const std::vector<reference<Type>>& args, bool strictMissing) {
@@ -179,11 +178,7 @@ Value VariableDefinition::execute(Scope& scope) {
 
     if (!inferred) {
         if (type.type != TypeType) { // wtf am i doing atp
-            Value ret;
-            ret.thrownException = create_reference<Value>(
-                "type value is not a type"
-            );
-            return ret;
+            return makeVarDefError("type value is not a type");
         }
         auto typeType = get<reference<Type>>(type.value);
 
@@ -194,11 +189,7 @@ Value VariableDefinition::execute(Scope& scope) {
                 Value argType = scope.getVariable(argToken.value);
                 if (argType.thrownException != nullptr) return argType;
                 if (argType.type != TypeType) {
-                    Value ret;
-                    ret.thrownException = create_reference<Value>(
-                        "type argument is not a type: " + argToken.value
-                    );
-                    return ret;
+                    return makeVarDefError("type argument is not a type: " + argToken.value);
                 }
                 args.push_back(get<reference<Type>>(argType.value));
             }
@@ -217,11 +208,14 @@ Value VariableDefinition::execute(Scope& scope) {
         auto value = this->expression->execute(scope);
         if (value.thrownException != nullptr) return value;
         if (!typeType->assignableFrom(value)) {
-            Value ret;
-            ret.thrownException = create_reference<Value>(
-                "value is not assignable to type " + typeType->getName()
-            );
-            return ret;
+            return makeVarDefError("value is not assignable to type " + typeType->getName());
+        }
+        if (value.type == FunctionType) {
+            auto fn = get<Function>(value.value);
+            if (fn.debugName.empty() || fn.debugName == "<lambda>") {
+                fn.debugName = name;
+                value.value = fn;
+            }
         }
         scope.addVariable(name, value);
         return value;
@@ -229,6 +223,13 @@ Value VariableDefinition::execute(Scope& scope) {
 
     if (this->expression != nullptr) {
         auto value = this->expression->execute(scope);
+        if (value.type == FunctionType) {
+            auto fn = get<Function>(value.value);
+            if (fn.debugName.empty() || fn.debugName == "<lambda>") {
+                fn.debugName = name;
+                value.value = fn;
+            }
+        }
         scope.addVariable(name, value);
         return value;
     } else {

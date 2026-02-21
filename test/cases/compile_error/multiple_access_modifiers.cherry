@@ -1,0 +1,3 @@
+class BadAccess {
+  public private int x;
+}

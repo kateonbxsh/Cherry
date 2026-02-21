@@ -1,6 +1,7 @@
 #include "interpreter.h"
 #include "scope.h"
 #include "expressions.h"
+#include "runtime_exception.h"
 
 void Interpreter::interpret(uref<GlobalBlock>& block)
 {
@@ -10,7 +11,7 @@ void Interpreter::interpret(uref<GlobalBlock>& block)
     auto returned = block->execute(mainScope);
 
     if (returned.thrownException != NULL) {
-        std::cerr << "Exception: " << stringify(*returned.thrownException) << std::endl;
+        printRuntimeException(returned.thrownException);
         return;
     }
     if (DEBUG) mainScope.printVariables();

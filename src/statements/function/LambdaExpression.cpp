@@ -1,5 +1,6 @@
 #include "LambdaExpression.hpp"
 #include "types/function.h"
+#include "runtime_exception.h"
 
 uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
 
@@ -93,9 +94,9 @@ Value LambdaDefinition::execute(Scope& scope) {
     Function function;
     function.body = body;
     function.parameters = {};
+    function.debugName = "<lambda>";
 
-    reference<Scope> parentRef(&scope, [](Scope*){});
-    auto childScope = create_reference<Scope>(Scope(parentRef));
+    auto childScope = create_reference<Scope>(Scope(create_reference<Scope>(scope)));
 
     for (auto& param : parameters) {
 
@@ -105,9 +106,7 @@ Value LambdaDefinition::execute(Scope& scope) {
 
         Value typeVal = childScope->getVariable(param.type.value);
         if (typeVal.type != TypeType) {
-            Value exc;
-            exc.thrownException = create_reference<Value>(Value("unknown type"));
-            return exc;
+            return makeThrown("TypeException", "unknown type");
         }
 
         fp.type = get<reference<Type>>(typeVal.value);

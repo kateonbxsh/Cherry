@@ -193,7 +193,7 @@ std::string stringify(const Value& value) {
 boolean compareValues(const Value& value1, const Value& value2) {
     
     if (value1.type != value2.type && !areNumericTypes(value1, value2)) return false;
-    if (value1.type == nullptr) return false;
+    if (value1.type == nullptr) return value2.type == nullptr;
     if (value1.type->kind != TypeKind::Primitive) return false;
 
     if (value1.type == RealType || value2.type == RealType)
@@ -425,6 +425,17 @@ Value performUnaryOperator(const Value& a, TokenKind op) {
 }
 
 Value performBinaryOperator(const Value& a, const Value& b, TokenKind op) {
+    if (op == COMPARATIVE_EQUALS) {
+        if (a.type == nullptr || b.type == nullptr) {
+            return Value((boolean)(a.type == b.type));
+        }
+    }
+    if (op == COMPARATIVE_NOT_EQUALS) {
+        if (a.type == nullptr || b.type == nullptr) {
+            return Value((boolean)(a.type != b.type));
+        }
+    }
+
     if (op == IS) {
         if (b.type != TypeType) {
             return op_error(op, a, b);
@@ -467,10 +478,13 @@ bool isUnaryOperator(const TokenKind& kind) {
 
 int precedence(const Token& token) {
     TokenKind kind = token.kind;
-    if (isUnaryOperator(kind)) return 5;
-    if (kind == EXPONENT)       return 4;
-    if (kind == DIVIDE)         return 3;
-    if (kind == TIMES)          return 2;
-    if (kind == PLUS || kind == MINUS) return 1;
+    if (kind == EXPONENT) return 7;
+    if (kind == TIMES || kind == DIVIDE || kind == MODULO || kind == DIV) return 6;
+    if (kind == PLUS || kind == MINUS) return 5;
+    if (kind == BIGGER_THAN || kind == BIGGER_OR_EQUAL ||
+        kind == SMALLER_THAN || kind == SMALLER_OR_EQUAL) return 4;
+    if (kind == COMPARATIVE_EQUALS || kind == COMPARATIVE_NOT_EQUALS || kind == IS) return 3;
+    if (kind == BITWISE_AND || kind == BITWISE_OR || kind == BITWISE_XOR) return 2;
+    if (kind == AND || kind == OR || kind == XOR) return 1;
     return 0;
 }

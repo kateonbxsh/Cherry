@@ -2,13 +2,12 @@
 #include "types/type.h"
 #include "types/function.h"
 #include "runtime_builtins.h"
+#include "runtime_exception.h"
 #include "statements/Block.hpp"
 #include <expressions.h>
 
 static Value makeAssignmentError(const std::string& message) {
-    Value err;
-    err.thrownException = create_reference<Value>(Value(message));
-    return err;
+    return makeThrown("TypeException", message);
 }
 
 static bool bindCallArguments(
@@ -310,6 +309,27 @@ static Value assignToTarget(Expression* target, Scope& scope, const Value& value
 uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
     lexer.savePosition();
 
+    auto varAff = parseWithoutSemicolon(lexer);
+    if (!varAff->valid) {
+        lexer.rollPosition();
+        return varAff;
+    }
+
+    if (!lexer.expectToken(SEMICOLON)) {
+        varAff->valid = false;
+        varAff->expected = tokenKindsToString({SEMICOLON});
+        varAff->lastToken = lexer.nextToken();
+        lexer.rollPosition();
+        return varAff;
+    }
+
+    lexer.deletePosition();
+    return varAff;
+}
+
+uref<VariableAffectation> VariableAffectation::parseWithoutSemicolon(Lexer &lexer) {
+    lexer.savePosition();
+
     auto varAff = create_unique<VariableAffectation>();
     auto lhs = Expression::parse(lexer);
     if (!lhs->valid) {
@@ -341,14 +361,6 @@ uref<VariableAffectation> VariableAffectation::parse(Lexer &lexer) {
         varAff->valid = false;
         varAff->expected = rhs->expected;
         varAff->lastToken = rhs->lastToken;
-        lexer.rollPosition();
-        return varAff;
-    }
-
-    if (!lexer.expectToken(SEMICOLON)) {
-        varAff->valid = false;
-        varAff->expected = tokenKindsToString({SEMICOLON});
-        varAff->lastToken = lexer.nextToken();
         lexer.rollPosition();
         return varAff;
     }

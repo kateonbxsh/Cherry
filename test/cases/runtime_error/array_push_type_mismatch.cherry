@@ -1,0 +1,2 @@
+Array<string> xs = new Array<string>();
+xs.push(5);

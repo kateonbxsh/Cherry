@@ -1,6 +1,8 @@
 #include "LoopStatement.hpp"
 #include "../Block.hpp"
+#include "../variable/VariableAffectation.h"
 #include "expressions.h"
+#include "runtime_exception.h"
 
 uref<Statement> ForStatement::parse(Lexer& lexer) {
 
@@ -39,11 +41,21 @@ uref<Statement> ForStatement::parse(Lexer& lexer) {
         return stmt;
     }
 
-    auto step = Expression::parse(lexer);
-    if (!step->valid) {
-        stmt->invalidFrom(*step);
+    uref<Statement> step;
+    lexer.savePosition();
+    auto stepAssign = VariableAffectation::parseWithoutSemicolon(lexer);
+    if (stepAssign->valid) {
+        step = move(stepAssign);
+        lexer.deletePosition();
+    } else {
         lexer.rollPosition();
-        return stmt;
+        auto stepExpr = Expression::parse(lexer);
+        if (!stepExpr->valid) {
+            stmt->invalidFrom(*stepExpr);
+            lexer.rollPosition();
+            return stmt;
+        }
+        step = move(stepExpr);
     }
 
     if (!lexer.expectToken(RIGHT_PARENTHESIS)) {
@@ -51,6 +63,9 @@ uref<Statement> ForStatement::parse(Lexer& lexer) {
         lexer.rollPosition();
         return stmt;
     }
+
+    // Optional semicolon for do-while form: do {...} while (cond);
+    lexer.expectToken(SEMICOLON);
 
     auto body = Block::parse(lexer);
     if (!body->valid) {
@@ -83,7 +98,7 @@ Value ForStatement::execute(Scope& scope) {
         Value result = body->execute(scope);
         if (result.thrownException) return result;
 
-        Value stepVal = step->execute(scope);
+    Value stepVal = step->execute(scope);
         if (stepVal.thrownException) return stepVal;
     }
 
@@ -119,6 +134,9 @@ uref<Statement> WhileStatement::parse(Lexer& lexer) {
         lexer.rollPosition();
         return stmt;
     }
+
+    // Optional semicolon for repeat-until form: repeat {...} until (cond);
+    lexer.expectToken(SEMICOLON);
 
     auto body = Block::parse(lexer);
     if (!body->valid) {
@@ -337,9 +355,7 @@ Value RepeatTimesStatement::execute(Scope& scope) {
     if (v.thrownException) return v;
 
     if (v.type != IntegerType) {
-        Value err;
-        err.thrownException = create_reference<Value>(Value("repeat count must be integer"));
-        return err;
+        return makeThrown("TypeException", "repeat count must be integer");
     }
 
     int n = get<integer>(v.value);

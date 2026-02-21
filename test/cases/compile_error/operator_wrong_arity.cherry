@@ -1,0 +1,5 @@
+class BadOpArity {
+  public static operator + (BadOpArity a) {
+    return a;
+  }
+}

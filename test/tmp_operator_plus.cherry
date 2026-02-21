@@ -1,7 +1,0 @@
-class Vec {
-  public int x = 0;
-  static Vec(int xv) { this.x = xv; }
-  public static operatormod(Vec a, Vec b) { return new Vec(a.x + b.x); }
-}
-let c = new Vec(2) mod new Vec(5);
-Standard.println("{}", c.x);

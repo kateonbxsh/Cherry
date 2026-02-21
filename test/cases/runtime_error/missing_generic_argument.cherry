@@ -1,0 +1,5 @@
+class Box<T> {
+  public T value;
+}
+
+Box a = new Box();

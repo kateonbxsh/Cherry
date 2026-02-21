@@ -3,6 +3,7 @@
 #include "expressions.h"
 #include "types/type.h"
 #include "runtime_builtins.h"
+#include "runtime_exception.h"
 
 // =======================
 // Constructor
@@ -81,19 +82,14 @@ Value Scope::getVariable(const std::string& name) {
 }
 
 Scope Scope::createChild() {
-    reference<Scope> self(this, [](Scope*) {});
-    return Scope(self);
+    return Scope(create_reference<Scope>(*this));
 }
 
 // =======================
 // Errors
 // =======================
 Value Scope::makeUndefinedVariableError(const std::string& name) const {
-    Value err = NullValue;
-    err.thrownException = create_reference<Value>(
-        Value("undefined variable: " + name)
-    );
-    return err;
+    return makeThrown("NameException", "undefined variable: " + name);
 }
 
 // =======================

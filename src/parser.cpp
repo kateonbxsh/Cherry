@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <filesystem>
 
 #include "parser.h"
 #include "compile_error.h"
@@ -9,6 +10,7 @@
 #include "statements/variable/VariableDefinition.h"
 #include "statements/GlobalBlock.h"
 #include "macros.h"
+#include "runtime_exception.h"
 
 Parser::Parser(Lexer& inputLexer, std::string filePath) : filePath(std::move(filePath)) {
     lexer = inputLexer;
@@ -17,6 +19,11 @@ Parser::Parser(Lexer& inputLexer, std::string filePath) : filePath(std::move(fil
 uref<GlobalBlock> Parser::parse() {
 
     lexer.initReader();
+    std::string absolutePath = filePath;
+    try {
+        absolutePath = std::filesystem::absolute(filePath).string();
+    } catch (...) {}
+    runtimeSetSourceContext(absolutePath, lexer.getParseData());
 
     auto block = GlobalBlock::parse(lexer);
 
@@ -26,7 +33,7 @@ uref<GlobalBlock> Parser::parse() {
         if (!block->errorMessage.empty()) {
             message = block->errorMessage;
         }
-        CompileError::fail(filePath, lexer.getParseData(), lastToken, message, block->expected);
+        CompileError::fail(absolutePath, lexer.getParseData(), lastToken, message, block->expected);
     }
 
     return block;

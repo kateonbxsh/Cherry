@@ -1,9 +1,0 @@
-function factory(type T) {
-    T a;
-    function inner(T c, T b) {
-        return not (c == a) and not (b == a);
-    }
-    return inner;
-}
-
-infer result = factory(int)(5, 0);

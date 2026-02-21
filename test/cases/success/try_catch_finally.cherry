@@ -1,0 +1,30 @@
+string kind1 = "none";
+string tail1 = "none";
+
+try {
+  throw "boom";
+} catch (Exception ex) {
+  kind1 = "Exception";
+} finally {
+  tail1 = "done";
+}
+
+string kind2 = "none";
+try {
+  throw 5;
+} catch (ValueException ex) {
+  kind2 = "ValueException";
+} catch (TypeException ex) {
+  kind2 = "TypeException";
+}
+
+string kind3 = "none";
+try {
+  throw 7;
+} catch (NameException ex) {
+  kind3 = "bad";
+} catch (ValueException ex) {
+  kind3 = "ValueException";
+}
+
+Standard.println("OK try_catch_finally {} {} {} {}", kind1, tail1, kind2, kind3);

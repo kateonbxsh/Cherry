@@ -248,6 +248,10 @@ void Lexer::defineCharKinds() {
     tokenMap["if"] = IF;
     tokenMap["else"] = ELSE;
     tokenMap["unless"] = UNLESS;
+    tokenMap["try"] = TRY;
+    tokenMap["catch"] = CATCH;
+    tokenMap["finally"] = FINALLY;
+    tokenMap["throw"] = THROW;
     tokenMap["repeat"] = REPEAT;
     tokenMap["return"] = RETURN;
     tokenMap["null"] = NULL_TOKEN;
@@ -372,6 +376,10 @@ const std::vector<std::string> tokenKindStrings = {
     "if",
     "unless",
     "else",
+    "try",
+    "catch",
+    "finally",
+    "throw",
     "return",
     "for",
     "while",

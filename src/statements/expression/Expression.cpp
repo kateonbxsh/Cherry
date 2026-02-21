@@ -6,6 +6,7 @@
 #include <expressions.h>
 #include <functional>
 #include "runtime_builtins.h"
+#include "runtime_exception.h"
 
 static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
     lexer.savePosition();
@@ -35,15 +36,11 @@ static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
 }
 
 static Value makeTypeInstantiationError(const std::string& message) {
-    Value err;
-    err.thrownException = create_reference<Value>(Value(message));
-    return err;
+    return makeThrown("TypeException", message);
 }
 
 static Value makeExpressionError(const std::string& message) {
-    Value err;
-    err.thrownException = create_reference<Value>(Value(message));
-    return err;
+    return makeThrown("RuntimeException", message);
 }
 
 static bool bindCallArguments(
@@ -88,7 +85,10 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
 
     if (function.kind == FunctionKind::Internal) {
         if (!function.internalHandler) return makeExpressionError("internal function is missing implementation");
-        return function.internalHandler(scope, boundArgs, function.__this);
+        runtimePushFrame(function.debugName);
+        Value ret = function.internalHandler(scope, boundArgs, function.__this);
+        runtimePopFrame();
+        return ret;
     }
 
     Scope funcScope(function.closure);
@@ -98,7 +98,10 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
     for (size_t i = 0; i < function.parameters.size(); ++i) {
         funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
     }
-    return function.body->execute(funcScope);
+    runtimePushFrame(function.debugName);
+    Value ret = function.body->execute(funcScope);
+    runtimePopFrame();
+    return ret;
 }
 
 static reference<Type> resolveParameterType(const reference<Type>& ownerType, const reference<Type>& parameterType) {
@@ -417,6 +420,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
             // this is a function call
             if (DEBUG) std::cout << DEBUG_PREFIX << "Expression is a function call\n";
             auto call = create_unique<FunctionCall>();
+            call->callToken = lexer.currentToken();
             call->function = move(expression);
 
             expression = create_unique<Expression>();
@@ -919,20 +923,12 @@ Value DotAccessExpression::execute(Scope& scope) {
                 return makeExpressionError("cannot access static method: " + member.value);
             }
             if (method.overloads.empty()) {
-                Value err;
-                err.thrownException = create_reference<Value>(
-                    Value("static method has no overloads: " + member.value)
-                );
-                return err;
+                return makeExpressionError("static method has no overloads: " + member.value);
             }
             return Value(method.overloads.front());
         }
 
-        Value err;
-        err.thrownException = create_reference<Value>(
-            Value("unknown static member: " + member.value)
-        );
-        return err;
+        return makeExpressionError("unknown static member: " + member.value);
     }
 
     if (base.type != nullptr && base.type->kind == TypeKind::Class) {
@@ -956,29 +952,22 @@ Value DotAccessExpression::execute(Scope& scope) {
                 return makeExpressionError("cannot access method: " + member.value);
             }
             if (method.overloads.empty()) {
-                Value err;
-                err.thrownException = create_reference<Value>(
-                    Value("method has no overloads: " + member.value)
-                );
-                return err;
+                return makeExpressionError("method has no overloads: " + member.value);
             }
             Function boundMethod = method.overloads.front();
             boundMethod.__this = create_reference<Value>(base);
             return Value(boundMethod);
         }
 
-        Value err;
-        err.thrownException = create_reference<Value>(
-            Value("unknown instance member: " + member.value)
-        );
-        return err;
+        // Builtin/native-backed instances (notably Exception) can expose runtime-injected fields.
+        if (instance.fieldValues.contains(member.value)) {
+            return instance.fieldValues[member.value];
+        }
+
+        return makeExpressionError("unknown instance member: " + member.value);
     }
 
-    Value err;
-    err.thrownException = create_reference<Value>(
-        Value("dot access requires class type or instance")
-    );
-    return err;
+    return makeExpressionError("dot access requires class type or instance");
 }
 
 Value IndexAccessExpression::execute(Scope& scope) {
@@ -1103,11 +1092,7 @@ Value ConstructorExpression::execute(Scope& scope) {
     Value classValue = scope.getVariable(typeName.value);
     if (classValue.thrownException != nullptr) return classValue;
     if (classValue.type != TypeType) {
-        Value err;
-        err.thrownException = create_reference<Value>(
-            Value("new target is not a type: " + typeName.value)
-        );
-        return err;
+        return makeTypeInstantiationError("new target is not a type: " + typeName.value);
     }
 
     auto classType = get<reference<Type>>(classValue.value);
@@ -1133,11 +1118,7 @@ Value ConstructorExpression::execute(Scope& scope) {
     }
 
     if (classType->kind != TypeKind::Class) {
-        Value err;
-        err.thrownException = create_reference<Value>(
-            Value("new target is not a class: " + typeName.value)
-        );
-        return err;
+        return makeTypeInstantiationError("new target is not a class: " + typeName.value);
     }
 
     ClassInstance instance;
@@ -1163,14 +1144,17 @@ Value ConstructorExpression::execute(Scope& scope) {
         if (field.hasDefaultValue) {
             fieldValue = field.value->execute(typeScope);
         } else {
+            if (field.type == nullptr) {
+                // Builtin/runtime-defined fields may intentionally omit a type declaration.
+                fieldValue = NullValue;
+                if (fieldValue.thrownException != nullptr) return fieldValue;
+                instance.fieldValues[field.name] = fieldValue;
+                continue;
+            }
             Value fieldTypeValue = field.type->execute(typeScope);
             if (fieldTypeValue.thrownException != nullptr) return fieldTypeValue;
             if (fieldTypeValue.type != TypeType) {
-                Value err;
-                err.thrownException = create_reference<Value>(
-                    Value("field type is not a type: " + field.name)
-                );
-                return err;
+                return makeTypeInstantiationError("field type is not a type: " + field.name);
             }
             auto fieldType = get<reference<Type>>(fieldTypeValue.value);
             fieldValue = Value::Uninitialized(fieldType);
@@ -1202,11 +1186,7 @@ Value ConstructorExpression::execute(Scope& scope) {
         }
 
         if (selected == nullptr) {
-            Value err;
-            err.thrownException = create_reference<Value>(
-                Value("no matching constructor overload for " + typeName.value)
-            );
-            return err;
+            return makeTypeInstantiationError("no matching constructor overload for " + typeName.value);
         }
 
         Function ctorFunction = *selected;
@@ -1236,11 +1216,7 @@ Value ConstructorExpression::execute(Scope& scope) {
             instance = get<ClassInstance>(thisValue.value);
         }
     } else if (!argValues.empty()) {
-        Value err;
-        err.thrownException = create_reference<Value>(
-            Value("class has no constructor overloads: " + typeName.value)
-        );
-        return err;
+        return makeTypeInstantiationError("class has no constructor overloads: " + typeName.value);
     }
 
     Value ret;

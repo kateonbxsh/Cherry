@@ -1,11 +1,10 @@
 #include "TypeDefinition.hpp"
+#include "runtime_exception.h"
 
 namespace {
 
 Value makeTypeDefinitionError(const std::string& msg) {
-    Value v;
-    v.thrownException = create_reference<Value>(Value(msg));
-    return v;
+    return makeThrown("TypeException", msg);
 }
 
 bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs, Statement& st) {

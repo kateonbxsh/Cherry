@@ -6,7 +6,7 @@ struct ForStatement : public Statement {
     
     uref<Statement> init;
     uref<Expression> condition;
-    uref<Expression> step;
+    uref<Statement> step;
 
     uref<Block> body;
 

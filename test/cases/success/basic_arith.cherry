@@ -1,0 +1,12 @@
+int p1 = 1 + 2 * 3;
+int p2 = (1 + 2) * 3;
+int p3 = 20 div 5 + 1;
+real p4 = 5 / 2;
+int p5 = 17 mod 5;
+int p6 = 2 + 3 * 4;
+int u1 = (0 - 5) + 2;
+boolean c1 = 3 < 4;
+boolean c2 = 4 >= 4;
+boolean c3 = 5 != 6;
+boolean c4 = 5 == 5;
+Standard.println("OK basic_arith {} {} {} {} {} {} {} {} {} {} {}", p1, p2, p3, p4, p5, p6, u1, c1, c2, c3, c4);

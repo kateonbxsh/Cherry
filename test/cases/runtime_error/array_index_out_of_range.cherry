@@ -1,0 +1,3 @@
+Array<int> xs = new Array<int>();
+xs.push(1);
+xs.get(5);

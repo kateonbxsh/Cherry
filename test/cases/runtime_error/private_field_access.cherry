@@ -1,0 +1,6 @@
+class Secrets {
+  private int secret = 42;
+}
+
+Secrets s = new Secrets();
+infer x = s.secret;

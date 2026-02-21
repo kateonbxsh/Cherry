@@ -1,0 +1,5 @@
+class C<T extends string> {
+  public T value;
+}
+
+C<int> x = new C<int>();

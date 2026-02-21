@@ -10,6 +10,7 @@ class VariableAffectation : public Statement {
 public:
 
     static uref<VariableAffectation> parse(Lexer& lexer);
+    static uref<VariableAffectation> parseWithoutSemicolon(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 private:

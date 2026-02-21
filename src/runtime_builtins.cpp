@@ -4,6 +4,7 @@
 #include "expressions.h"
 #include "scope.h"
 #include "types/function.h"
+#include "runtime_exception.h"
 
 namespace {
 
@@ -18,6 +19,15 @@ struct NativeMap {
 reference<Type> arrayType = nullptr;
 reference<Type> mapType = nullptr;
 reference<Type> standardType = nullptr;
+reference<Type> exceptionType = nullptr;
+reference<Type> runtimeExceptionType = nullptr;
+reference<Type> valueExceptionType = nullptr;
+reference<Type> typeExceptionType = nullptr;
+reference<Type> nameExceptionType = nullptr;
+reference<Type> argumentExceptionType = nullptr;
+reference<Type> operationExceptionType = nullptr;
+reference<Type> divisionByZeroExceptionType = nullptr;
+reference<Type> indexExceptionType = nullptr;
 bool initialized = false;
 
 Function makeInternal(
@@ -32,9 +42,7 @@ Function makeInternal(
 }
 
 Value runtimeError(const std::string& message) {
-    Value err;
-    err.thrownException = create_reference<Value>(Value(message));
-    return err;
+    return makeThrown("RuntimeException", message);
 }
 
 reference<Type> getBoundType(const reference<Type>& classType, const std::string& name) {
@@ -104,6 +112,23 @@ std::string resolveFormat(const std::string& format, const std::vector<Value>& a
 
 reference<Type> getArrayTypeBuiltin() {
     return arrayType;
+}
+
+reference<Type> getExceptionTypeBuiltin() {
+    return exceptionType;
+}
+
+reference<Type> getExceptionTypeByName(const std::string& name) {
+    if (name == "Exception") return exceptionType;
+    if (name == "RuntimeException") return runtimeExceptionType;
+    if (name == "ValueException") return valueExceptionType;
+    if (name == "TypeException") return typeExceptionType;
+    if (name == "NameException") return nameExceptionType;
+    if (name == "ArgumentException") return argumentExceptionType;
+    if (name == "OperationException") return operationExceptionType;
+    if (name == "DivisionByZeroException") return divisionByZeroExceptionType;
+    if (name == "IndexException") return indexExceptionType;
+    return nullptr;
 }
 
 void initializeBuiltinInstance(ClassInstance& instance) {
@@ -483,4 +508,57 @@ void registerBuiltinRuntime(Scope& scope) {
     scope.addVariable("Array", Value(arrayType));
     scope.addVariable("Map", Value(mapType));
     scope.addVariable("Standard", Value(standardType));
+
+    exceptionType = create_reference<Type>(TypeKind::Class);
+    exceptionType->setName("Exception");
+    runtimeExceptionType = create_reference<Type>(TypeKind::Class);
+    runtimeExceptionType->setName("RuntimeException");
+    valueExceptionType = create_reference<Type>(TypeKind::Class);
+    valueExceptionType->setName("ValueException");
+    typeExceptionType = create_reference<Type>(TypeKind::Class);
+    typeExceptionType->setName("TypeException");
+    nameExceptionType = create_reference<Type>(TypeKind::Class);
+    nameExceptionType->setName("NameException");
+    argumentExceptionType = create_reference<Type>(TypeKind::Class);
+    argumentExceptionType->setName("ArgumentException");
+    operationExceptionType = create_reference<Type>(TypeKind::Class);
+    operationExceptionType->setName("OperationException");
+    divisionByZeroExceptionType = create_reference<Type>(TypeKind::Class);
+    divisionByZeroExceptionType->setName("DivisionByZeroException");
+    indexExceptionType = create_reference<Type>(TypeKind::Class);
+    indexExceptionType->setName("IndexException");
+
+    auto makeExceptionField = [](const std::string& name) -> Field {
+        Field f;
+        f.name = name;
+        f.type = nullptr;
+        f.flags = MemberFlags::Public;
+        f.hasDefaultValue = false;
+        f.value = nullptr;
+        return f;
+    };
+    exceptionType->fields.push_back(makeExceptionField("message"));
+    exceptionType->fields.push_back(makeExceptionField("stacktrace"));
+    exceptionType->fields.push_back(makeExceptionField("line"));
+    exceptionType->fields.push_back(makeExceptionField("col"));
+    exceptionType->fields.push_back(makeExceptionField("file"));
+
+    runtimeExceptionType->parent = exceptionType;
+    valueExceptionType->parent = runtimeExceptionType;
+    typeExceptionType->parent = runtimeExceptionType;
+    nameExceptionType->parent = runtimeExceptionType;
+    argumentExceptionType->parent = runtimeExceptionType;
+    operationExceptionType->parent = runtimeExceptionType;
+    divisionByZeroExceptionType->parent = operationExceptionType;
+    indexExceptionType->parent = runtimeExceptionType;
+
+    scope.addVariable("Exception", Value(exceptionType));
+    scope.addVariable("RuntimeException", Value(runtimeExceptionType));
+    scope.addVariable("ValueException", Value(valueExceptionType));
+    scope.addVariable("TypeException", Value(typeExceptionType));
+    scope.addVariable("NameException", Value(nameExceptionType));
+    scope.addVariable("ArgumentException", Value(argumentExceptionType));
+    scope.addVariable("OperationException", Value(operationExceptionType));
+    scope.addVariable("DivisionByZeroException", Value(divisionByZeroExceptionType));
+    scope.addVariable("IndexException", Value(indexExceptionType));
 }
