@@ -21,7 +21,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
         [](Lexer& l) { return UnaryExpression::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
-        [](Lexer& l) { return LambdaExpression::parse(l); },
+        [](Lexer& l) { return MethodDefinition::parse(l); },
     };
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Trying to parse first operand\n";
@@ -301,7 +301,7 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
 uref<Expression> UnaryExpression::parse(Lexer& lexer) {
 
     lexer.savePosition();
-    auto unaryExpr = create_unique<Expression>();
+    auto unaryExpr = create_unique<UnaryExpression>();
 
     Token op = lexer.nextToken();
 
@@ -400,5 +400,5 @@ Value ExpressionValue::execute(Scope &scope) {
 }
 
 Value UnaryExpression::execute(Scope &scope) {
-    return performUnaryOperator(this->expression->execute(scope), this->expressionOperator.kind);
+    return performUnaryOperator(this->firstOperand->execute(scope), this->expressionOperator.kind);
 }

@@ -9,7 +9,7 @@ class Scope;
 
 struct FunctionParameter {
     string name;
-    reference<Type> type; 
+    reference<Type> type;
 };
 
 struct Function {
@@ -17,4 +17,6 @@ struct Function {
     std::vector<FunctionParameter> parameters;
     reference<Scope> closure;
     reference<Block> body;
+
+    bool validArguments(const std::vector<Value>& arguments);
 };

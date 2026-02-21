@@ -10,6 +10,7 @@ uref<ReturnStatement> ReturnStatement::parse(Lexer& lexer) {
         ret->valid = false;
         ret->lastToken = lexer.nextToken();
         ret->expected = tokenKindsToString({RETURN});
+        lexer.rollPosition();
         return ret;
     }
 
@@ -18,6 +19,7 @@ uref<ReturnStatement> ReturnStatement::parse(Lexer& lexer) {
         ret->valid = false;
         ret->lastToken = expr->lastToken;
         ret->expected = expr->expected;
+        lexer.rollPosition();
         return ret;
     }
 

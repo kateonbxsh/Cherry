@@ -1,4 +1,5 @@
 #include "Block.hpp"
+#include "./expression/Expression.h"
 
 uref<Block> Block::parse(Lexer& lexer) {
 
@@ -25,7 +26,7 @@ uref<Block> Block::parse(Lexer& lexer) {
         return block;
     }
 
-    auto stmt = GeneralStatement::parse(lexer);
+    auto stmt = Expression::parse(lexer);
 
     if (!stmt->valid) {
         block->valid = false;

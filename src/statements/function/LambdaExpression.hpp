@@ -2,13 +2,13 @@
 #include "../expression/Expression.h"
 #include "../Block.hpp"
 
-struct LambdaParameter {
+struct MethodParameter {
     Token type;
     Token name;
 };
 
-struct LambdaExpression : public Expression {
-    std::vector<LambdaParameter> parameters;
+struct MethodDefinition : public Expression {
+    std::vector<MethodParameter> parameters;
     reference<Block> body;
 
     static uref<Expression> parse(Lexer& lexer);

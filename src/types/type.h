@@ -2,18 +2,12 @@
 
 #include <string>
 #include "macros.h"
+#include "class.h"
 
-enum PrimitiveType {
-
-    NOT_PRIMITIVE,
-    TYPE_TYPE,
-    ANON_TYPE,
-    PRIMITIVE_INTEGER,
-    PRIMITIVE_REAL,
-    PRIMITIVE_STRING,
-    PRIMITIVE_BOOLEAN,
-    FUNCTION_TYPE
-
+enum TypeKind {
+    Primitive,
+    Dynamic,
+    Class,
 };
 
 class Type {
@@ -22,14 +16,28 @@ public:
 
     static void defineTypes();
 
-    Type(): primitive(false), primitiveType(PrimitiveType::NOT_PRIMITIVE) {};
-    explicit Type(PrimitiveType type): primitive(true), primitiveType(type) {};
+    Type(): kind(TypeKind::Primitive) {};
+    explicit Type(TypeKind kind): kind(kind) {};
+
+    virtual bool assignableFrom(const Value& other);
 
     void setName(const string& name);
     string getName();
 
-    bool primitive;
-    PrimitiveType primitiveType;
+    void setDefaultValue(const Value& value);
+    Value getDefaultValue();
+
+    TypeKind kind;
+
+    std::vector<TypeParameter> typeParameters;
+
+    Value defaultValue;
+
+    reference<Type> parent;
+
+    Method constructors;
+    std::unordered_map<string, Method> methods;
+    std::vector<Field> fields;
 
 private:
 

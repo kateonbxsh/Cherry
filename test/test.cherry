@@ -5,9 +5,10 @@ function make_adder = (type t) => {
     return adder;
 };
 
-int cnt = 1;
+
 
 function helloFactory = (string name) => {
+    int cnt = 1;
     string hello = "Hello, ";
     function func = () => {
         cnt += 1;

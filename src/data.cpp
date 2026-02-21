@@ -2,20 +2,9 @@
 #include "types/function.h"
 
 Value Value::Uninitialized(reference<Type>& type) {
-    Value value;
-    value.type = type;
-    if (type == IntegerType) {
-        value.value = 0;
-    } else if (type == RealType) {
-        value.value = (real) 0;
-    } else if (type == BooleanType) {
-        value.value = (boolean) false;
-    } else if (type == StringType) {
-        value.value = (string) "";
-    } else if (type == TypeType) {
-        value.value = AnonymousType;
-    }
-    return value;
+
+    return type->getDefaultValue();
+
 }
 
 Value::Value(reference<Type>& type)
