@@ -474,7 +474,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
             dot->target = move(expression);
 
             Token member = lexer.nextToken();
-            if (member.kind != IDENTIFIER) {
+            if (member.kind != IDENTIFIER && member.kind != DISPLAY) {
                 dot->valid = false;
                 dot->expected = {"member name"};
                 dot->lastToken = member;

@@ -613,7 +613,7 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
     }
 
     Token name = lexer.nextToken();
-    if (name.kind != IDENTIFIER) {
+    if (name.kind != IDENTIFIER && name.kind != DISPLAY) {
         if (DEBUG) std::cout << DEBUG_WARNING_PREFIX << "No method name found\n";
         method->valid = false;
         lexer.rollPosition();
@@ -633,6 +633,8 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
         }
         method->name = Token{IDENTIFIER, "operator" + opToken.value, name.pos, name.line};
         isOperatorOverload = true;
+    } else if (name.kind == DISPLAY) {
+        method->name = Token{IDENTIFIER, "display", name.pos, name.line};
     } else {
         method->name = name;
     }
@@ -640,7 +642,10 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
 
     TokenKind listClose = RIGHT_PARENTHESIS;
     bool isIndexer = false;
-    if ((method->name.value == "get" || method->name.value == "set") && lexer.expectToken(LEFT_BRACKET)) {
+    bool isDisplayShortcut = method->name.value == "display" && lexer.peekToken().kind == LEFT_BRACE;
+    if (isDisplayShortcut) {
+        // display { ... } is sugar for display() { ... }
+    } else if ((method->name.value == "get" || method->name.value == "set") && lexer.expectToken(LEFT_BRACKET)) {
         listClose = RIGHT_BRACKET;
         isIndexer = true;
     } else if ((method->name.value == "get" || method->name.value == "set") && lexer.peekToken().kind == RIGHT_BRACKET) {
@@ -656,7 +661,7 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
         return method;
     }
 
-    while (!lexer.expectToken(listClose)) {
+    while (!isDisplayShortcut && !lexer.expectToken(listClose)) {
 
         Token type = lexer.nextToken();
         if (type.kind != IDENTIFIER) {
