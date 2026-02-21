@@ -83,6 +83,7 @@ public:
     std::vector<Field> fields;
     std::vector<Field> staticFields;
     std::unordered_map<string, reference<Value>> staticFieldValues;
+    std::unordered_map<string, reference<Type>> typeBindings;
 
 private:
 

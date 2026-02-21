@@ -58,19 +58,54 @@ bool isTruthy(const Value& value) {
 }
 
 std::string stringify(const Value& value) {
+    auto stringifyClassName = [](const reference<Type>& type) -> string {
+        if (type == nullptr) return "<unknown>";
+        string out = type->getName();
+
+        reference<Type> root = type;
+        while (root->parent != nullptr) {
+            root = root->parent;
+        }
+
+        const auto& displayParams = root->typeParameters;
+        if (!displayParams.empty()) {
+            out += "<";
+            for (size_t i = 0; i < displayParams.size(); ++i) {
+                const auto& tp = displayParams[i];
+                if (type->typeBindings.contains(tp.name) && type->typeBindings.at(tp.name) != nullptr) {
+                    out += type->typeBindings.at(tp.name)->getName();
+                } else if (tp.hasDefault && tp.defaultValue != nullptr) {
+                    out += "? = " + tp.defaultValue->getName();
+                } else {
+                    out += "?";
+                }
+
+                if (i + 1 < displayParams.size()) out += ", ";
+            }
+            out += ">";
+        }
+
+        return out;
+    };
 
     if (value.type == nullptr) return "null";
-    if (value.type->kind != TypeKind::Primitive) return "<Object>";
     if (value.type == RealType) return std::to_string(getValue<real>(value));
     if (value.type == StringType) return getValue<string>(value);
     if (value.type == IntegerType) return std::to_string(getValue<integer>(value));
     if (value.type == BooleanType) return getValue<boolean>(value) ? "true" : "false";
-    if (value.type == FunctionType) return "<function>";
+    if (value.type == FunctionType) return "[function]";
     if (value.type == TypeType) {
         auto type = get<reference<Type>>(value.value);
-        return "<type " + type->getName() + ">";
+        if (type != nullptr && type->kind == TypeKind::Class) {
+            return "[type " + stringifyClassName(type) + "]";
+        }
+        return "[type " + type->getName() + "]";
     }
-    return "null";
+    if (value.type->kind == TypeKind::Class) {
+        return "[" + stringifyClassName(value.type) + " instance]";
+    }
+
+    return "[object]";
 }
 
 boolean compareValues(const Value& value1, const Value& value2) {

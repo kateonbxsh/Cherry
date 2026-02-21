@@ -46,7 +46,20 @@ static Value resolvePathValue(Scope& scope, const std::vector<Token>& path) {
 static Value setMember(Value& owner, const std::string& name, const Value& newValue) {
     if (owner.type == TypeType) {
         auto typeRef = get<reference<Type>>(owner.value);
-        typeRef->staticFieldValues[name] = create_reference<Value>(newValue);
+        auto applyToType = [&](reference<Type> current) {
+            if (current->staticFieldValues.contains(name)) {
+                *current->staticFieldValues[name] = newValue;
+            } else {
+                current->staticFieldValues[name] = create_reference<Value>(newValue);
+            }
+        };
+
+        applyToType(typeRef);
+        auto p = typeRef->parent;
+        while (p != nullptr) {
+            applyToType(p);
+            p = p->parent;
+        }
         return newValue;
     }
 
