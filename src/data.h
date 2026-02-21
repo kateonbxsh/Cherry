@@ -5,6 +5,7 @@
 #include <variant>
 #include "types/type.h"
 #include "types/function.h"
+#include "types/class.h"
 
 struct Value {
 
@@ -21,7 +22,7 @@ struct Value {
     static Value Uninitialized(reference<Type>& type);
 
     reference<Type> type;
-    variant<real, string, integer, boolean, Function, reference<Type>, void*> value;
+    variant<real, string, integer, boolean, Function, reference<Type>, ClassInstance, void*> value;
     reference<Value> thrownException; //non-null when exception is thrown
     boolean returning = false; // returning from current method
 

@@ -1,9 +1,10 @@
 #include "types/type.h"
 
-reference<Type> IntegerType = create_reference<Type>(PrimitiveType::PRIMITIVE_INTEGER);
-reference<Type> RealType = create_reference<Type>(PrimitiveType::PRIMITIVE_REAL);
-reference<Type> StringType = create_reference<Type>(PrimitiveType::PRIMITIVE_STRING);
-reference<Type> BooleanType = create_reference<Type>(PrimitiveType::PRIMITIVE_BOOLEAN);
-reference<Type> FunctionType = create_reference<Type>(PrimitiveType::FUNCTION_TYPE);
-reference<Type> AnonymousType = create_reference<Type>(ANON_TYPE);
-reference<Type> TypeType = create_reference<Type>(PrimitiveType::TYPE_TYPE);
+reference<Type> IntegerType = create_reference<Type>();
+reference<Type> RealType = create_reference<Type>();
+reference<Type> StringType = create_reference<Type>();
+reference<Type> BooleanType = create_reference<Type>();
+reference<Type> FunctionType = create_reference<Type>();
+reference<Type> AnyType = create_reference<Type>();
+reference<Type> AnonymousType = create_reference<Type>();
+reference<Type> TypeType = create_reference<Type>();

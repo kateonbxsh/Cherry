@@ -23,9 +23,9 @@ uref<Statement> GeneralStatement::parse(Lexer& lexer) {
         {"IfStatement", [](Lexer& l) { return IfStatement::parse(l); }},
         {"ExpressionStatement", [](Lexer& l) { return ExpressionStatement::parse(l); }},
         {"WhileLoop", [](Lexer& l) { return WhileStatement::parse(l); }},
-        {"ForLoop", [](Lexer& l) { return ForStatement::parse(l); }},
+        //{"ForLoop", [](Lexer& l) { return ForStatement::parse(l); }},
         {"DoWhile", [](Lexer& l) { return DoWhileStatement::parse(l); }},
-        //{"RepeatUntilLoop", [](Lexer& l) { return RepeatUntilStatement::parse(l); }},
+        {"RepeatUntilLoop", [](Lexer& l) { return RepeatUntilStatement::parse(l); }},
         {"RepeatTimesLoop", [](Lexer& l) { return RepeatTimesStatement::parse(l); }},
         {"ReturnStatement", [](Lexer& l) { return ReturnStatement::parse(l); }}
     };

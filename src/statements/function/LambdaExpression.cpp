@@ -1,10 +1,10 @@
 #include "LambdaExpression.hpp"
 #include "types/function.h"
 
-uref<Expression> LambdaExpression::parse(Lexer& lexer) {
+uref<Expression> MethodDefinition::parse(Lexer& lexer) {
 
     lexer.savePosition();
-    auto lambda = create_unique<LambdaExpression>();
+    auto lambda = create_unique<MethodDefinition>();
 
     if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         lambda->valid = false;
@@ -74,7 +74,7 @@ uref<Expression> LambdaExpression::parse(Lexer& lexer) {
     return lambda;
 }
 
-Value LambdaExpression::execute(Scope& scope) {
+Value MethodDefinition::execute(Scope& scope) {
 
     Function function;
     function.body = body;

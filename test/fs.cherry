@@ -1,0 +1,7 @@
+
+function a = (i) => {
+    if (i == 0) return 0;
+    return i * a(i-1);
+};
+
+int b = a(5);
