@@ -10,6 +10,82 @@ static Value makeAssignmentError(const std::string& message) {
     return makeThrown("TypeException", message);
 }
 
+static uref<Expression> parseAssignmentTarget(Lexer& lexer) {
+    auto base = ExpressionValue::parse(lexer);
+    if (!base->valid) {
+        auto invalid = create_unique<Expression>();
+        invalid->valid = false;
+        invalid->expected = base->expected;
+        invalid->lastToken = base->lastToken;
+        return invalid;
+    }
+
+    uref<Expression> current = move(base);
+    while (true) {
+        if (lexer.expectToken(DOT)) {
+            Token member = lexer.nextToken();
+            if (member.kind != IDENTIFIER && member.kind != DISPLAY) {
+                auto invalid = create_unique<Expression>();
+                invalid->valid = false;
+                invalid->expected = {"member name"};
+                invalid->lastToken = member;
+                return invalid;
+            }
+
+            auto dot = create_unique<DotAccessExpression>();
+            dot->target = move(current);
+            dot->member = member;
+            dot->valid = true;
+
+            auto wrapper = create_unique<Expression>();
+            wrapper->firstOperand = move(dot);
+            wrapper->expressionOperator = {NONE, "", 0, 0};
+            wrapper->valid = true;
+            current = move(wrapper);
+            continue;
+        }
+
+        if (lexer.expectToken(LEFT_BRACKET)) {
+            auto idx = create_unique<IndexAccessExpression>();
+            idx->target = move(current);
+
+            while (!lexer.expectToken(RIGHT_BRACKET)) {
+                auto arg = Expression::parse(lexer);
+                if (!arg->valid) {
+                    auto invalid = create_unique<Expression>();
+                    invalid->valid = false;
+                    invalid->expected = arg->expected;
+                    invalid->lastToken = arg->lastToken;
+                    return invalid;
+                }
+                idx->arguments.push_back(move(arg));
+
+                Token sep = lexer.nextToken();
+                if (sep.kind == RIGHT_BRACKET) break;
+                if (sep.kind != COMMA) {
+                    auto invalid = create_unique<Expression>();
+                    invalid->valid = false;
+                    invalid->expected = tokenKindsToString({COMMA, RIGHT_BRACKET});
+                    invalid->lastToken = sep;
+                    return invalid;
+                }
+            }
+
+            idx->valid = true;
+            auto wrapper = create_unique<Expression>();
+            wrapper->firstOperand = move(idx);
+            wrapper->expressionOperator = {NONE, "", 0, 0};
+            wrapper->valid = true;
+            current = move(wrapper);
+            continue;
+        }
+
+        break;
+    }
+
+    return current;
+}
+
 static bool bindCallArguments(
     const Function& function,
     const std::vector<Value>& args,
@@ -331,7 +407,7 @@ uref<VariableAffectation> VariableAffectation::parseWithoutSemicolon(Lexer &lexe
     lexer.savePosition();
 
     auto varAff = create_unique<VariableAffectation>();
-    auto lhs = Expression::parse(lexer);
+    auto lhs = parseAssignmentTarget(lexer);
     if (!lhs->valid) {
         varAff->valid = false;
         varAff->expected = lhs->expected;
@@ -341,14 +417,18 @@ uref<VariableAffectation> VariableAffectation::parseWithoutSemicolon(Lexer &lexe
     }
 
     varAff->selfOperation = NONE;
+    bool consumedCompoundAssign = false;
+    lexer.savePosition();
     Token op = lexer.nextToken();
-    if (isBinaryOperator(op.kind)) {
+    if (isBinaryOperator(op.kind) && lexer.expectToken(EQUALS)) {
         varAff->selfOperation = op.kind;
+        consumedCompoundAssign = true;
+        lexer.deletePosition();
     } else {
-        lexer.back();
+        lexer.rollPosition();
     }
 
-    if (!lexer.expectToken(EQUALS)) {
+    if (!consumedCompoundAssign && !lexer.expectToken(EQUALS)) {
         varAff->valid = false;
         varAff->expected = tokenKindsToString({EQUALS});
         varAff->lastToken = lexer.nextToken();

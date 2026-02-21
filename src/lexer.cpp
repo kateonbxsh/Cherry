@@ -276,6 +276,7 @@ void Lexer::defineCharKinds() {
     tokenMap["."] = DOT;
     tokenMap["..."] = ELLIPSIS;
     tokenMap["this"] = THIS;
+    tokenMap["display"] = DISPLAY;
 
     tokenMap[""] = END_OF_FEED;
 
@@ -412,6 +413,7 @@ const std::vector<std::string> tokenKindStrings = {
     "dot",
     "ellipsis",
     "this",
+    "display",
     
     "begin_of_binary_operators",
     "comparative_equals", "comparative_not_equals",

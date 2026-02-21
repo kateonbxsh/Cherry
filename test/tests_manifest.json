@@ -90,6 +90,22 @@
       }
     },
     {
+      "name": "success_operator_plus_compound",
+      "file": "cases/success/operator_plus_compound.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK operator_plus_compound 10"]
+      }
+    },
+    {
+      "name": "success_display_and_format",
+      "file": "cases/success/display_and_format.cherry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK display_and_format Vec(5) a=Vec(5) b=9 c=9"]
+      }
+    },
+    {
       "name": "success_class_static_instance",
       "file": "cases/success/class_static_instance.cherry",
       "allowed_exit_codes": [0],

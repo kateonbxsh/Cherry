@@ -1,18 +1,145 @@
-
 # Cherry
 
-A C-like interpreted programming language under developement, created for the sole purpose of having a programming language that has an "unless" statement, which is an alias for "if not", just like in the English language.
+Cherry is a custom interpreted programming language written in modern C++.
+It is expression-oriented, class-capable, and includes language features like `unless`, indexer methods, dynamic types, operator overloading, and structured exception handling.
 
-```
-unless x == 0 {
-    print("x is not 0");
+## Highlights
+
+- `if` and `unless`
+- Classes with:
+  - fields and methods
+  - static fields and methods
+  - constructors
+  - access flags (`public`, `private`, `protected`, `readonly`)
+  - operator overloading (`operator +`, etc.) with static binary dispatch
+  - indexer methods (`get[...]`, `set[...]`)
+- Lambdas and closures
+- Variadic parameters (`...`) for lambdas, methods, and internal built-ins
+- Generic type parameters with defaults and constraints
+- Dynamic type declarations and `is` checks
+- `throw`, `try/catch/finally`, built-in exception hierarchy, and formatted runtime errors
+- Built-in runtime classes:
+  - `Array<T = any>`
+  - `Map<U = string, V = any>`
+  - `Standard` (`print`, `println` with formatting)
+
+## Quick Example
+
+```typescript
+class Vec {
+  public int x;
+
+  public Vec(int x) {
+    this.x = x;
+  }
+
+  public static operator+(Vec a, Vec b) {
+    return new Vec(a.x + b.x);
+  }
+
+  display {
+    return "x: " + this.x;
+  }
 }
-```
-or, in a nicer way:
-```
-print("x is not 0") unless x == 0;
+
+Vec a = new Vec(4);
+function makeIncrementer = () => {
+  let b = new Vec(2);
+  return () => {
+    b += a;
+    return b;
+  };
+};
+let incrementer = makeIncrementer();
+Standard.println("iteration 1 = {}", incrementer()); // x: 6
+Standard.println("iteration 2 = {}", incrementer()); // x: 10
 ```
 
-The language however does offer more than just an *unless* statement.
+## Build
 
-*A proper documentation is to come soon.*
+### Requirements
+
+- CMake 3.22+
+- C++23-compatible compiler
+
+### Configure + Build
+
+```bash
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+On Windows, the executable is typically:
+
+- `build/Cherry.exe` (or `build/Release/Cherry.exe` depending on generator)
+
+On Linux/macOS:
+
+- `build/Cherry`
+
+## Run
+
+```bash
+# Windows example
+.\build\Cherry.exe .\test\cases\success\basic_arith.cherry
+
+# Linux/macOS example
+./build/Cherry ./test/cases/success/basic_arith.cherry
+```
+
+Debug mode:
+
+```bash
+.\build\Cherry.exe .\test\cases\success\basic_arith.cherry --debug
+```
+
+## Test Suite
+
+The repository includes a manifest-driven test harness covering:
+
+- success paths
+- compile-time failures
+- runtime failures
+- edge cases (precedence, operators, generics, variadics, indexers, exceptions, etc.)
+
+Run all tests:
+
+```bash
+python scripts/run_cherry_tests.py
+```
+
+Use a custom executable path:
+
+```bash
+python scripts/run_cherry_tests.py --exe build/Release/Cherry.exe
+```
+
+Test definitions live in:
+
+- `test/tests_manifest.json`
+- `test/cases/success`
+- `test/cases/compile_error`
+- `test/cases/runtime_error`
+
+## CI
+
+GitHub Actions workflow:
+
+- `.github/workflows/cherry-tests.yml`
+
+It builds Cherry and runs the full manifest suite on:
+
+- `ubuntu-latest`
+- `windows-latest`
+
+## Repository Layout
+
+- `src/` language implementation (lexer, parser, interpreter, runtime)
+- `test/` test cases and manifest
+- `scripts/run_cherry_tests.py` local/CI test runner
+- `.github/workflows/` CI
+
+## Notes
+
+- Cherry is actively evolving; syntax and diagnostics are still being refined.
+- The test suite is the current source of truth for expected behavior.

@@ -184,6 +184,35 @@ std::string stringify(const Value& value) {
         return "[type " + type->getName() + "]";
     }
     if (value.type->kind == TypeKind::Class) {
+        reference<Type> cursor = value.type;
+        while (cursor != nullptr) {
+            if (cursor->methods.contains("display")) {
+                const auto& method = cursor->methods.at("display");
+                for (const auto& overload : method.overloads) {
+                    if (!overload.parameters.empty()) continue;
+                    Function fn = overload;
+                    fn.__this = create_reference<Value>(value);
+                    Value rendered;
+                    if (fn.kind == FunctionKind::Internal) {
+                        Scope internalScope(fn.closure);
+                        if (!fn.internalHandler) break;
+                        rendered = fn.internalHandler(internalScope, {}, fn.__this);
+                    } else {
+                        Scope funcScope(fn.closure);
+                        if (fn.__this != nullptr) {
+                            funcScope.addVariable("this", *fn.__this);
+                        }
+                        rendered = fn.body->execute(funcScope);
+                    }
+                    if (rendered.thrownException == nullptr && rendered.type == StringType) {
+                        return get<string>(rendered.value);
+                    }
+                    break;
+                }
+                break;
+            }
+            cursor = cursor->parent;
+        }
         return "[" + stringifyClassName(value.type) + " instance]";
     }
 

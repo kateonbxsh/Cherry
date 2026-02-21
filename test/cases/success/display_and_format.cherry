@@ -1,0 +1,16 @@
+class Vec {
+  public int x;
+
+  public Vec(int x) {
+    this.x = x;
+  }
+
+  display {
+    return "Vec(" + this.x + ")";
+  }
+}
+
+Vec v = new Vec(5);
+string s1 = "" + v;
+string s2 = Standard.format("a={} b={1} c={}", v, 9, "x");
+Standard.println("OK display_and_format {} {}", s1, s2);

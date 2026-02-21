@@ -472,36 +472,58 @@ void registerBuiltinRuntime(Scope& scope) {
     standardType = create_reference<Type>(TypeKind::Class);
     standardType->setName("Standard");
 
-    auto formatPrint = [](bool lineBreak) {
+    auto formatBuiltin = []() {
         std::vector<FunctionParameter> params;
         params.push_back({"format", StringType, false});
         params.push_back({"args", AnyType, true});
-        return makeInternal(params, [lineBreak](Scope&, const std::vector<Value>& args, const reference<Value>&) -> Value {
+        return makeInternal(params, [](Scope&, const std::vector<Value>& args, const reference<Value>&) -> Value {
             std::vector<Value> unpacked;
             if (args.size() > 1) {
                 Value packed = args[1];
                 std::vector<Value>* items = nullptr;
-                if (!tryGetArrayItems(packed, items)) return runtimeError("print variadic arguments must be an Array");
+                if (!tryGetArrayItems(packed, items)) return runtimeError("format variadic arguments must be an Array");
                 unpacked = *items;
             }
             std::string format = get<string>(args[0].value);
             std::string text = resolveFormat(format, unpacked);
-            if (lineBreak) std::cout << text << std::endl;
-            else std::cout << text;
-            return NullValue;
+            return Value(text);
         });
     };
 
     {
+        Method formatMethod;
+        formatMethod.flags = MemberFlags::Public | MemberFlags::Static;
+        formatMethod.overloads.push_back(formatBuiltin());
+        standardType->staticMethods["format"] = std::move(formatMethod);
+    }
+    {
         Method printMethod;
         printMethod.flags = MemberFlags::Public | MemberFlags::Static;
-        printMethod.overloads.push_back(formatPrint(false));
+        printMethod.overloads.push_back(makeInternal(
+            {{"format", StringType, false}, {"args", AnyType, true}},
+            [formatBuiltin](Scope& scope, const std::vector<Value>& args, const reference<Value>& self) -> Value {
+                Function formatter = formatBuiltin();
+                Value rendered = formatter.internalHandler(scope, args, self);
+                if (rendered.thrownException != nullptr) return rendered;
+                std::cout << get<string>(rendered.value);
+                return NullValue;
+            }
+        ));
         standardType->staticMethods["print"] = std::move(printMethod);
     }
     {
         Method printlnMethod;
         printlnMethod.flags = MemberFlags::Public | MemberFlags::Static;
-        printlnMethod.overloads.push_back(formatPrint(true));
+        printlnMethod.overloads.push_back(makeInternal(
+            {{"format", StringType, false}, {"args", AnyType, true}},
+            [formatBuiltin](Scope& scope, const std::vector<Value>& args, const reference<Value>& self) -> Value {
+                Function formatter = formatBuiltin();
+                Value rendered = formatter.internalHandler(scope, args, self);
+                if (rendered.thrownException != nullptr) return rendered;
+                std::cout << get<string>(rendered.value) << std::endl;
+                return NullValue;
+            }
+        ));
         standardType->staticMethods["println"] = std::move(printlnMethod);
     }
 
