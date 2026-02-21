@@ -2,6 +2,7 @@
 
 #include "../expression/Expression.h"
 #include "../variable/VariableDefinition.h"
+#include "../Block.hpp"
 
 struct ClassDeclarationTypeParameter {
 
@@ -25,6 +26,8 @@ struct FieldDefinition : public Statement {
 };
 
 
+struct MethodDefinition;
+
 struct ClassDeclaration : public Statement {
 
     static uref<ClassDeclaration> parse(Lexer& lexer);
@@ -34,7 +37,7 @@ struct ClassDeclaration : public Statement {
     
     std::unordered_map<string, ClassDeclarationTypeParameter> typeParameters;
     std::vector<FieldDefinition> fields;
-    std::unordered_map<string, reference<MethodDefinition>> methods;
+    std::unordered_map<string, std::vector<uref<MethodDefinition>>> methods;
 
 };
 
@@ -49,7 +52,7 @@ struct MethodDefinition : public Expression {
     std::vector<MethodParameter> parameters;
     reference<Block> body;
 
-    static reference<MethodDefinition> parse(Lexer& lexer);
+    static uref<MethodDefinition> parse(Lexer& lexer);
     Value execute(Scope& scope) override;
 
 };
