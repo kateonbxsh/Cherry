@@ -1,0 +1,32 @@
+type ShortString = string x when x.length() <= 5 default "mini";
+type TOrText<T> = T | string;
+
+class Box<T = any> {
+  public T value;
+
+  public Box(T value) {
+    this.value = value;
+  }
+
+  display {
+    return "Box<" + T + ">:" + this.value;
+  }
+}
+
+type IntBox = Box<int>;
+type Check = TOrText<int>;
+
+IntBox a = new IntBox(7);
+Box<string> b = new Box<string>("hey");
+Box<ShortString> c = new Box<ShortString>("tiny");
+
+let strictInts = Array<int>[1, 2, 3, 4];
+let mixed = [1, "two", 3];
+
+Check ok1 = 42;
+Check ok2 = "forty-two";
+
+Standard.println("a={} b={} c={}", a, b, c);
+Standard.println("strictInts type={}", typeof strictInts);
+Standard.println("mixed type={}", typeof mixed);
+Standard.println("check={} {}", ok1, ok2);
