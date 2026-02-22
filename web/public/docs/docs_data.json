@@ -1,0 +1,35 @@
+{
+  "sections": [
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "pages": [
+        { "id": "overview", "title": "Overview", "file": "pages/intro/overview.html" },
+        { "id": "quickstart", "title": "Quickstart", "file": "pages/intro/quickstart.html" }
+      ]
+    },
+    {
+      "id": "syntax",
+      "title": "Syntax",
+      "pages": [
+        { "id": "statements-blocks", "title": "Statements and blocks", "file": "pages/syntax/statements-blocks.html" },
+        { "id": "variables", "title": "Variables", "file": "pages/syntax/variables.html" },
+        { "id": "operators", "title": "Operators", "file": "pages/syntax/operators.html" },
+        { "id": "functions", "title": "Functions", "file": "pages/syntax/functions.html" },
+        { "id": "if-else-conditions", "title": "Conditions", "file": "pages/syntax/if-else-conditions.html" },
+        { "id": "loops", "title": "Loops", "file": "pages/syntax/loops.html" },
+        { "id": "try-catch-finally-throw", "title": "try-catch block", "file": "pages/syntax/try-catch-finally-throw.html" },
+        { "id": "classes", "title": "Classes", "file": "pages/syntax/classes.html" }
+      ]
+    },
+    {
+      "id": "classes-types",
+      "title": "Classes & Types",
+      "pages": [
+        { "id": "nature-of-types", "title": "Nature of types", "file": "pages/classes-types/nature-of-types.html" },
+        { "id": "class-structure", "title": "Class structure", "file": "pages/classes-types/class-structure.html" },
+        { "id": "generics", "title": "Generics", "file": "pages/classes-types/generics.html" }
+      ]
+    }
+  ]
+}

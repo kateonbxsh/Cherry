@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cherry Playground</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.51.0/min/vs/loader.min.js"></script>
+  <script src="../ansi_up.js"></script>
+  <script src="../cherry_monaco.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top, #0d0d0d 0%, #050505 70%);
+      font-family: 'JetBrains Mono', monospace;
+      color: white;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 30px rgba(255, 182, 193, 0.08);
+    }
+    .accent { color: #ff7a9e; font-weight: 600; }
+    .monaco-container, #editor {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="min-h-screen overflow-x-hidden">
+  <div class="absolute top-0 right-0 w-72 h-72 pointer-events-none opacity-50"
+    style="background: radial-gradient(circle,#ff7a9e33 0%, transparent 70%); filter: blur(80px);"></div>
+  <div class="absolute bottom-0 left-0 w-96 h-96 pointer-events-none opacity-40"
+    style="background: radial-gradient(circle,#ffb7cc22 0%, transparent 70%); filter: blur(120px);"></div>
+
+  <header class="max-w-[1500px] mx-auto p-6 pb-2">
+    <div class="glass rounded-2xl px-4 py-3 flex items-center justify-between">
+      <a href="/web/" class="text-xl font-bold tracking-tight accent">CHERRY PLAYGROUND</a>
+      <nav class="flex gap-2 text-sm">
+        <a href="/web/" class="px-3 py-1 rounded-md hover:bg-white/10 text-gray-300">home</a>
+        <a href="/web/playground/" class="px-3 py-1 rounded-md bg-white/10 text-white">playground</a>
+        <a href="/web/docs/" class="px-3 py-1 rounded-md hover:bg-white/10 text-gray-300">docs</a>
+        <a href="https://github.com/" target="_blank" rel="noreferrer" class="px-3 py-1 rounded-md hover:bg-white/10 text-gray-300">github repo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-[1500px] mx-auto p-6 pt-3">
+    <div class="grid grid-cols-12 gap-4 h-[78vh] min-h-0">
+      <aside class="glass rounded-2xl p-4 col-span-12 lg:col-span-3 overflow-hidden flex flex-col min-h-0 min-w-0">
+        <div class="text-sm font-semibold text-gray-300 mb-2 tracking-wide uppercase">Examples</div>
+        <div id="exampleList" class="overflow-auto pr-1 space-y-2"></div>
+      </aside>
+
+      <section class="glass p-4 rounded-2xl col-span-12 lg:col-span-6 flex flex-col min-h-0 min-w-0 overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold text-gray-300 tracking-wide uppercase">Code Editor</div>
+          <button id="run" class="bg-[#ff7a9e] hover:bg-[#ff93b0] text-black font-semibold px-4 py-2 rounded-md transition">Run Code</button>
+        </div>
+        <div class="monaco-container grow min-h-0 min-w-0" id="editor"></div>
+      </section>
+
+      <section class="glass p-4 rounded-2xl col-span-12 lg:col-span-3 flex flex-col min-h-0 min-w-0">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold text-gray-300 tracking-wide uppercase">Output</div>
+          <span id="runtimeBadge" class="text-xs text-gray-400">loading wasm...</span>
+        </div>
+        <div id="output" style="white-space: pre-wrap" class="grow w-full bg-transparent outline-none resize-none text-gray-200 text-sm leading-6 overflow-auto"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="./playground.js"></script>
+  <script src="../wasm/Cherry.js"></script>
+</body>
+</html>

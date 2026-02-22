@@ -1,0 +1,14 @@
+function makeCounter = (int start) => {
+  int n = start;
+  function bump = (int step) => {
+    n = n + step;
+    return n;
+  };
+  return bump;
+};
+
+function c1 = makeCounter(0);
+function c2 = makeCounter(100);
+
+Standard.println("c1={} {} {}", c1(1), c1(3), c1(5));
+Standard.println("c2={} {}", c2(10), c2(-20));
