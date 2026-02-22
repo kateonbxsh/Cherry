@@ -48,7 +48,9 @@ static Value invokeOverload(
             err.thrownException = create_reference<Value>(Value("internal function is missing implementation"));
             return err;
         }
-        return fn.internalHandler(internalScope, args, fn.__this);
+        Value ret = fn.internalHandler(internalScope, args, fn.__this);
+        ret.returning = false;
+        return ret;
     }
 
     Scope funcScope(fn.closure);
@@ -58,11 +60,27 @@ static Value invokeOverload(
     }
     if (fn.__this != nullptr) {
         funcScope.addVariable("this", *fn.__this);
+        if ((*fn.__this).type != nullptr) {
+            reference<Type> cursor = (*fn.__this).type;
+            while (cursor != nullptr) {
+                for (const auto& [tpName, tpType] : cursor->typeBindings) {
+                    if (tpType != nullptr) {
+                        auto resolvedType = tpType;
+                        funcScope.addVariable(tpName, Value(resolvedType));
+                    }
+                }
+                cursor = cursor->parent;
+            }
+        }
     }
     for (size_t i = 0; i < fn.parameters.size(); ++i) {
         funcScope.addVariable(fn.parameters[i].name, args[i]);
     }
-    return fn.body->execute(funcScope);
+    Value ret = fn.body->execute(funcScope);
+    if (!ret.thrownException) {
+        ret.returning = false;
+    }
+    return ret;
 }
 
 struct ClassOperatorResult {
@@ -201,6 +219,18 @@ std::string stringify(const Value& value) {
                         Scope funcScope(fn.closure);
                         if (fn.__this != nullptr) {
                             funcScope.addVariable("this", *fn.__this);
+                            if ((*fn.__this).type != nullptr) {
+                                reference<Type> cursorWithBindings = (*fn.__this).type;
+                                while (cursorWithBindings != nullptr) {
+                                    for (const auto& [tpName, tpType] : cursorWithBindings->typeBindings) {
+                                        if (tpType != nullptr) {
+                                            auto resolvedType = tpType;
+                                            funcScope.addVariable(tpName, Value(resolvedType));
+                                        }
+                                    }
+                                    cursorWithBindings = cursorWithBindings->parent;
+                                }
+                            }
                         }
                         rendered = fn.body->execute(funcScope);
                     }
@@ -247,8 +277,12 @@ boolean compareValues(const Value& value1, const Value& value2) {
         return getNumericValueAsReal(value1) == getNumericValueAsReal(value2);
     if (value1.type == IntegerType || value2.type == IntegerType)
         return getNumericValueAsInt(value1) == getNumericValueAsInt(value2);
+    if (value1.type == StringType && value2.type == StringType)
+        return getValue<string>(value1) == getValue<string>(value2);
+    if (value1.type == BooleanType && value2.type == BooleanType)
+        return getValue<boolean>(value1) == getValue<boolean>(value2);
 
-    return getValue<boolean>(value1) == getValue<boolean>(value2);
+    return false;
 }
 
 boolean firstIsBigger(const Value& value1, const Value& value2) {

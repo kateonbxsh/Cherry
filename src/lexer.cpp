@@ -345,11 +345,13 @@ void Lexer::savePosition() {
 }
 
 void Lexer::rollPosition() {
+    if (positions.empty()) return;
     reader = positions.top();
-    Lexer::deletePosition();
+    positions.pop();
 }
 
 void Lexer::deletePosition() {
+    if (positions.empty()) return;
     positions.pop();
 }
 

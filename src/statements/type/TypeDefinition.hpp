@@ -3,19 +3,20 @@
 #include "statement.h"
 #include "lexer.h"
 #include "statements/expression/Expression.h"
+#include "type_syntax.h"
 
 struct TypeDeclarationParameter {
     Token name;
     bool withDefaultValue = false;
-    Token defaultValue;
+    TypeSyntaxExpression defaultValue;
     bool withConstraint = false;
-    Token constraintType;
+    TypeSyntaxExpression constraintType;
 };
 
 struct TypeUnionTerm {
     Token token;
     bool literal = false;
-    std::vector<Token> typeArguments;
+    std::vector<TypeSyntaxExpression> typeArguments;
 };
 
 class TypeDefinition : public Statement {
@@ -28,7 +29,7 @@ private:
     std::vector<TypeDeclarationParameter> parameters;
 
     bool usesPredicateSyntax = false;
-    Token predicateBaseType;
+    TypeSyntaxExpression predicateBaseType;
     Token predicateVariable;
     reference<Expression> predicateExpression;
     reference<Expression> defaultExpression;

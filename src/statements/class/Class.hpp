@@ -3,6 +3,7 @@
 #include "../expression/Expression.h"
 #include "../variable/VariableDefinition.h"
 #include "../Block.hpp"
+#include "type_syntax.h"
 #include <vector>
 #include <unordered_map>
 
@@ -10,9 +11,9 @@ struct ClassDeclarationTypeParameter {
 
     Token name;
     bool withDefaultValue;
-    Token defaultValue;
+    TypeSyntaxExpression defaultValue;
     bool withConstraint = false;
-    Token constraintType;
+    TypeSyntaxExpression constraintType;
 
 };
 
@@ -38,7 +39,7 @@ struct ClassDeclaration : public Statement {
 
     string name;
     bool hasBaseType = false;
-    Token baseType;
+    TypeSyntaxExpression baseType;
 
     std::vector<ClassDeclarationTypeParameter> typeParameters;
     std::vector<FieldDefinition> fields;
@@ -48,7 +49,7 @@ struct ClassDeclaration : public Statement {
 };
 
 struct MethodParameter {
-    Token type;
+    TypeSyntaxExpression type;
     Token name;
     bool variadic = false;
 };

@@ -4,6 +4,7 @@
 #include "types/type.h"
 #include "lexer.h"
 #include "scope.h"
+#include "type_syntax.h"
 #include <vector>
 
 class Expression : public Statement {
@@ -43,7 +44,7 @@ public:
 private:
 
     Token identifier;
-    std::vector<Token> typeArguments;
+    std::vector<TypeSyntaxExpression> typeArguments;
     bool hasTypeArguments = false;
 
 };
@@ -81,6 +82,14 @@ public:
     std::vector<uref<Expression>> arguments;
 };
 
+class ArrayLiteralExpression : public Expression {
+public:
+    static uref<Expression> parse(Lexer& lexer);
+    Value execute(Scope& scope) override;
+
+    std::vector<uref<Expression>> elements;
+};
+
 class ConstructorExpression : public Expression {
 public:
 
@@ -89,7 +98,7 @@ public:
 
 private:
     Token typeName;
-    std::vector<Token> typeArguments;
+    std::vector<TypeSyntaxExpression> typeArguments;
     std::vector<uref<Expression>> arguments;
 
 };

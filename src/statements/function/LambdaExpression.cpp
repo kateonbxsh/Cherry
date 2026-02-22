@@ -96,7 +96,7 @@ Value LambdaDefinition::execute(Scope& scope) {
     function.parameters = {};
     function.debugName = "<lambda>";
 
-    auto childScope = create_reference<Scope>(Scope(create_reference<Scope>(scope)));
+    auto closureScope = create_reference<Scope>(scope.snapshot());
 
     for (auto& param : parameters) {
 
@@ -104,18 +104,18 @@ Value LambdaDefinition::execute(Scope& scope) {
         fp.name = param.name.value;
         fp.variadic = param.variadic;
 
-        Value typeVal = childScope->getVariable(param.type.value);
+        Value typeVal = closureScope->getVariable(param.type.value);
         if (typeVal.type != TypeType) {
             return makeThrown("TypeException", "unknown type");
         }
 
         fp.type = get<reference<Type>>(typeVal.value);
-        childScope->addVariable(fp.name, Value::Uninitialized(fp.type));
+        closureScope->addVariable(fp.name, Value::Uninitialized(fp.type));
 
         function.parameters.push_back(fp);
     }
 
-    function.closure = childScope;
+    function.closure = closureScope;
 
     return Value(function);
 }

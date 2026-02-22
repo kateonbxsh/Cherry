@@ -119,6 +119,20 @@ static bool bindCallArguments(
     return true;
 }
 
+static void injectThisTypeBindings(Scope& scope, const Value& thisValue) {
+    if (thisValue.type == nullptr) return;
+    reference<Type> cursor = thisValue.type;
+    while (cursor != nullptr) {
+        for (const auto& [tpName, tpType] : cursor->typeBindings) {
+            if (tpType != nullptr) {
+                auto resolvedType = tpType;
+                scope.addVariable(tpName, Value(resolvedType));
+            }
+        }
+        cursor = cursor->parent;
+    }
+}
+
 static Value invokeFunction(
     const Function& function,
     Scope& scope,
@@ -136,12 +150,14 @@ static Value invokeFunction(
         runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
         Value ret = function.internalHandler(scope, boundArgs, function.__this);
         runtimePopFrame();
+        ret.returning = false;
         return ret;
     }
 
     Scope funcScope(function.closure);
     if (function.__this != nullptr) {
         funcScope.addVariable("this", *function.__this);
+        injectThisTypeBindings(funcScope, *function.__this);
     }
     for (size_t i = 0; i < function.parameters.size(); ++i) {
         funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
@@ -153,6 +169,7 @@ static Value invokeFunction(
     Value result = function.body->execute(funcScope);
     runtimePopFrame();
     if (result.thrownException != nullptr) return result;
+    result.returning = false;
 
     if (function.__this != nullptr) {
         Value updatedThis = funcScope.getVariable("this");

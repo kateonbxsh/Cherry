@@ -2,73 +2,12 @@
 #include "statements/expression/Expression.h"
 #include "types/type.h"
 #include "runtime_exception.h"
+#include "type_syntax.h"
 
 namespace {
 
 Value makeVarDefError(const std::string& message) {
     return makeThrown("TypeException", message);
-}
-
-Value instantiateGenericType(reference<Type> baseType, const std::vector<reference<Type>>& args, bool strictMissing) {
-    if (baseType == nullptr) return makeVarDefError("cannot instantiate null type");
-
-    std::vector<size_t> undefinedIndices;
-    for (size_t i = 0; i < baseType->typeParameters.size(); ++i) {
-        if (baseType->typeParameters[i].value == nullptr) undefinedIndices.push_back(i);
-    }
-
-    if (args.size() > undefinedIndices.size()) {
-        return makeVarDefError("too many type arguments for " + baseType->getName());
-    }
-
-    auto specialized = create_reference<Type>(*baseType);
-    specialized->parent = baseType;
-    specialized->typeBindings = baseType->typeBindings;
-
-    size_t consumed = 0;
-    for (size_t idx : undefinedIndices) {
-        auto& tp = specialized->typeParameters[idx];
-        if (consumed < args.size()) {
-            auto candidate = args[consumed++];
-            if (tp.hasConstraint && tp.constraint != nullptr) {
-                auto probeType = candidate;
-                Value probe = Value::Uninitialized(probeType);
-                probe.type = candidate;
-                if (!tp.constraint->assignableFrom(probe)) {
-                    return makeVarDefError("type argument for " + tp.name + " does not satisfy extends constraint");
-                }
-            }
-            tp.value = candidate;
-            continue;
-        }
-
-        if (tp.hasDefault && tp.defaultValue != nullptr) {
-            auto candidate = tp.defaultValue;
-            if (tp.hasConstraint && tp.constraint != nullptr) {
-                auto probeType = candidate;
-                Value probe = Value::Uninitialized(probeType);
-                probe.type = candidate;
-                if (!tp.constraint->assignableFrom(probe)) {
-                    return makeVarDefError("default type argument for " + tp.name + " does not satisfy extends constraint");
-                }
-            }
-            tp.value = candidate;
-            continue;
-        }
-
-        if (strictMissing) {
-            return makeVarDefError("missing type argument for " + tp.name + " in " + baseType->getName());
-        }
-    }
-
-    std::vector<TypeParameter> remaining;
-    for (auto& tp : specialized->typeParameters) {
-        specialized->typeBindings[tp.name] = tp.value;
-        if (tp.value == nullptr) remaining.push_back(tp);
-    }
-    specialized->typeParameters = move(remaining);
-
-    return Value(specialized);
 }
 
 }
@@ -83,37 +22,7 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
         varDef->inferred = true;
     } else {
 
-        Token nextToken = lexer.nextToken();
-        if (nextToken.kind == IDENTIFIER) {
-            varDef->type = nextToken;
-
-            if (lexer.expectToken(SMALLER_THAN)) {
-                while (true) {
-                    Token arg = lexer.nextToken();
-                    if (arg.kind != IDENTIFIER) {
-                        varDef->lastToken = arg;
-                        varDef->expected = {"type argument"};
-                        varDef->valid = false;
-                        lexer.rollPosition();
-                        return varDef;
-                    }
-                    varDef->typeArguments.push_back(arg);
-
-                    Token sep = lexer.nextToken();
-                    if (sep.kind == BIGGER_THAN) break;
-                    if (sep.kind != COMMA) {
-                        varDef->lastToken = sep;
-                        varDef->expected = tokenKindsToString({COMMA, BIGGER_THAN});
-                        varDef->valid = false;
-                        lexer.rollPosition();
-                        return varDef;
-                    }
-                }
-            }
-        } else {
-            varDef->lastToken = nextToken;
-            varDef->expected = {"type name", "class name", "interface name", "enum name", "primitive type"};
-            varDef->valid = false;
+        if (!parseTypeSyntaxExpression(lexer, varDef->type, *varDef)) {
             lexer.rollPosition();
             return varDef;
         }
@@ -173,31 +82,13 @@ uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
 
 Value VariableDefinition::execute(Scope& scope) {
 
-    Value type = scope.getVariable(this->type.value);
     auto name = this->name.value;
 
     if (!inferred) {
-        if (type.type != TypeType) { // wtf am i doing atp
-            return makeVarDefError("type value is not a type");
-        }
+        Value type = resolveTypeSyntaxExpression(scope, this->type, false, "");
+        if (type.thrownException != nullptr) return type;
+        if (type.type != TypeType) return makeVarDefError("type value is not a type");
         auto typeType = get<reference<Type>>(type.value);
-
-        if (!typeArguments.empty()) {
-            std::vector<reference<Type>> args;
-            args.reserve(typeArguments.size());
-            for (const auto& argToken : typeArguments) {
-                Value argType = scope.getVariable(argToken.value);
-                if (argType.thrownException != nullptr) return argType;
-                if (argType.type != TypeType) {
-                    return makeVarDefError("type argument is not a type: " + argToken.value);
-                }
-                args.push_back(get<reference<Type>>(argType.value));
-            }
-
-            Value specialized = instantiateGenericType(typeType, args, false);
-            if (specialized.thrownException != nullptr) return specialized;
-            typeType = get<reference<Type>>(specialized.value);
-        }
 
         if (expression == nullptr) {
             auto value = Value::Uninitialized(typeType);

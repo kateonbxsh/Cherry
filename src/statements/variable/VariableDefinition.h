@@ -3,6 +3,7 @@
 #include "statement.h"
 #include "lexer.h"
 #include "statements/expression/Expression.h"
+#include "type_syntax.h"
 
 class VariableDefinition : public Statement {
 
@@ -15,8 +16,7 @@ private:
 
     bool inferred = false;
     uref<Expression> expression;
-    Token type;
-    std::vector<Token> typeArguments;
+    TypeSyntaxExpression type;
     Token name;
 
 };

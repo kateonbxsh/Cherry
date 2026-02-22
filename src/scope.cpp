@@ -5,14 +5,18 @@
 #include "runtime_builtins.h"
 #include "runtime_exception.h"
 
+reference<Scope> makeScopeReference(Scope& scope) {
+    return reference<Scope>(&scope, [](Scope*) {});
+}
+
 // =======================
 // Constructor
 // =======================
-Scope::Scope(reference<Scope> parent)
+Scope::Scope(reference<Scope> parent, bool initializeBuiltins)
     : parent(parent) {
 
     // Only root scope defines builtins
-    if (!parent) {
+    if (!parent && initializeBuiltins) {
         Type::defineTypes();
         addVariable("int", Value(IntegerType));
         addVariable("boolean", Value(BooleanType));
@@ -34,7 +38,11 @@ void Scope::addVariable(const std::string& name, const Value& initial) {
                   << (initial.type ? initial.type->getName() : "<null>")
                   << std::endl;
     }
-    variables[name] = initial;
+    if (variables.contains(name) && variables[name] != nullptr) {
+        *variables[name] = initial;
+        return;
+    }
+    variables[name] = create_reference<Value>(initial);
 }
 
 void Scope::setVariable(const std::string& name, const Value& value) {
@@ -44,7 +52,9 @@ void Scope::setVariable(const std::string& name, const Value& value) {
                   << std::endl;
     }
     if (variables.contains(name)) {
-        variables[name] = value;
+        auto& cell = variables[name];
+        if (cell == nullptr) cell = create_reference<Value>(value);
+        else *cell = value;
         return;
     }
     if (parent) {
@@ -69,8 +79,9 @@ Value Scope::getVariable(const std::string& name) {
     if (DEBUG) std::cout << "Getting variable " << name << std::endl;;
     // local
     if (variables.contains(name)) {
-        const Value& val = variables.at(name);
-        return val;
+        const auto& cell = variables.at(name);
+        if (cell != nullptr) return *cell;
+        return makeUndefinedVariableError(name);
     }
 
     // parent
@@ -82,7 +93,22 @@ Value Scope::getVariable(const std::string& name) {
 }
 
 Scope Scope::createChild() {
-    return Scope(create_reference<Scope>(*this));
+    return Scope(makeScopeReference(*this));
+}
+
+void Scope::collectVisibleVariables(std::map<std::string, reference<Value>>& out) const {
+    if (parent) {
+        parent->collectVisibleVariables(out);
+    }
+    for (const auto& [name, value] : variables) {
+        out[name] = value;
+    }
+}
+
+Scope Scope::snapshot() const {
+    Scope copy(nullptr, false);
+    collectVisibleVariables(copy.variables);
+    return copy;
 }
 
 // =======================
@@ -98,6 +124,10 @@ Value Scope::makeUndefinedVariableError(const std::string& name) const {
 void Scope::printVariables() const {
     std::cout << "Scope variables:\n";
     for (const auto& [name, value] : variables) {
-        std::cout << "  " << name << " = " << stringify(value) << "\n";
+        if (value == nullptr) {
+            std::cout << "  " << name << " = <null>\n";
+            continue;
+        }
+        std::cout << "  " << name << " = " << stringify(*value) << "\n";
     }
 }

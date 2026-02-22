@@ -1,0 +1,9 @@
+type Names = Array<string>;
+Standard.println(
+  "OK array_literal {} {} {} {} {}",
+  typeof [1, 2, 3],
+  typeof [1, 2.5, 3],
+  typeof [1, "x"],
+  Names["a", "b"][1],
+  Array<int>[4, 5, 6][2]
+);
