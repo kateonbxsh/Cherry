@@ -94,11 +94,11 @@ Lexer::Lexer(std::string data) {
         }
 
         // ---------- IDENTIFIER / KEYWORD ----------
-        if (std::isalpha(c) || c == '_' || c == '-') {
+        if (std::isalpha(c) || c == '_') {
             std::string value;
             while (i < parseData.size()) {
                 char ch = parseData[i];
-                if (std::isalnum(ch) || ch == '_' || ch == '-') {
+                if (std::isalnum(ch) || ch == '_') {
                     value += ch;
                     i++; pos++;
                 } else {
@@ -236,7 +236,7 @@ void Lexer::defineCharKinds() {
     tokenMap["&"] = BITWISE_AND;
     tokenMap["!|"] = BITWISE_XOR;
     tokenMap["xor"] = XOR;
-    tokenMap["!||"] = XOR;
+    tokenMap["^||"] = XOR;
     tokenMap["not"] = NOT;
     tokenMap["!"] = NOT;
 
