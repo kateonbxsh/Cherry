@@ -44,6 +44,9 @@ import { useRoute, useRouter } from "vue-router";
 import { marked } from "marked";
 import NavBar from "../components/NavBar.vue";
 
+const BASE_URL = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "") + "/";
+const withBase = (path) => BASE_URL + String(path).replace(/^\/+/, "");
+
 const route = useRoute();
 const router = useRouter();
 const sidebarRefDesktop = ref(null);
@@ -289,7 +292,7 @@ async function renderActivePage() {
   renderSidebar();
   activeContent.innerHTML = "<p class='text-gray-400'>Loading...</p>";
   try {
-    const res = await fetch(`/docs/${page.file}`);
+    const res = await fetch(withBase(`docs/${page.file}`));
     if (!res.ok) throw new Error(`Failed to load ${page.file} (${res.status})`);
     const raw = await res.text();
     const html = page.file.endsWith(".md") ? markdownToHtml(raw) : raw;
@@ -321,9 +324,9 @@ function renderSidebar() {
     <div class="mb-3">
       <div class="text-[10px] uppercase tracking-[0.12em] text-gray-400 mb-2">Navigate</div>
       <div class="space-y-1">
-        <a href="/" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">home</a>
-        <a href="/playground" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">playground</a>
-        <a href="/docs" class="block text-xs px-2 py-1.5 rounded-md bg-white/[0.06] text-white">docs</a>
+        <a href="${withBase("")}" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">home</a>
+        <a href="${withBase("playground")}" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">playground</a>
+        <a href="${withBase("docs")}" class="block text-xs px-2 py-1.5 rounded-md bg-white/[0.06] text-white">docs</a>
       </div>
     </div>
     <div class="mb-3">
@@ -405,7 +408,7 @@ async function initDocs() {
   if (desktop) desktop.addEventListener("scroll", onContentScroll, { passive: true });
   if (mobile) mobile.addEventListener("scroll", onContentScroll, { passive: true });
 
-  const res = await fetch("/docs/docs_data.json");
+  const res = await fetch(withBase("docs/docs_data.json"));
   docsData = await res.json();
 
   const pageId = route.params.pageId ? String(route.params.pageId) : null;

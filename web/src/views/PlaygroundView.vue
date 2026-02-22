@@ -26,9 +26,9 @@
       <div class="mb-3 md:hidden">
         <div class="text-[10px] uppercase tracking-[0.12em] text-gray-400 mb-2">Navigate</div>
         <div class="space-y-1">
-          <a href="/" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">home</a>
-          <a href="/playground" class="block text-xs px-2 py-1.5 rounded-md bg-white/[0.06] text-white">playground</a>
-          <a href="/docs" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">docs</a>
+          <a :href="homeHref" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">home</a>
+          <a :href="playgroundHref" class="block text-xs px-2 py-1.5 rounded-md bg-white/[0.06] text-white">playground</a>
+          <a :href="docsHref" class="block text-xs px-2 py-1.5 rounded-md hover:bg-white/[0.06] text-gray-300">docs</a>
         </div>
       </div>
 
@@ -77,6 +77,12 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref } from "vue";
 import NavBar from "../components/NavBar.vue";
+
+const BASE_URL = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "") + "/";
+const withBase = (path) => BASE_URL + String(path).replace(/^\/+/, "");
+const homeHref = withBase("");
+const playgroundHref = withBase("playground");
+const docsHref = withBase("docs");
 
 const EXAMPLE_MANIFEST = [
   { title: "Class definition", file: "class_definition.chry" },
@@ -212,6 +218,7 @@ function runInIsolatedFrame(sourceCode) {
       removeRunnerFrame();
     };
 
+    const wasmScriptUrl = withBase("wasm/Cherry.js");
     iframe.srcdoc = `<!doctype html><html><body><script>
       (function () {
         var runId = ${runId};
@@ -236,7 +243,7 @@ function runInIsolatedFrame(sourceCode) {
           }
         };
         var s = document.createElement("script");
-        s.src = "/wasm/Cherry.js";
+        s.src = "${wasmScriptUrl}";
         s.onerror = function () { post("fail", "failed to load wasm runtime"); };
         document.body.appendChild(s);
       })();
@@ -250,7 +257,7 @@ async function loadExamples() {
   const loaded = [];
   for (const item of EXAMPLE_MANIFEST) {
     try {
-      const response = await fetch(`/playground/examples/${item.file}`);
+      const response = await fetch(withBase(`playground/examples/${item.file}`));
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       loaded.push({ ...item, code: await response.text() });
     } catch (error) {
@@ -334,9 +341,9 @@ onMounted(async () => {
   window.addEventListener("error", onWindowError);
   window.addEventListener("unhandledrejection", onWindowRejection);
 
-  await loadScript("/ansi_up.js?v=2");
+  await loadScript(withBase("ansi_up.js?v=2"));
   ansi = createAnsiInstance();
-  await loadScript("/cherry_monaco.js");
+  await loadScript(withBase("cherry_monaco.js"));
   await loadScript("https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.51.0/min/vs/loader.min.js");
   initEditor();
 });
