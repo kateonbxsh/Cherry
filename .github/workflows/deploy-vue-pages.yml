@@ -16,38 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-vue:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm --dir web install --frozen-lockfile
-
-      - name: Build Vue app
-        run: pnpm --dir web run build:pnpm -- --base "/${{ github.event.repository.name }}/"
-
-      - name: Setup Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: web/dist
-
   await-builds:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Wait for required build workflows
@@ -117,6 +86,34 @@ jobs:
 
               await sleep(pollMs);
             }
+
+  build-vue:
+    needs: await-builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: pnpm --dir web install --frozen-lockfile
+
+      - name: Build Vue app
+        run: pnpm --dir web run build:pnpm -- --base "/${{ github.event.repository.name }}/"
+
+      - name: Setup Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
 
   deploy-vue:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
