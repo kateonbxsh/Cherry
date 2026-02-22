@@ -28,10 +28,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Configure (CMake preset: native)
+      - name: "Configure (CMake preset: native)"
         run: cmake --preset native
 
-      - name: Build (CMake preset: native)
+      - name: "Build (CMake preset: native)"
         run: cmake --build --preset native --config Release
 
       - name: Run Cherry test suite
@@ -55,10 +55,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Configure (CMake preset: native)
+      - name: "Configure (CMake preset: native)"
         run: cmake --preset native
 
-      - name: Build (CMake preset: native)
+      - name: "Build (CMake preset: native)"
         run: cmake --build --preset native --config Release
 
       - name: Run Cherry test suite
@@ -81,10 +81,10 @@ jobs:
         with:
           version: 3.1.64
 
-      - name: Configure (CMake preset: wasm)
+      - name: "Configure (CMake preset: wasm)"
         run: cmake --preset wasm
 
-      - name: Build (CMake preset: wasm)
+      - name: "Build (CMake preset: wasm)"
         run: cmake --build --preset wasm --config Release
 
       - name: WASM smoke test
@@ -139,10 +139,10 @@ jobs:
         with:
           version: 3.1.64
 
-      - name: Configure (CMake preset: wasm)
+      - name: "Configure (CMake preset: wasm)"
         run: cmake --preset wasm
 
-      - name: Build (CMake preset: wasm)
+      - name: "Build (CMake preset: wasm)"
         run: cmake --build --preset wasm --config Release
 
       - name: WASM smoke test
