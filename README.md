@@ -2,6 +2,7 @@
 
 Cherry is a custom interpreted programming language written in modern C++.
 It is expression-oriented, class-capable, and includes language features like `unless`, indexer methods, dynamic types, operator overloading, and structured exception handling.
+Source and test programs in this repository use the `.chry` extension.
 
 ## Highlights
 
@@ -21,7 +22,7 @@ It is expression-oriented, class-capable, and includes language features like `u
 - Built-in runtime classes:
   - `Array<T = any>`
   - `Map<U = string, V = any>`
-  - `Standard` (`print`, `println` with formatting)
+  - `Standard` (`print`, `println`, `format` with formatting)
 
 ## Quick Example
 
@@ -81,16 +82,16 @@ On Linux/macOS:
 
 ```bash
 # Windows example
-.\build\Cherry.exe .\test\cases\success\basic_arith.cherry
+.\build\Cherry.exe .\test\cases\success\basic_arith.chry
 
 # Linux/macOS example
-./build/Cherry ./test/cases/success/basic_arith.cherry
+./build/Cherry ./test/cases/success/basic_arith.chry
 ```
 
 Debug mode:
 
 ```bash
-.\build\Cherry.exe .\test\cases\success\basic_arith.cherry --debug
+.\build\Cherry.exe .\test\cases\success\basic_arith.chry --debug
 ```
 
 ## Test Suite
@@ -139,7 +140,43 @@ It builds Cherry and runs the full manifest suite on:
 - `scripts/run_cherry_tests.py` local/CI test runner
 - `.github/workflows/` CI
 
+## Web Playground (WASM)
+
+Build browser runtime (manual mode):
+
+```powershell
+./scripts/build_wasm.ps1
+```
+
+or
+
+```bash
+./scripts/build_wasm.sh
+```
+
+Build browser runtime using CMake presets (`CMakePresets.json`):
+
+```powershell
+./scripts/build_wasm.ps1 -UsePreset
+```
+
+or
+
+```bash
+./scripts/build_wasm.sh build-wasm web/wasm Release 1
+```
+
+This generates/copies the runtime files consumed by the playground:
+
+- `web/wasm/Cherry.js`
+- `web/wasm/Cherry.wasm`
+
+Serve repository root and open:
+
+- `http://localhost:8000/web/`
+
 ## Notes
 
 - Cherry is actively evolving; syntax and diagnostics are still being refined.
 - The test suite is the current source of truth for expected behavior.
+
