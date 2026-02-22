@@ -1,5 +1,7 @@
 # Cherry Test Suite
 
+Test case files use the `.chry` extension.
+
 Run locally:
 
 ```bash
