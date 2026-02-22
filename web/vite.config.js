@@ -1,7 +1,9 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // Local dev serves from root, production deploy uses project-path base.
+  base: command === "serve" ? "/" : (process.env.VITE_BASE_PATH || "/Cherry/"),
   plugins: [
     vue(),
     {
@@ -19,4 +21,4 @@ export default defineConfig({
       }
     }
   ]
-});
+}));
