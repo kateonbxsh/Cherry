@@ -1,0 +1,19 @@
+class Pair<T, U = string> {
+  public T first;
+  public U second;
+
+  public Pair(T first, U second) {
+    this.first = first;
+    this.second = second;
+  }
+
+  display {
+    return "Pair<" + this.first + ", " + this.second + ">";
+  }
+}
+
+Pair<int> a = new Pair<int>(42, "answer");
+Pair<string, int> b = new Pair<string, int>("rank", 1);
+
+Standard.println("a={}", a);
+Standard.println("b={}", b);

@@ -1,0 +1,21 @@
+class Person {
+  public string name;
+  private int age;
+
+  public Person(string name, int age) {
+    this.name = name;
+    this.age = age;
+  }
+
+  public getAge() {
+    return this.age;
+  }
+
+  display {
+    return "Person{name=" + this.name + ", age=" + this.age + "}";
+  }
+}
+
+Person p = new Person("Cherry", 4);
+Standard.println("{}", p);
+Standard.println("name={} age={}", p.name, p.getAge());

@@ -1,0 +1,49 @@
+class Tape {
+  public Map<int, string> cells;
+  public int head;
+
+  public Tape() {
+    this.cells = new Map<int, string>();
+    this.head = 0;
+  }
+
+  public read() {
+    string v = this.cells.get(this.head);
+    if (v == null) return "_";
+    return v;
+  }
+
+  public write(string symbol) {
+    this.cells.set(this.head, symbol);
+  }
+
+  public move(int delta) {
+    this.head = this.head + delta;
+  }
+}
+
+Tape tape = new Tape();
+tape.write("1");
+tape.move(1);
+tape.write("1");
+tape.move(-1);
+
+int steps = 0;
+while (steps < 6) {
+  string s = tape.read();
+  if (s == "1") {
+    tape.write("0");
+    tape.move(1);
+  } else {
+    tape.write("1");
+    tape.move(-1);
+  }
+  steps = steps + 1;
+}
+
+Standard.println("head={} left={} center={} right={}",
+  tape.head,
+  tape.cells.get(-1),
+  tape.cells.get(0),
+  tape.cells.get(1)
+);

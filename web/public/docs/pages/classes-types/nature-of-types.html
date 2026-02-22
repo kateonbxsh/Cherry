@@ -1,0 +1,27 @@
+<h1>Nature of types</h1>
+<p>In Cherry, types are runtime values. This is the mental model that unlocks the rest of the language. You are not only writing values of type <code>int</code> or <code>string</code>; you can also manipulate type objects themselves.</p>
+
+<h2>Types as values</h2>
+<p>The identifier <code>int</code> is itself a value. Its runtime type is <code>type</code>, and its value is the integer type object.</p>
+<pre><code>Standard.println("{}", int);         // prints type representation
+Standard.println("{}", string);
+</code></pre>
+
+<h2>The special case: type</h2>
+<p><code>type</code> is also a runtime value of type <code>type</code>. In other words, type metadata is self-describing.</p>
+<pre><code>Standard.println("{}", type);
+</code></pre>
+
+<h2>Classes are types</h2>
+<p>When you define a class, Cherry registers a new runtime type. Instantiation with <code>new</code> creates object values whose runtime type is that class type.</p>
+<pre><code>class Person {
+  public string name;
+}
+
+Standard.println("{}", Person);      // type value
+Person p = new Person();              // instance value
+Standard.println("{}", p);
+</code></pre>
+
+<h2>Failure mindset</h2>
+<p>If a name that should resolve to a type is missing from scope, you will get a name exception at runtime. That is usually a registration/scope problem, not a syntax problem.</p>

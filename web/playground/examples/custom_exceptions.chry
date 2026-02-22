@@ -1,0 +1,23 @@
+class ValidationException extends Exception {
+  public ValidationException(string message) {
+    Exception(message);
+  }
+}
+
+function requirePositive = (int x) => {
+  if (x <= 0) {
+    throw new ValidationException("Expected a positive number");
+  }
+  return x;
+};
+
+try {
+  Standard.println("{}", requirePositive(5));
+  Standard.println("{}", requirePositive(-2));
+} catch (ValidationException e) {
+  Standard.println("ValidationException: {}", e.message);
+} catch (Exception e) {
+  Standard.println("Exception: {}", e.message);
+} finally {
+  Standard.println("finished");
+}

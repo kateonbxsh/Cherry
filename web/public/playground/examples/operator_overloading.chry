@@ -1,0 +1,40 @@
+class Vec {
+  public int x;
+  public int y;
+
+  public Vec(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  public sum() {
+    return this.x + this.y;
+  }
+
+  public sum(int extra) {
+    return this.x + this.y + extra;
+  }
+
+  public static operator + (Vec a, Vec b) {
+    return new Vec(a.x + b.x, a.y + b.y);
+  }
+
+  public get[int idx]() {
+    if (idx == 0) return this.x;
+    return this.y;
+  }
+
+  public set[int idx](int value) {
+    if (idx == 0) this.x = value;
+    else this.y = value;
+  }
+}
+
+Vec a = new Vec(1, 2);
+Vec b = new Vec(4, 8);
+Vec c = a + b;
+
+c[1] = c[1] + 10;
+
+Standard.println("sum()={} sum(5)={}", c.sum(), c.sum(5));
+Standard.println("c[0]={} c[1]={}", c[0], c[1]);

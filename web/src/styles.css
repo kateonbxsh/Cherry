@@ -1,0 +1,84 @@
+body {
+  background: radial-gradient(circle at top, #0d0d0d 0%, #050505 70%);
+  font-family: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: white;
+  margin: 0;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 30px rgba(255, 182, 193, 0.08);
+}
+
+.accent {
+  color: #ff7a9e;
+  font-weight: 600;
+}
+
+.blob-a {
+  background: radial-gradient(circle, #ff7a9e33 0%, transparent 70%);
+  filter: blur(80px);
+}
+
+.blob-b {
+  background: radial-gradient(circle, #ffb7cc22 0%, transparent 70%);
+  filter: blur(120px);
+}
+
+.type-line::after {
+  content: "|";
+  margin-left: 0.2rem;
+  animation: blink 1s step-end infinite;
+  color: #ff7a9e;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.7s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 122, 158, 0.75) rgba(255, 255, 255, 0.06);
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  background: linear-gradient(180deg, rgba(255, 122, 158, 0.95), rgba(255, 183, 204, 0.75));
+  box-shadow: 0 0 12px rgba(255, 122, 158, 0.3);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 145, 178, 1), rgba(255, 199, 216, 0.85));
+  box-shadow: 0 0 16px rgba(255, 122, 158, 0.45);
+}
