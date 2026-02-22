@@ -124,6 +124,20 @@ reference<Value> normalizeExceptionRef(const reference<Value>& ex) {
     return makeExceptionRef("ValueException", stringify(*ex));
 }
 
+void runtimeEnsureExceptionLocation(const reference<Value>& ex, int line, int col) {
+    auto normalized = normalizeExceptionRef(ex);
+    if (normalized == nullptr || normalized->type == nullptr || normalized->type->kind != TypeKind::Class) return;
+    auto inst = get<ClassInstance>(normalized->value);
+    bool hasLine = inst.fieldValues.contains("line") && inst.fieldValues.at("line").type == IntegerType;
+    bool hasCol = inst.fieldValues.contains("col") && inst.fieldValues.at("col").type == IntegerType;
+    if (!hasLine && line >= 1) inst.fieldValues["line"] = Value((integer)line);
+    if (!hasCol && col >= 1) inst.fieldValues["col"] = Value((integer)col);
+    if (!inst.fieldValues.contains("file") && !gRuntimeFilePath.empty()) {
+        inst.fieldValues["file"] = Value(gRuntimeFilePath);
+    }
+    normalized->value = inst;
+}
+
 void printRuntimeException(const reference<Value>& ex) {
     auto normalized = normalizeExceptionRef(ex);
     std::cerr << EXCEPTION_THROWN_PREFIX;
@@ -144,6 +158,12 @@ void printRuntimeException(const reference<Value>& ex) {
     std::string file = fileValue.type == StringType ? get<string>(fileValue.value) : gRuntimeFilePath;
     int line = lineValue.type == IntegerType ? (int)get<integer>(lineValue.value) : -1;
     int col = colValue.type == IntegerType ? (int)get<integer>(colValue.value) : -1;
+    if ((line < 1 || col < 1 || file.empty()) && !gCallFrames.empty()) {
+        const auto& top = gCallFrames.back();
+        if (file.empty()) file = top.file.empty() ? gRuntimeFilePath : top.file;
+        if (line < 1) line = top.line;
+        if (col < 1) col = top.col;
+    }
 
     std::cerr << " " << typeName << " " << RESET << " " << BOLD_ERROR_PREFIX << message << ERROR_PREFIX << "\n";
     std::cerr << "at " << (file.empty() ? std::string("<unknown file>") : file) << ":" << RESET;

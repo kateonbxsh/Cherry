@@ -146,6 +146,14 @@
       }
     },
     {
+      "name": "success_typeof_builtin",
+      "file": "cases/success/typeof_builtin.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK typeof_builtin true true true true"]
+      }
+    },
+    {
       "name": "compile_default_type_param_not_last",
       "file": "cases/compile_error/default_type_param_not_last.chry",
       "allowed_exit_codes": [1, 2],
@@ -278,7 +286,7 @@
       "file": "cases/runtime_error/compatible_catch_blocks.chry",
       "allowed_exit_codes": [0],
       "expect": {
-        "stderr_contains": ["compatible catch blocks detected", "TypeException"]
+        "stderr_contains": ["unreachable catch block", "TypeException"]
       }
     }
   ]

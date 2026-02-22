@@ -1,0 +1,8 @@
+int a = 7;
+string b = "hello";
+infer ta = typeof a;
+infer tb = typeof b;
+infer tt = typeof int;
+infer tn = typeof null;
+
+Standard.println("OK typeof_builtin {} {} {} {}", ta == int, tb == string, tt == typeof int, tn == any);

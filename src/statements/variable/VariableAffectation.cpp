@@ -133,7 +133,10 @@ static Value invokeFunction(
 
     if (function.kind == FunctionKind::Internal) {
         if (!function.internalHandler) return makeAssignmentError("internal function is missing implementation");
-        return function.internalHandler(scope, boundArgs, function.__this);
+        runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
+        Value ret = function.internalHandler(scope, boundArgs, function.__this);
+        runtimePopFrame();
+        return ret;
     }
 
     Scope funcScope(function.closure);
@@ -146,7 +149,9 @@ static Value invokeFunction(
     if (implicitAssignedValue != nullptr) {
         funcScope.addVariable("value", *implicitAssignedValue);
     }
+    runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
     Value result = function.body->execute(funcScope);
+    runtimePopFrame();
     if (result.thrownException != nullptr) return result;
 
     if (function.__this != nullptr) {

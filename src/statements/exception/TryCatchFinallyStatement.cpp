@@ -142,10 +142,11 @@ Value TryCatchFinallyStatement::execute(Scope& scope) {
             auto bProbe = Value::Uninitialized(bType);
             aProbe.type = aType;
             bProbe.type = bType;
-            if (aType->assignableFrom(bProbe) || bType->assignableFrom(aProbe)) {
+            // Reject only unreachable ordering: a broader catch before a narrower one.
+            if (aType->assignableFrom(bProbe)) {
                 return makeThrown(
                     "TypeException",
-                    "compatible catch blocks detected: " + catches[i].typeName.value + " and " + catches[j].typeName.value,
+                    "unreachable catch block: " + catches[j].typeName.value + " is already covered by " + catches[i].typeName.value,
                     catches[j].typeName.line,
                     catches[j].typeName.pos + 1
                 );

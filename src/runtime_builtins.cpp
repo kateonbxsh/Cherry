@@ -500,6 +500,13 @@ void registerBuiltinRuntime(Scope& scope) {
         Method printMethod;
         printMethod.flags = MemberFlags::Public | MemberFlags::Static;
         printMethod.overloads.push_back(makeInternal(
+            {{"x", AnyType, false}},
+            [](Scope&, const std::vector<Value>& args, const reference<Value>&) -> Value {
+                std::cout << stringify(args[0]);
+                return NullValue;
+            }
+        ));
+        printMethod.overloads.push_back(makeInternal(
             {{"format", StringType, false}, {"args", AnyType, true}},
             [formatBuiltin](Scope& scope, const std::vector<Value>& args, const reference<Value>& self) -> Value {
                 Function formatter = formatBuiltin();
@@ -514,6 +521,13 @@ void registerBuiltinRuntime(Scope& scope) {
     {
         Method printlnMethod;
         printlnMethod.flags = MemberFlags::Public | MemberFlags::Static;
+        printlnMethod.overloads.push_back(makeInternal(
+            {{"x", AnyType, false}},
+            [](Scope&, const std::vector<Value>& args, const reference<Value>&) -> Value {
+                std::cout << stringify(args[0]) << std::endl;
+                return NullValue;
+            }
+        ));
         printlnMethod.overloads.push_back(makeInternal(
             {{"format", StringType, false}, {"args", AnyType, true}},
             [formatBuiltin](Scope& scope, const std::vector<Value>& args, const reference<Value>& self) -> Value {
