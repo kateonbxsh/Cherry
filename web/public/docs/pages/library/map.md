@@ -27,6 +27,8 @@ V set(U key, V value);
 - Throws if key/value are not assignable to `U` / `V`.
 - Throws if runtime key is not string-compatible.
 
+---
+
 #### `get`
 
 ```chry
@@ -36,6 +38,8 @@ V get(U key);
 - Returns the value for `key`.
 - Throws when key does not exist.
 
+---
+
 #### `has`
 
 ```chry
@@ -43,6 +47,8 @@ boolean has(U key);
 ```
 
 - Returns whether `key` exists.
+
+---
 
 #### `remove`
 
@@ -53,6 +59,8 @@ boolean remove(U key);
 - Removes key if present.
 - Returns `true` if removed, else `false`.
 
+---
+
 #### `size`
 
 ```chry
@@ -60,6 +68,8 @@ int size();
 ```
 
 - Returns number of entries.
+
+---
 
 #### `clear`
 
@@ -69,6 +79,8 @@ void clear();
 
 - Removes all entries.
 
+---
+
 #### `empty`
 
 ```chry
@@ -76,6 +88,8 @@ boolean empty();
 ```
 
 - Returns `true` when size is `0`.
+
+---
 
 #### `keys`
 
@@ -85,6 +99,8 @@ Array<U> keys();
 
 - Returns all keys as an `Array`.
 
+---
+
 #### `values`
 
 ```chry
@@ -92,6 +108,8 @@ Array<V> values();
 ```
 
 - Returns all values as an `Array`.
+
+---
 
 ### Indexing syntax
 
