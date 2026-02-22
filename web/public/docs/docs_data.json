@@ -4,31 +4,45 @@
       "id": "intro",
       "title": "Introduction",
       "pages": [
-        { "id": "overview", "title": "Overview", "file": "pages/intro/overview.html" },
-        { "id": "quickstart", "title": "Quickstart", "file": "pages/intro/quickstart.html" }
+        { "id": "overview", "title": "Overview", "file": "pages/intro/overview.md" },
+        { "id": "quickstart", "title": "Quickstart", "file": "pages/intro/quickstart.md" }
       ]
     },
     {
       "id": "syntax",
       "title": "Syntax",
       "pages": [
-        { "id": "statements-blocks", "title": "Statements and blocks", "file": "pages/syntax/statements-blocks.html" },
-        { "id": "variables", "title": "Variables", "file": "pages/syntax/variables.html" },
-        { "id": "operators", "title": "Operators", "file": "pages/syntax/operators.html" },
-        { "id": "functions", "title": "Functions", "file": "pages/syntax/functions.html" },
-        { "id": "if-else-conditions", "title": "Conditions", "file": "pages/syntax/if-else-conditions.html" },
-        { "id": "loops", "title": "Loops", "file": "pages/syntax/loops.html" },
-        { "id": "try-catch-finally-throw", "title": "try-catch block", "file": "pages/syntax/try-catch-finally-throw.html" },
-        { "id": "classes", "title": "Classes", "file": "pages/syntax/classes.html" }
-      ]
+        { "id": "statements-blocks", "title": "Statements and blocks", "file": "pages/syntax/statements-blocks.md" },
+        { "id": "variables", "title": "Variables", "file": "pages/syntax/variables.md" },
+        { "id": "operators", "title": "Operators", "file": "pages/syntax/operators.md" },
+        { "id": "functions", "title": "Functions", "file": "pages/syntax/functions.md" },
+        { "id": "if-else-conditions", "title": "Conditions", "file": "pages/syntax/if-else-conditions.md" },
+        { "id": "loops", "title": "Loops", "file": "pages/syntax/loops.md" },
+        { "id": "try-catch-finally-throw", "title": "try-catch block", "file": "pages/syntax/try-catch-finally-throw.md" }
+       ]
     },
     {
       "id": "classes-types",
       "title": "Classes & Types",
       "pages": [
-        { "id": "nature-of-types", "title": "Nature of types", "file": "pages/classes-types/nature-of-types.html" },
-        { "id": "class-structure", "title": "Class structure", "file": "pages/classes-types/class-structure.html" },
-        { "id": "generics", "title": "Generics", "file": "pages/classes-types/generics.html" }
+        { "id": "nature-of-types", "title": "Nature of types", "file": "pages/classes-types/nature-of-types.md" },
+        { "id": "class-structure", "title": "Class structure", "file": "pages/classes-types/class-structure.md" },
+        { "id": "dynamic-types", "title": "Dynamic types", "file": "pages/classes-types/dynamic-types.md" },
+        { "id": "generics", "title": "Generics", "file": "pages/classes-types/generics.md" },
+        { "id": "method-overloading", "title": "Method overloading", "file": "pages/classes-types/method-overloading.md" },
+        { "id": "operator-overloading", "title": "Operator overloading", "file": "pages/classes-types/operator-overloading.md" },
+        { "id": "class-extensions", "title": "Class extensions (expertimental)", "file": "pages/classes-types/class-extensions.md" }
+      ]
+    },
+    {
+      "id": "library",
+      "title": "Library",
+      "pages": [
+        { "id": "built-ins", "title": "Built-ins", "file": "pages/library/built-ins.md" },
+        { "id": "standard-library", "title": "Standard library", "file": "pages/library/standard-library.md" },
+        { "id": "exceptions", "title": "Exceptions", "file": "pages/library/exceptions.md" },
+        { "id": "array", "title": "Array", "file": "pages/library/array.md" },
+        { "id": "map", "title": "Map", "file": "pages/library/map.md" }
       ]
     }
   ]
