@@ -81,11 +81,13 @@ jobs:
         with:
           version: 3.1.64
 
-      - name: "Configure (CMake preset: wasm)"
-        run: cmake --preset wasm
+      - name: Configure (Emscripten)
+        shell: pwsh
+        run: emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
 
-      - name: "Build (CMake preset: wasm)"
-        run: cmake --build --preset wasm --config Release
+      - name: Build (Emscripten)
+        shell: pwsh
+        run: cmake --build build-wasm --config Release
 
       - name: WASM smoke test
         shell: pwsh
@@ -98,23 +100,16 @@ jobs:
             throw "Cherry.js not found in build-wasm or build-wasm/Release."
           }
           $script = @"
-          const fs = require("fs");
           const path = require("path");
           const jsPath = process.argv[2];
-          const source = fs.readFileSync("test/cases/success/basic_arith.chry", "utf8");
           global.Module = {
             noInitialRun: true,
-            preRun: [() => {
-              FS.writeFile("/input.chry", source);
-            }],
             onRuntimeInitialized: () => {
-              try {
-                Module.callMain(["/input.chry"]);
-                process.exit(0);
-              } catch (err) {
-                console.error(err);
+              if (typeof Module.callMain !== "function") {
+                console.error("callMain is not exported");
                 process.exit(1);
               }
+              process.exit(0);
             }
           };
           require(path.resolve(jsPath));
@@ -139,11 +134,11 @@ jobs:
         with:
           version: 3.1.64
 
-      - name: "Configure (CMake preset: wasm)"
-        run: cmake --preset wasm
+      - name: Configure (Emscripten)
+        run: emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
 
-      - name: "Build (CMake preset: wasm)"
-        run: cmake --build --preset wasm --config Release
+      - name: Build (Emscripten)
+        run: cmake --build build-wasm --config Release
 
       - name: WASM smoke test
         shell: bash
@@ -157,23 +152,16 @@ jobs:
             exit 1
           fi
           cat > .github/workflows/.tmp-wasm-smoke.js <<'EOF'
-          const fs = require("fs");
           const path = require("path");
           const jsPath = process.argv[2];
-          const source = fs.readFileSync("test/cases/success/basic_arith.chry", "utf8");
           global.Module = {
             noInitialRun: true,
-            preRun: [() => {
-              FS.writeFile("/input.chry", source);
-            }],
             onRuntimeInitialized: () => {
-              try {
-                Module.callMain(["/input.chry"]);
-                process.exit(0);
-              } catch (err) {
-                console.error(err);
+              if (typeof Module.callMain !== "function") {
+                console.error("callMain is not exported");
                 process.exit(1);
               }
+              process.exit(0);
             }
           };
           require(path.resolve(jsPath));

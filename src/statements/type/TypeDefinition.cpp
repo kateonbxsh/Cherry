@@ -343,7 +343,11 @@ Value TypeDefinition::execute(Scope& scope) {
                     }
                     Value specialized = instantiateGenericType(baseType, args, false);
                     if (specialized.thrownException != nullptr) return specialized;
-                    typeRef->dynamicUnionTypes.push_back(get<reference<Type>>(specialized.value));
+                    if (auto specializedType = std::get_if<reference<Type>>(&specialized.value)) {
+                        typeRef->dynamicUnionTypes.push_back(*specializedType);
+                    } else {
+                        return makeTypeDefinitionError("specialized generic did not resolve to a type");
+                    }
                 }
                 continue;
             }
