@@ -2,9 +2,9 @@ name: Build & Deploy Vue to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
           path: web/dist
 
   await-builds:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Wait for required build workflows
@@ -119,7 +119,7 @@ jobs:
             }
 
   deploy-vue:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs:
       - build-vue
       - await-builds
