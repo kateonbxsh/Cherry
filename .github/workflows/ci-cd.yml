@@ -1,0 +1,227 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-test-windows:
+    name: Build & Test Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure (CMake preset: native)
+        run: cmake --preset native
+
+      - name: Build (CMake preset: native)
+        run: cmake --build --preset native --config Release
+
+      - name: Run Cherry test suite
+        shell: bash
+        run: |
+          EXE="build/Release/Cherry.exe"
+          if [ ! -f "$EXE" ]; then
+            EXE="build/Cherry.exe"
+          fi
+          python scripts/run_cherry_tests.py --exe "$EXE"
+
+  build-test-linux:
+    name: Build & Test Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure (CMake preset: native)
+        run: cmake --preset native
+
+      - name: Build (CMake preset: native)
+        run: cmake --build --preset native --config Release
+
+      - name: Run Cherry test suite
+        run: python3 scripts/run_cherry_tests.py --exe build/Cherry
+
+  build-test-windows-wasm:
+    name: Build & Test Windows (WASM)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+
+      - name: Configure (CMake preset: wasm)
+        run: cmake --preset wasm
+
+      - name: Build (CMake preset: wasm)
+        run: cmake --build --preset wasm --config Release
+
+      - name: WASM smoke test
+        shell: pwsh
+        run: |
+          $jsPath = "build-wasm/Cherry.js"
+          if (-not (Test-Path $jsPath)) {
+            $jsPath = "build-wasm/Release/Cherry.js"
+          }
+          if (-not (Test-Path $jsPath)) {
+            throw "Cherry.js not found in build-wasm or build-wasm/Release."
+          }
+          $script = @"
+          const fs = require("fs");
+          const path = require("path");
+          const jsPath = process.argv[2];
+          const source = fs.readFileSync("test/cases/success/basic_arith.chry", "utf8");
+          global.Module = {
+            noInitialRun: true,
+            preRun: [() => {
+              FS.writeFile("/input.chry", source);
+            }],
+            onRuntimeInitialized: () => {
+              try {
+                Module.callMain(["/input.chry"]);
+                process.exit(0);
+              } catch (err) {
+                console.error(err);
+                process.exit(1);
+              }
+            }
+          };
+          require(path.resolve(jsPath));
+          "@
+          Set-Content -Path .github/workflows/.tmp-wasm-smoke.js -Value $script -Encoding UTF8
+          node .github/workflows/.tmp-wasm-smoke.js $jsPath
+
+  build-test-linux-wasm:
+    name: Build & Test Linux (WASM)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+
+      - name: Configure (CMake preset: wasm)
+        run: cmake --preset wasm
+
+      - name: Build (CMake preset: wasm)
+        run: cmake --build --preset wasm --config Release
+
+      - name: WASM smoke test
+        shell: bash
+        run: |
+          JS_PATH="build-wasm/Cherry.js"
+          if [ ! -f "$JS_PATH" ]; then
+            JS_PATH="build-wasm/Release/Cherry.js"
+          fi
+          if [ ! -f "$JS_PATH" ]; then
+            echo "Cherry.js not found in build-wasm or build-wasm/Release."
+            exit 1
+          fi
+          cat > .github/workflows/.tmp-wasm-smoke.js <<'EOF'
+          const fs = require("fs");
+          const path = require("path");
+          const jsPath = process.argv[2];
+          const source = fs.readFileSync("test/cases/success/basic_arith.chry", "utf8");
+          global.Module = {
+            noInitialRun: true,
+            preRun: [() => {
+              FS.writeFile("/input.chry", source);
+            }],
+            onRuntimeInitialized: () => {
+              try {
+                Module.callMain(["/input.chry"]);
+                process.exit(0);
+              } catch (err) {
+                console.error(err);
+                process.exit(1);
+              }
+            }
+          };
+          require(path.resolve(jsPath));
+          EOF
+          node .github/workflows/.tmp-wasm-smoke.js "$JS_PATH"
+
+  build-vue:
+    name: Build Vue
+    needs:
+      - build-test-windows
+      - build-test-linux
+      - build-test-windows-wasm
+      - build-test-linux-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: pnpm --dir web install --frozen-lockfile
+
+      - name: Build Vue app
+        run: pnpm --dir web run build:pnpm -- --base "/${{ github.event.repository.name }}/"
+
+      - name: Setup Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy-vue:
+    name: Deploy Vue
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    needs: build-vue
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
