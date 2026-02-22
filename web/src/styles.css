@@ -13,12 +13,12 @@ body {
 }
 
 .accent {
-  color: #ff7a9e;
+  color: #ff5f7a;
   font-weight: 600;
 }
 
 .blob-a {
-  background: radial-gradient(circle, #ff7a9e33 0%, transparent 70%);
+  background: radial-gradient(circle, #ff5f7a33 0%, transparent 70%);
   filter: blur(80px);
 }
 
@@ -31,7 +31,7 @@ body {
   content: "|";
   margin-left: 0.2rem;
   animation: blink 1s step-end infinite;
-  color: #ff7a9e;
+  color: #ff5f7a;
 }
 
 @keyframes blink {
@@ -57,7 +57,7 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 122, 158, 0.75) rgba(255, 255, 255, 0.06);
+  scrollbar-color: rgba(255, 95, 122, 0.75) rgba(255, 255, 255, 0.06);
 }
 
 *::-webkit-scrollbar {
@@ -74,11 +74,11 @@ body {
 *::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid rgba(0, 0, 0, 0.12);
-  background: linear-gradient(180deg, rgba(255, 122, 158, 0.95), rgba(255, 183, 204, 0.75));
-  box-shadow: 0 0 12px rgba(255, 122, 158, 0.3);
+  background: linear-gradient(180deg, rgba(255, 95, 122, 0.95), rgba(255, 168, 186, 0.75));
+  box-shadow: 0 0 12px rgba(255, 95, 122, 0.3);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(255, 145, 178, 1), rgba(255, 199, 216, 0.85));
-  box-shadow: 0 0 16px rgba(255, 122, 158, 0.45);
+  background: linear-gradient(180deg, rgba(255, 120, 150, 1), rgba(255, 186, 201, 0.85));
+  box-shadow: 0 0 16px rgba(255, 95, 122, 0.45);
 }
