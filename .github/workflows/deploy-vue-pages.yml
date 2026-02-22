@@ -1,0 +1,133 @@
+name: Build & Deploy Vue to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-vue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm --dir web install --frozen-lockfile
+
+      - name: Build Vue app
+        run: pnpm --dir web run build:pnpm -- --base "/${{ github.event.repository.name }}/"
+
+      - name: Setup Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  await-builds:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for required build workflows
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const required = new Set([
+              "Build & Test Windows",
+              "Build & Test Linux",
+              "Build & Test Windows WASM",
+              "Build & Test Linux WASM"
+            ]);
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const sha = context.sha;
+            const timeoutMs = 30 * 60 * 1000;
+            const pollMs = 15000;
+            const start = Date.now();
+
+            async function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            while (true) {
+              const runs = await github.paginate(
+                github.rest.actions.listWorkflowRunsForRepo,
+                {
+                  owner,
+                  repo,
+                  head_sha: sha,
+                  per_page: 100
+                }
+              );
+
+              const relevant = runs.filter((r) => required.has(r.name));
+              const names = new Set(relevant.map((r) => r.name));
+              const missing = [...required].filter((n) => !names.has(n));
+
+              if (missing.length === 0) {
+                const latestByName = {};
+                for (const run of relevant) {
+                  if (!latestByName[run.name] || latestByName[run.name].run_number < run.run_number) {
+                    latestByName[run.name] = run;
+                  }
+                }
+
+                const latestRuns = Object.values(latestByName);
+                const unfinished = latestRuns.filter((r) => r.status !== "completed");
+                if (unfinished.length === 0) {
+                  const failed = latestRuns.filter((r) => r.conclusion !== "success");
+                  if (failed.length > 0) {
+                    core.setFailed(
+                      "Required workflows failed: " +
+                        failed.map((r) => `${r.name}=${r.conclusion}`).join(", ")
+                    );
+                    return;
+                  }
+                  core.info("All required build workflows passed.");
+                  return;
+                }
+              }
+
+              if (Date.now() - start > timeoutMs) {
+                core.setFailed("Timed out waiting for required build workflows to complete successfully.");
+                return;
+              }
+
+              await sleep(pollMs);
+            }
+
+  deploy-vue:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - build-vue
+      - await-builds
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
