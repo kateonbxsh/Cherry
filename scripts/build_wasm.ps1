@@ -1,8 +1,10 @@
 param(
     [string]$BuildDir = "build-wasm",
-    [string]$OutDir = "web/wasm",
+    [string]$OutDir = "web/public/wasm",
     [string]$Config = "Release",
-    [switch]$UsePreset
+    [switch]$UsePreset,
+    [switch]$Reconfigure,
+    [switch]$UseSccache
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,15 +18,43 @@ function Require-Command([string]$Name) {
 Require-Command "cmake"
 
 if ($UsePreset) {
-    Write-Host "Configuring Emscripten build using CMake preset 'wasm'..."
-    cmake --preset wasm
+    $BuildDir = "build-wasm"
+}
 
+$cachePath = Join-Path $BuildDir "CMakeCache.txt"
+$needsConfigure = $Reconfigure -or (-not (Test-Path $cachePath))
+
+$sccacheArgs = @()
+if ($UseSccache) {
+    $sccache = Get-Command "sccache" -ErrorAction SilentlyContinue
+    if ($null -eq $sccache) {
+        Write-Host "sccache was requested but not found in PATH. Continuing without it."
+    } else {
+        Write-Host "Using sccache compiler launcher."
+        $sccacheArgs = @(
+            "-DCMAKE_C_COMPILER_LAUNCHER=sccache",
+            "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
+        )
+    }
+}
+
+if ($UsePreset) {
+    if ($needsConfigure) {
+        Write-Host "Configuring Emscripten build using CMake preset 'wasm'..."
+        cmake --preset wasm @sccacheArgs
+    } else {
+        Write-Host "Skipping configure (cache exists at '$cachePath'). Use -Reconfigure to force."
+    }
     Write-Host "Building Cherry (WASM) using CMake build preset 'wasm'..."
     cmake --build --preset wasm
 } else {
     Require-Command "emcmake"
-    Write-Host "Configuring Emscripten build..."
-    emcmake cmake -S . -B $BuildDir -DCMAKE_BUILD_TYPE=$Config
+    if ($needsConfigure) {
+        Write-Host "Configuring Emscripten build..."
+        emcmake cmake -S . -B $BuildDir -DCMAKE_BUILD_TYPE=$Config @sccacheArgs
+    } else {
+        Write-Host "Skipping configure (cache exists at '$cachePath'). Use -Reconfigure to force."
+    }
 
     Write-Host "Building Cherry (WASM)..."
     cmake --build $BuildDir --config $Config
