@@ -2,6 +2,7 @@
 
 #include "macros.h"
 #include <functional>
+#include <string>
 #include <vector>
 
 class Block;
@@ -10,7 +11,7 @@ class Scope;
 class Type;
 
 struct FunctionParameter {
-    string name;
+    std::string name;
     reference<Type> type;
     bool variadic = false;
 };
