@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -102,8 +102,11 @@ jobs:
           $script = @"
           const path = require("path");
           const jsPath = process.argv[2];
+          const absJsPath = path.resolve(jsPath);
+          const baseDir = path.dirname(absJsPath);
           global.Module = {
             noInitialRun: true,
+            locateFile: (file) => path.join(baseDir, file),
             onRuntimeInitialized: () => {
               if (typeof Module.callMain !== "function") {
                 console.error("callMain is not exported");
@@ -112,7 +115,7 @@ jobs:
               process.exit(0);
             }
           };
-          require(path.resolve(jsPath));
+          require(absJsPath);
           "@
           Set-Content -Path .github/workflows/.tmp-wasm-smoke.js -Value $script -Encoding UTF8
           node .github/workflows/.tmp-wasm-smoke.js $jsPath
@@ -154,8 +157,11 @@ jobs:
           cat > .github/workflows/.tmp-wasm-smoke.js <<'EOF'
           const path = require("path");
           const jsPath = process.argv[2];
+          const absJsPath = path.resolve(jsPath);
+          const baseDir = path.dirname(absJsPath);
           global.Module = {
             noInitialRun: true,
+            locateFile: (file) => path.join(baseDir, file),
             onRuntimeInitialized: () => {
               if (typeof Module.callMain !== "function") {
                 console.error("callMain is not exported");
@@ -164,7 +170,7 @@ jobs:
               process.exit(0);
             }
           };
-          require(path.resolve(jsPath));
+          require(absJsPath);
           EOF
           node .github/workflows/.tmp-wasm-smoke.js "$JS_PATH"
 
