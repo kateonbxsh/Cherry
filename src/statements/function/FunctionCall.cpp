@@ -101,6 +101,20 @@ static bool bindCallArguments(
     return true;
 }
 
+static void injectThisTypeBindings(Scope& scope, const Value& thisValue) {
+    if (thisValue.type == nullptr) return;
+    reference<Type> cursor = thisValue.type;
+    while (cursor != nullptr) {
+        for (const auto& [tpName, tpType] : cursor->typeBindings) {
+            if (tpType != nullptr) {
+                auto resolvedType = tpType;
+                scope.addVariable(tpName, Value(resolvedType));
+            }
+        }
+        cursor = cursor->parent;
+    }
+}
+
 uref<FunctionCall> FunctionCall::parse(Lexer& lexer) {
     return create_unique<FunctionCall>();
 }
@@ -147,6 +161,7 @@ Value FunctionCall::execute(Scope& scope) {
         if (ret.thrownException != nullptr) {
             runtimeEnsureExceptionLocation(ret.thrownException, callToken.line, callToken.pos + 1);
         }
+        ret.returning = false;
         return ret;
     }
 
@@ -154,6 +169,7 @@ Value FunctionCall::execute(Scope& scope) {
     Scope funcScope(function.closure);
     if (function.__this != nullptr) {
         funcScope.addVariable("this", *function.__this);
+        injectThisTypeBindings(funcScope, *function.__this);
     }
     for (size_t i = 0; i < function.parameters.size(); ++i) {
         funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
@@ -166,5 +182,6 @@ Value FunctionCall::execute(Scope& scope) {
     if (ret.thrownException != nullptr) {
         runtimeEnsureExceptionLocation(ret.thrownException, callToken.line, callToken.pos + 1);
     }
+    ret.returning = false;
     return ret;
 }

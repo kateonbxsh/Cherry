@@ -66,6 +66,14 @@
       }
     },
     {
+      "name": "success_array_literal",
+      "file": "cases/success/array_literal.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK array_literal [type Array<integer>] [type Array<any>] [type Array<any>] b 6"]
+      }
+    },
+    {
       "name": "success_map_methods",
       "file": "cases/success/map_methods.chry",
       "allowed_exit_codes": [0],
@@ -119,6 +127,14 @@
       "allowed_exit_codes": [0],
       "expect": {
         "stdout_contains": ["OK generics_default x 2 y 9"]
+      }
+    },
+    {
+      "name": "success_nested_generics",
+      "file": "cases/success/nested_generics.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK nested_generics 5 5 5 [type Box<Holder>] [type Box<Holder>]"]
       }
     },
     {
@@ -215,6 +231,14 @@
       "allowed_exit_codes": [0],
       "expect": {
         "stderr_contains": ["Array.push expected value of type string, got int", "RuntimeException"]
+      }
+    },
+    {
+      "name": "runtime_array_literal_explicit_type_mismatch",
+      "file": "cases/runtime_error/array_literal_explicit_type_mismatch.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["array literal element is not assignable to string", "RuntimeException"]
       }
     },
     {

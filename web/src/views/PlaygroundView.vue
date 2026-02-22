@@ -88,6 +88,7 @@ const EXAMPLE_MANIFEST = [
   { title: "Class definition", file: "class_definition.chry" },
   { title: "Turing Machine", file: "turing_machine.chry" },
   { title: "Generics", file: "generics.chry" },
+  { title: "Type shenanigans", file: "type_shenanigans.chry" },
   { title: "Closure madness", file: "closure_madness.chry" },
   { title: "Custom exceptions", file: "custom_exceptions.chry" },
   { title: "Operator overloading", file: "operator_overloading.chry" }
@@ -321,6 +322,7 @@ function runCode() {
   if (runInProgress.value) return;
   runInProgress.value = true;
   if (outputRef.value) outputRef.value.innerHTML = "";
+  ansi = createAnsiInstance();
 
   Promise.resolve().then(async () => {
     if (!editor) {

@@ -8,7 +8,7 @@
 #include "runtime_builtins.h"
 #include "runtime_exception.h"
 
-static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
+static bool parseTypeArgumentList(Lexer& lexer, std::vector<TypeSyntaxExpression>& outArgs, Statement& st) {
     lexer.savePosition();
     if (!lexer.expectToken(SMALLER_THAN)) {
         lexer.rollPosition();
@@ -16,12 +16,12 @@ static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
     }
 
     while (true) {
-        Token arg = lexer.nextToken();
-        if (arg.kind != IDENTIFIER) {
+        TypeSyntaxExpression arg;
+        if (!parseTypeSyntaxExpression(lexer, arg, st)) {
             lexer.rollPosition();
             return false;
         }
-        outArgs.push_back(arg);
+        outArgs.push_back(std::move(arg));
 
         Token sep = lexer.nextToken();
         if (sep.kind == BIGGER_THAN) {
@@ -29,6 +29,9 @@ static bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs) {
             return true;
         }
         if (sep.kind != COMMA) {
+            st.valid = false;
+            st.expected = tokenKindsToString({COMMA, BIGGER_THAN});
+            st.lastToken = sep;
             lexer.rollPosition();
             return false;
         }
@@ -151,12 +154,25 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
         runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
         Value ret = function.internalHandler(scope, boundArgs, function.__this);
         runtimePopFrame();
+        ret.returning = false;
         return ret;
     }
 
     Scope funcScope(function.closure);
     if (function.__this != nullptr) {
         funcScope.addVariable("this", *function.__this);
+        if ((*function.__this).type != nullptr) {
+            reference<Type> cursor = (*function.__this).type;
+            while (cursor != nullptr) {
+                for (const auto& [tpName, tpType] : cursor->typeBindings) {
+                    if (tpType != nullptr) {
+                        auto resolvedType = tpType;
+                        funcScope.addVariable(tpName, Value(resolvedType));
+                    }
+                }
+                cursor = cursor->parent;
+            }
+        }
     }
     for (size_t i = 0; i < function.parameters.size(); ++i) {
         funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
@@ -164,6 +180,9 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
     runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
     Value ret = function.body->execute(funcScope);
     runtimePopFrame();
+    if (!ret.thrownException) {
+        ret.returning = false;
+    }
     return ret;
 }
 
@@ -269,6 +288,71 @@ static bool bindArgumentsForFunction(
     return true;
 }
 
+static bool typeCanAcceptType(const reference<Type>& targetType, const reference<Type>& sourceType) {
+    if (targetType == nullptr || sourceType == nullptr) return false;
+    auto sourceCopy = sourceType;
+    Value probe = Value::Uninitialized(sourceCopy);
+    probe.type = sourceType;
+    return targetType->assignableFrom(probe);
+}
+
+static reference<Type> inferArrayElementType(const std::vector<Value>& values) {
+    reference<Type> current = nullptr;
+    for (const auto& value : values) {
+        auto valueType = value.type != nullptr ? value.type : AnyType;
+        if (current == nullptr) {
+            current = valueType;
+            continue;
+        }
+
+        if (typeCanAcceptType(current, valueType)) {
+            continue;
+        }
+        if (typeCanAcceptType(valueType, current)) {
+            current = valueType;
+            continue;
+        }
+
+        current = AnyType;
+    }
+
+    if (current == nullptr) return AnyType;
+    return current;
+}
+
+static reference<Type> getTypeBinding(const reference<Type>& typeRef, const std::string& name) {
+    reference<Type> cursor = typeRef;
+    while (cursor != nullptr) {
+        if (cursor->typeBindings.contains(name)) {
+            return cursor->typeBindings.at(name);
+        }
+        cursor = cursor->parent;
+    }
+    return nullptr;
+}
+
+static reference<Type> resolveArrayLiteralTargetType(const reference<Type>& typeRef) {
+    if (typeRef == nullptr) return nullptr;
+
+    auto builtinArrayType = getArrayTypeBuiltin();
+    if (builtinArrayType != nullptr) {
+        reference<Type> cursor = typeRef;
+        while (cursor != nullptr) {
+            if (cursor == builtinArrayType) return typeRef;
+            if (!cursor->getName().empty() && cursor->getName() == builtinArrayType->getName()) return typeRef;
+            cursor = cursor->parent;
+        }
+    }
+
+    if (typeRef->kind == TypeKind::Dynamic &&
+        typeRef->dynamicUnionLiterals.empty() &&
+        typeRef->dynamicUnionTypes.size() == 1) {
+        return resolveArrayLiteralTargetType(typeRef->dynamicUnionTypes[0]);
+    }
+
+    return nullptr;
+}
+
 static Value instantiateType(reference<Type> baseType, const std::vector<reference<Type>>& args, bool strictMissing) {
     if (baseType == nullptr) {
         return makeTypeInstantiationError("cannot instantiate null type");
@@ -355,6 +439,36 @@ static Value instantiateType(reference<Type> baseType, const std::vector<referen
     }
 
     return Value(specialized);
+}
+
+static Value resolveTypeExpressionWithInstantiate(
+    Scope& scope,
+    const TypeSyntaxExpression& syntax,
+    bool strictMissing
+) {
+    Value base = scope.getVariable(syntax.name.value);
+    if (base.thrownException != nullptr) return base;
+    if (base.type != TypeType) {
+        return makeTypeInstantiationError("type is not a type: " + syntax.name.value);
+    }
+
+    auto baseType = get<reference<Type>>(base.value);
+    if (syntax.arguments.empty()) {
+        return Value(baseType);
+    }
+
+    std::vector<reference<Type>> args;
+    args.reserve(syntax.arguments.size());
+    for (const auto& argExpr : syntax.arguments) {
+        Value argType = resolveTypeExpressionWithInstantiate(scope, argExpr, strictMissing);
+        if (argType.thrownException != nullptr) return argType;
+        if (argType.type != TypeType) {
+            return makeTypeInstantiationError("type argument is not a type: " + argExpr.name.value);
+        }
+        args.push_back(get<reference<Type>>(argType.value));
+    }
+
+    return instantiateType(baseType, args, strictMissing);
 }
 
 static bool isSameOrDerivedType(const reference<Type>& maybeChild, const reference<Type>& maybeAncestor) {
@@ -479,6 +593,7 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     std::vector<ExprParser> parsers = {
         [](Lexer& l) { return UnaryExpression::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
+        [](Lexer& l) { return ArrayLiteralExpression::parse(l); },
         [](Lexer& l) { return ConstructorExpression::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
         [](Lexer& l) { return LambdaDefinition::parse(l); },
@@ -799,8 +914,9 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
         lexer.deletePosition();
         expression->identifier = nextToken;
         if (nextToken.kind == IDENTIFIER) {
-            std::vector<Token> parsedArgs;
-            if (parseTypeArgumentList(lexer, parsedArgs)) {
+            std::vector<TypeSyntaxExpression> parsedArgs;
+            NotAStatement probe;
+            if (parseTypeArgumentList(lexer, parsedArgs, probe)) {
                 expression->hasTypeArguments = true;
                 expression->typeArguments = move(parsedArgs);
             }
@@ -947,11 +1063,11 @@ Value ExpressionValue::execute(Scope &scope) {
 
             std::vector<reference<Type>> args;
             args.reserve(typeArguments.size());
-            for (auto& argToken : typeArguments) {
-                Value argValue = getVariableAtToken(scope, argToken);
+            for (auto& argExpr : typeArguments) {
+                Value argValue = resolveTypeExpressionWithInstantiate(scope, argExpr, false);
                 if (argValue.thrownException != nullptr) return argValue;
                 if (argValue.type != TypeType) {
-                    return makeTypeInstantiationError("type argument is not a type: " + argToken.value);
+                    return makeTypeInstantiationError("type argument is not a type: " + argExpr.name.value);
                 }
                 args.push_back(get<reference<Type>>(argValue.value));
             }
@@ -988,6 +1104,81 @@ uref<Expression> IndexAccessExpression::parse(Lexer& lexer) {
     expr->expected = {"index access"};
     expr->lastToken = lexer.peekToken();
     return expr;
+}
+
+uref<Expression> ArrayLiteralExpression::parse(Lexer& lexer) {
+    lexer.savePosition();
+    auto expr = create_unique<ArrayLiteralExpression>();
+
+    if (!lexer.expectToken(LEFT_BRACKET)) {
+        expr->valid = false;
+        expr->expected = tokenKindsToString({LEFT_BRACKET});
+        expr->lastToken = lexer.peekToken();
+        lexer.rollPosition();
+        return expr;
+    }
+
+    if (lexer.expectToken(RIGHT_BRACKET)) {
+        expr->valid = true;
+        lexer.deletePosition();
+        return expr;
+    }
+
+    while (true) {
+        auto item = Expression::parse(lexer);
+        if (!item->valid) {
+            expr->valid = false;
+            expr->expected = item->expected;
+            expr->lastToken = item->lastToken;
+            lexer.rollPosition();
+            return expr;
+        }
+        expr->elements.push_back(move(item));
+
+        Token sep = lexer.nextToken();
+        if (sep.kind == RIGHT_BRACKET) {
+            expr->valid = true;
+            lexer.deletePosition();
+            return expr;
+        }
+        if (sep.kind != COMMA) {
+            expr->valid = false;
+            expr->expected = tokenKindsToString({COMMA, RIGHT_BRACKET});
+            expr->lastToken = sep;
+            lexer.rollPosition();
+            return expr;
+        }
+    }
+}
+
+Value ArrayLiteralExpression::execute(Scope& scope) {
+    std::vector<Value> values;
+    values.reserve(elements.size());
+    for (auto& element : elements) {
+        Value v = element->execute(scope);
+        if (v.thrownException != nullptr) return v;
+        values.push_back(v);
+    }
+
+    auto elementType = inferArrayElementType(values);
+    auto arrayBaseType = getArrayTypeBuiltin();
+    if (arrayBaseType == nullptr) {
+        return makeExpressionError("Array type is not initialized");
+    }
+
+    Value specializedTypeValue = instantiateType(arrayBaseType, {elementType}, true);
+    if (specializedTypeValue.thrownException != nullptr) return specializedTypeValue;
+    auto specializedArrayType = get<reference<Type>>(specializedTypeValue.value);
+
+    Value arr = makeArrayFromValues(values);
+    if (arr.thrownException != nullptr) return arr;
+    if (arr.type != nullptr && arr.type->kind == TypeKind::Class) {
+        auto instance = get<ClassInstance>(arr.value);
+        instance.classType = specializedArrayType;
+        arr.type = specializedArrayType;
+        arr.value = instance;
+    }
+    return arr;
 }
 
 Value DotAccessExpression::execute(Scope& scope) {
@@ -1110,6 +1301,30 @@ Value IndexAccessExpression::execute(Scope& scope) {
     }
 
     if (base.type == TypeType) {
+        auto typeRef = get<reference<Type>>(base.value);
+        auto arrayLiteralType = resolveArrayLiteralTargetType(typeRef);
+        if (arrayLiteralType != nullptr) {
+            auto elementType = getTypeBinding(arrayLiteralType, "T");
+            if (elementType == nullptr) elementType = AnyType;
+            for (const auto& arg : args) {
+                if (arg.type != nullptr && !elementType->assignableFrom(arg)) {
+                    return makeExpressionError(
+                        "array literal element is not assignable to " + elementType->getName() +
+                        ": got " + arg.type->getName()
+                    );
+                }
+            }
+
+            Value arr = makeArrayFromValues(args);
+            if (arr.thrownException != nullptr) return arr;
+            if (arr.type != nullptr && arr.type->kind == TypeKind::Class) {
+                auto instance = get<ClassInstance>(arr.value);
+                instance.classType = arrayLiteralType;
+                arr.type = arrayLiteralType;
+                arr.value = instance;
+            }
+            return arr;
+        }
         return makeExpressionError("cannot index type value");
     }
 
@@ -1164,7 +1379,11 @@ uref<Expression> ConstructorExpression::parse(Lexer& lexer) {
         return expr;
     }
     expr->typeName = typeToken;
-    parseTypeArgumentList(lexer, expr->typeArguments);
+    parseTypeArgumentList(lexer, expr->typeArguments, *expr);
+    if (!expr->valid) {
+        lexer.rollPosition();
+        return expr;
+    }
 
     if (!lexer.expectToken(LEFT_PARENTHESIS)) {
         expr->valid = false;
@@ -1214,11 +1433,11 @@ Value ConstructorExpression::execute(Scope& scope) {
     if (!typeArguments.empty()) {
         std::vector<reference<Type>> args;
         args.reserve(typeArguments.size());
-        for (auto& argToken : typeArguments) {
-            Value argValue = getVariableAtToken(scope, argToken);
+        for (auto& argExpr : typeArguments) {
+            Value argValue = resolveTypeExpressionWithInstantiate(scope, argExpr, true);
             if (argValue.thrownException != nullptr) return argValue;
             if (argValue.type != TypeType) {
-                return makeTypeInstantiationError("type argument is not a type: " + argToken.value);
+                return makeTypeInstantiationError("type argument is not a type: " + argExpr.name.value);
             }
             args.push_back(get<reference<Type>>(argValue.value));
         }
@@ -1239,10 +1458,11 @@ Value ConstructorExpression::execute(Scope& scope) {
     ClassInstance instance;
     instance.classType = classType;
     initializeBuiltinInstance(instance);
-    Scope typeScope(scope);
+    Scope typeScope = scope.createChild();
     for (auto& [tpName, tpType] : classType->typeBindings) {
         if (tpType != nullptr) {
-            typeScope.addVariable(tpName, Value(tpType));
+            auto resolvedType = tpType;
+            typeScope.addVariable(tpName, Value(resolvedType));
         }
     }
 
@@ -1320,6 +1540,18 @@ Value ConstructorExpression::execute(Scope& scope) {
         } else {
             Scope ctorScope(ctorFunction.closure);
             ctorScope.addVariable("this", *ctorFunction.__this);
+            if ((*ctorFunction.__this).type != nullptr) {
+                reference<Type> cursor = (*ctorFunction.__this).type;
+                while (cursor != nullptr) {
+                    for (const auto& [tpName, tpType] : cursor->typeBindings) {
+                        if (tpType != nullptr) {
+                            auto resolvedType = tpType;
+                            ctorScope.addVariable(tpName, Value(resolvedType));
+                        }
+                    }
+                    cursor = cursor->parent;
+                }
+            }
             for (size_t i = 0; i < ctorFunction.parameters.size(); ++i) {
                 ctorScope.addVariable(ctorFunction.parameters[i].name, boundCtorArgs[i]);
             }

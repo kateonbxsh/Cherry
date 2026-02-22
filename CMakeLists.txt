@@ -18,6 +18,7 @@ set(SOURCE_FILES
     src/interpreter.cpp
     src/lexer.cpp
     src/parser.cpp
+    src/type_syntax.cpp
     src/scope.cpp
     src/data.cpp
     src/runtime_exception.cpp

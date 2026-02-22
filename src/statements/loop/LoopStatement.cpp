@@ -4,6 +4,10 @@
 #include "expressions.h"
 #include "runtime_exception.h"
 
+static inline bool shouldPropagateLoopValue(const Value& value) {
+    return value.thrownException != nullptr || value.returning;
+}
+
 uref<Statement> ForStatement::parse(Lexer& lexer) {
 
     lexer.savePosition();
@@ -87,19 +91,19 @@ uref<Statement> ForStatement::parse(Lexer& lexer) {
 Value ForStatement::execute(Scope& scope) {
 
     Value initVal = init->execute(scope);
-    if (initVal.thrownException) return initVal;
+    if (shouldPropagateLoopValue(initVal)) return initVal;
 
     while (true) {
 
         Value cond = condition->execute(scope);
-        if (cond.thrownException) return cond;
+        if (shouldPropagateLoopValue(cond)) return cond;
         if (!isTruthy(cond)) break;
 
         Value result = body->execute(scope);
-        if (result.thrownException) return result;
+        if (shouldPropagateLoopValue(result)) return result;
 
-    Value stepVal = step->execute(scope);
-        if (stepVal.thrownException) return stepVal;
+        Value stepVal = step->execute(scope);
+        if (shouldPropagateLoopValue(stepVal)) return stepVal;
     }
 
     return NullValue;
@@ -158,11 +162,11 @@ Value WhileStatement::execute(Scope& scope) {
 
     while (true) {
         auto c = condition->execute(scope);
-        if (c.thrownException) return c;
+        if (shouldPropagateLoopValue(c)) return c;
         if (!isTruthy(c)) break;
 
         auto r = body->execute(scope);
-        if (r.thrownException) return r;
+        if (shouldPropagateLoopValue(r)) return r;
     }
 
     return NullValue;
@@ -223,10 +227,10 @@ Value DoWhileStatement::execute(Scope& scope) {
 
     do {
         auto r = body->execute(scope);
-        if (r.thrownException) return r;
+        if (shouldPropagateLoopValue(r)) return r;
 
         auto c = condition->execute(scope);
-        if (c.thrownException) return c;
+        if (shouldPropagateLoopValue(c)) return c;
 
         if (!isTruthy(c)) break;
 
@@ -291,10 +295,10 @@ Value RepeatUntilStatement::execute(Scope& scope) {
     while (true) {
 
         auto r = body->execute(scope);
-        if (r.thrownException) return r;
+        if (shouldPropagateLoopValue(r)) return r;
 
         auto c = condition->execute(scope);
-        if (c.thrownException) return c;
+        if (shouldPropagateLoopValue(c)) return c;
 
         if (isTruthy(c)) break;
     }
@@ -352,7 +356,7 @@ uref<Statement> RepeatTimesStatement::parse(Lexer& lexer) {
 Value RepeatTimesStatement::execute(Scope& scope) {
 
     auto v = count->execute(scope);
-    if (v.thrownException) return v;
+    if (shouldPropagateLoopValue(v)) return v;
 
     if (v.type != IntegerType) {
         return makeThrown("TypeException", "repeat count must be integer");
@@ -362,7 +366,7 @@ Value RepeatTimesStatement::execute(Scope& scope) {
 
     for (int i = 0; i < n; ++i) {
         auto r = body->execute(scope);
-        if (r.thrownException) return r;
+        if (shouldPropagateLoopValue(r)) return r;
     }
 
     return NullValue;

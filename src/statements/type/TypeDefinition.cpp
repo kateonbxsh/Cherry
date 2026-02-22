@@ -1,5 +1,6 @@
 #include "TypeDefinition.hpp"
 #include "runtime_exception.h"
+#include "type_syntax.h"
 
 namespace {
 
@@ -7,14 +8,11 @@ Value makeTypeDefinitionError(const std::string& msg) {
     return makeThrown("TypeException", msg);
 }
 
-bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs, Statement& st) {
+bool parseTypeArgumentList(Lexer& lexer, std::vector<TypeSyntaxExpression>& outArgs, Statement& st) {
     if (!lexer.expectToken(SMALLER_THAN)) return true;
     while (true) {
-        Token arg = lexer.nextToken();
-        if (arg.kind != IDENTIFIER) {
-            st.valid = false;
-            st.expected = {"type argument"};
-            st.lastToken = arg;
+        TypeSyntaxExpression arg;
+        if (!parseTypeSyntaxExpression(lexer, arg, st)) {
             return false;
         }
         outArgs.push_back(arg);
@@ -29,68 +27,6 @@ bool parseTypeArgumentList(Lexer& lexer, std::vector<Token>& outArgs, Statement&
         }
     }
     return true;
-}
-
-Value instantiateGenericType(reference<Type> baseType, const std::vector<reference<Type>>& args, bool strictMissing) {
-    if (baseType == nullptr) return makeTypeDefinitionError("cannot instantiate null type");
-
-    std::vector<size_t> undefinedIndices;
-    for (size_t i = 0; i < baseType->typeParameters.size(); ++i) {
-        if (baseType->typeParameters[i].value == nullptr) undefinedIndices.push_back(i);
-    }
-    if (args.size() > undefinedIndices.size()) {
-        return makeTypeDefinitionError("too many type arguments for " + baseType->getName());
-    }
-
-    auto specialized = create_reference<Type>(*baseType);
-    specialized->parent = baseType;
-    specialized->typeBindings = baseType->typeBindings;
-
-    size_t consumed = 0;
-    for (size_t idx : undefinedIndices) {
-        if (consumed < args.size()) {
-            auto candidate = args[consumed++];
-            auto& tp = specialized->typeParameters[idx];
-            if (tp.hasConstraint && tp.constraint != nullptr) {
-                auto probeType = candidate;
-                Value probe = Value::Uninitialized(probeType);
-                probe.type = candidate;
-                if (!tp.constraint->assignableFrom(probe)) {
-                    return makeTypeDefinitionError("type argument for " + tp.name + " does not satisfy extends constraint");
-                }
-            }
-            tp.value = candidate;
-            continue;
-        }
-
-        auto& tp = specialized->typeParameters[idx];
-        if (tp.hasDefault && tp.defaultValue != nullptr) {
-            auto candidate = tp.defaultValue;
-            if (tp.hasConstraint && tp.constraint != nullptr) {
-                auto probeType = candidate;
-                Value probe = Value::Uninitialized(probeType);
-                probe.type = candidate;
-                if (!tp.constraint->assignableFrom(probe)) {
-                    return makeTypeDefinitionError("default type argument for " + tp.name + " does not satisfy extends constraint");
-                }
-            }
-            tp.value = candidate;
-            continue;
-        }
-
-        if (strictMissing) {
-            return makeTypeDefinitionError("missing type argument for " + tp.name + " in " + baseType->getName());
-        }
-    }
-
-    std::vector<TypeParameter> remaining;
-    for (auto& tp : specialized->typeParameters) {
-        specialized->typeBindings[tp.name] = tp.value;
-        if (tp.value == nullptr) remaining.push_back(tp);
-    }
-    specialized->typeParameters = move(remaining);
-
-    return Value(specialized);
 }
 
 bool parseTypeParameters(Lexer& lexer, std::vector<TypeDeclarationParameter>& outParams, Statement& st) {
@@ -110,11 +46,8 @@ bool parseTypeParameters(Lexer& lexer, std::vector<TypeDeclarationParameter>& ou
         tp.name = paramName;
 
         if (lexer.expectToken(EXTENDS)) {
-            Token constraint = lexer.nextToken();
-            if (constraint.kind != IDENTIFIER) {
-                st.valid = false;
-                st.expected = {"type constraint"};
-                st.lastToken = constraint;
+            TypeSyntaxExpression constraint;
+            if (!parseTypeSyntaxExpression(lexer, constraint, st)) {
                 return false;
             }
             tp.withConstraint = true;
@@ -122,11 +55,8 @@ bool parseTypeParameters(Lexer& lexer, std::vector<TypeDeclarationParameter>& ou
         }
 
         if (lexer.expectToken(EQUALS)) {
-            Token def = lexer.nextToken();
-            if (def.kind != IDENTIFIER) {
-                st.valid = false;
-                st.expected = {"type default"};
-                st.lastToken = def;
+            TypeSyntaxExpression def;
+            if (!parseTypeSyntaxExpression(lexer, def, st)) {
                 return false;
             }
             tp.withDefaultValue = true;
@@ -191,49 +121,51 @@ uref<TypeDefinition> TypeDefinition::parse(Lexer& lexer) {
 
     // Try dynamic predicate form: <type> <var> when <expr> default <expr>;
     lexer.savePosition();
-    Token baseType = lexer.nextToken();
-    Token varName = lexer.nextToken();
-    if (baseType.kind == IDENTIFIER && varName.kind == IDENTIFIER && lexer.expectToken(WHEN)) {
-        auto predicate = Expression::parse(lexer);
-        if (!predicate->valid) {
-            td->valid = false;
-            td->expected = predicate->expected;
-            td->lastToken = predicate->lastToken;
-            lexer.rollPosition();
-            return td;
-        }
-        if (!lexer.expectToken(DEFAULT)) {
-            td->valid = false;
-            td->expected = tokenKindsToString({DEFAULT});
-            td->lastToken = lexer.nextToken();
-            lexer.rollPosition();
-            return td;
-        }
-        auto defExpr = Expression::parse(lexer);
-        if (!defExpr->valid) {
-            td->valid = false;
-            td->expected = defExpr->expected;
-            td->lastToken = defExpr->lastToken;
-            lexer.rollPosition();
-            return td;
-        }
-        if (!lexer.expectToken(SEMICOLON)) {
-            td->valid = false;
-            td->expected = tokenKindsToString({SEMICOLON});
-            td->lastToken = lexer.nextToken();
-            lexer.rollPosition();
-            return td;
-        }
+    TypeSyntaxExpression baseType;
+    if (parseTypeSyntaxExpression(lexer, baseType, *td)) {
+        Token varName = lexer.nextToken();
+        if (varName.kind == IDENTIFIER && lexer.expectToken(WHEN)) {
+            auto predicate = Expression::parse(lexer);
+            if (!predicate->valid) {
+                td->valid = false;
+                td->expected = predicate->expected;
+                td->lastToken = predicate->lastToken;
+                lexer.rollPosition();
+                return td;
+            }
+            if (!lexer.expectToken(DEFAULT)) {
+                td->valid = false;
+                td->expected = tokenKindsToString({DEFAULT});
+                td->lastToken = lexer.nextToken();
+                lexer.rollPosition();
+                return td;
+            }
+            auto defExpr = Expression::parse(lexer);
+            if (!defExpr->valid) {
+                td->valid = false;
+                td->expected = defExpr->expected;
+                td->lastToken = defExpr->lastToken;
+                lexer.rollPosition();
+                return td;
+            }
+            if (!lexer.expectToken(SEMICOLON)) {
+                td->valid = false;
+                td->expected = tokenKindsToString({SEMICOLON});
+                td->lastToken = lexer.nextToken();
+                lexer.rollPosition();
+                return td;
+            }
 
-        td->usesPredicateSyntax = true;
-        td->predicateBaseType = baseType;
-        td->predicateVariable = varName;
-        td->predicateExpression = move(predicate);
-        td->defaultExpression = move(defExpr);
-        td->valid = true;
-        lexer.deletePosition();
-        lexer.deletePosition();
-        return td;
+            td->usesPredicateSyntax = true;
+            td->predicateBaseType = baseType;
+            td->predicateVariable = varName;
+            td->predicateExpression = move(predicate);
+            td->defaultExpression = move(defExpr);
+            td->valid = true;
+            lexer.deletePosition();
+            lexer.deletePosition();
+            return td;
+        }
     }
     lexer.rollPosition();
 
@@ -244,6 +176,7 @@ uref<TypeDefinition> TypeDefinition::parse(Lexer& lexer) {
             term.token = t;
             term.literal = (t.kind != IDENTIFIER);
             if (!term.literal) {
+                term.token = t;
                 if (!parseTypeArgumentList(lexer, term.typeArguments, *td)) {
                     lexer.rollPosition();
                     return td;
@@ -288,14 +221,14 @@ Value TypeDefinition::execute(Scope& scope) {
         tp.hasConstraint = p.withConstraint;
 
         if (p.withConstraint) {
-            Value c = typeScope.getVariable(p.constraintType.value);
+            Value c = resolveTypeSyntaxExpression(typeScope, p.constraintType, false, "");
             if (c.thrownException != nullptr) return c;
             if (c.type != TypeType) return makeTypeDefinitionError("type constraint is not a type");
             tp.constraint = get<reference<Type>>(c.value);
         }
 
         if (p.withDefaultValue) {
-            Value d = typeScope.getVariable(p.defaultValue.value);
+            Value d = resolveTypeSyntaxExpression(typeScope, p.defaultValue, false, "");
             if (d.thrownException != nullptr) return d;
             if (d.type != TypeType) return makeTypeDefinitionError("type parameter default is not a type");
             tp.defaultValue = get<reference<Type>>(d.value);
@@ -311,7 +244,7 @@ Value TypeDefinition::execute(Scope& scope) {
     }
 
     if (usesPredicateSyntax) {
-        Value base = typeScope.getVariable(predicateBaseType.value);
+        Value base = resolveTypeSyntaxExpression(typeScope, predicateBaseType, false, "");
         if (base.thrownException != nullptr) return base;
         if (base.type != TypeType) return makeTypeDefinitionError("dynamic type base is not a type");
         typeRef->dynamicBaseType = get<reference<Type>>(base.value);
@@ -324,31 +257,14 @@ Value TypeDefinition::execute(Scope& scope) {
     } else {
         for (auto& term : unionTerms) {
             if (!term.literal) {
-                Value t = typeScope.getVariable(term.token.value);
+                TypeSyntaxExpression typeExpr;
+                typeExpr.name = term.token;
+                typeExpr.arguments = term.typeArguments;
+                Value t = resolveTypeSyntaxExpression(typeScope, typeExpr, false, "");
                 if (t.thrownException != nullptr) return t;
                 if (t.type != TypeType) return makeTypeDefinitionError("union member is not a type: " + term.token.value);
                 auto baseType = get<reference<Type>>(t.value);
-                if (term.typeArguments.empty()) {
-                    typeRef->dynamicUnionTypes.push_back(baseType);
-                } else {
-                    std::vector<reference<Type>> args;
-                    args.reserve(term.typeArguments.size());
-                    for (const auto& argTok : term.typeArguments) {
-                        Value argTypeValue = typeScope.getVariable(argTok.value);
-                        if (argTypeValue.thrownException != nullptr) return argTypeValue;
-                        if (argTypeValue.type != TypeType) {
-                            return makeTypeDefinitionError("type argument is not a type: " + argTok.value);
-                        }
-                        args.push_back(get<reference<Type>>(argTypeValue.value));
-                    }
-                    Value specialized = instantiateGenericType(baseType, args, false);
-                    if (specialized.thrownException != nullptr) return specialized;
-                    if (auto specializedType = std::get_if<reference<Type>>(&specialized.value)) {
-                        typeRef->dynamicUnionTypes.push_back(*specializedType);
-                    } else {
-                        return makeTypeDefinitionError("specialized generic did not resolve to a type");
-                    }
-                }
+                typeRef->dynamicUnionTypes.push_back(baseType);
                 continue;
             }
 
@@ -357,6 +273,20 @@ Value TypeDefinition::execute(Scope& scope) {
             else if (term.token.kind == TRUE) typeRef->dynamicUnionLiterals.push_back(create_reference<Value>(Value((boolean)true)));
             else if (term.token.kind == FALSE) typeRef->dynamicUnionLiterals.push_back(create_reference<Value>(Value((boolean)false)));
             else typeRef->dynamicUnionLiterals.push_back(create_reference<Value>(NullValue));
+        }
+    }
+
+    // Plain alias optimization:
+    // type A = SomeConcreteType;
+    // Keep aliases that are unions/predicates/generic declarations as dynamic types.
+    if (!usesPredicateSyntax &&
+        parameters.empty() &&
+        typeRef->dynamicUnionLiterals.empty() &&
+        typeRef->dynamicUnionTypes.size() == 1) {
+        auto aliasedType = typeRef->dynamicUnionTypes.front();
+        if (aliasedType != nullptr) {
+            scope.addVariable(name, Value(aliasedType));
+            return Value(aliasedType);
         }
     }
 

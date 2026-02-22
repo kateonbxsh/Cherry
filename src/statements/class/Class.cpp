@@ -109,16 +109,14 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
     if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Parsing class: " << klass->name << "\n";
 
     if (lexer.expectToken(EXTENDS)) {
-        Token baseType = lexer.nextToken();
-        if (baseType.kind != IDENTIFIER) {
+        TypeSyntaxExpression baseTypeExpr;
+        if (!parseTypeSyntaxExpression(lexer, baseTypeExpr, *klass)) {
             klass->valid = false;
-            klass->expected = {"base class name"};
-            klass->lastToken = baseType;
             lexer.rollPosition();
             return klass;
         }
         klass->hasBaseType = true;
-        klass->baseType = baseType;
+        klass->baseType = baseTypeExpr;
     }
 
     /* =========================
@@ -146,32 +144,28 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
             param.withConstraint = false;
 
             if (lexer.expectToken(EXTENDS)) {
-                Token constraintToken = lexer.nextToken();
-                if (constraintToken.kind != IDENTIFIER) {
+                TypeSyntaxExpression constraintExpr;
+                if (!parseTypeSyntaxExpression(lexer, constraintExpr, *klass)) {
                     klass->valid = false;
-                    klass->expected = {"type constraint"};
-                    klass->lastToken = constraintToken;
                     lexer.rollPosition();
                     return klass;
                 }
                 param.withConstraint = true;
-                param.constraintType = constraintToken;
+                param.constraintType = constraintExpr;
             }
 
             if (lexer.expectToken(EQUALS)) {
                 if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing type parameter default value\n";
-                Token def = lexer.nextToken();
-                if (def.kind != IDENTIFIER) {
+                TypeSyntaxExpression defExpr;
+                if (!parseTypeSyntaxExpression(lexer, defExpr, *klass)) {
                     if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Invalid type parameter default type\n";
                     klass->valid = false;
-                    klass->expected = {"type identifier"};
-                    klass->lastToken = def;
                     lexer.rollPosition();
                     return klass;
                 }
 
                 param.withDefaultValue = true;
-                param.defaultValue = def;
+                param.defaultValue = defExpr;
                 seenDefault = true;
             } else if (seenDefault) {
                 if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Non-default type parameter after default\n";
@@ -201,16 +195,14 @@ uref<ClassDeclaration> ClassDeclaration::parse(Lexer& lexer) {
     }
 
     if (!klass->hasBaseType && lexer.expectToken(EXTENDS)) {
-        Token baseType = lexer.nextToken();
-        if (baseType.kind != IDENTIFIER) {
+        TypeSyntaxExpression baseTypeExpr;
+        if (!parseTypeSyntaxExpression(lexer, baseTypeExpr, *klass)) {
             klass->valid = false;
-            klass->expected = {"base class name"};
-            klass->lastToken = baseType;
             lexer.rollPosition();
             return klass;
         }
         klass->hasBaseType = true;
-        klass->baseType = baseType;
+        klass->baseType = baseTypeExpr;
     }
 
     /* =========================
@@ -411,14 +403,14 @@ Value ClassDeclaration::execute(Scope& scope) {
     classScope.addVariable(name, Value(classType));
 
     if (hasBaseType) {
-        Value parentTypeValue = classScope.getVariable(baseType.value);
+        Value parentTypeValue = resolveTypeSyntaxExpression(classScope, baseType, false, "");
         if (parentTypeValue.thrownException != nullptr) return parentTypeValue;
         if (parentTypeValue.type != TypeType) {
-            return makeClassRegistrationError("extended type is not a type: " + baseType.value);
+            return makeClassRegistrationError("extended type is not a type");
         }
         auto parentType = get<reference<Type>>(parentTypeValue.value);
         if (parentType == nullptr || parentType->kind != TypeKind::Class) {
-            return makeClassRegistrationError("class can only extend class type: " + baseType.value);
+            return makeClassRegistrationError("class can only extend class type");
         }
         classType->parent = parentType;
     }
@@ -436,7 +428,7 @@ Value ClassDeclaration::execute(Scope& scope) {
         tp.hasConstraint = param.withConstraint;
 
         if (param.withDefaultValue) {
-            Value def = classScope.getVariable(param.defaultValue.value);
+            Value def = resolveTypeSyntaxExpression(classScope, param.defaultValue, false, "");
             if (def.thrownException != nullptr) return def;
             if (def.type != TypeType) return Value{};
             tp.defaultValue = get<reference<Type>>(def.value);
@@ -444,10 +436,10 @@ Value ClassDeclaration::execute(Scope& scope) {
         }
 
         if (param.withConstraint) {
-            Value constraint = classScope.getVariable(param.constraintType.value);
+            Value constraint = resolveTypeSyntaxExpression(classScope, param.constraintType, false, "");
             if (constraint.thrownException != nullptr) return constraint;
             if (constraint.type != TypeType) {
-                return makeClassRegistrationError("type parameter constraint is not a type: " + param.constraintType.value);
+                return makeClassRegistrationError("type parameter constraint is not a type");
             }
             tp.constraint = get<reference<Type>>(constraint.value);
         }
@@ -665,12 +657,11 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
 
     while (!isDisplayShortcut && !lexer.expectToken(listClose)) {
 
-        Token type = lexer.nextToken();
-        if (type.kind != IDENTIFIER) {
+        TypeSyntaxExpression typeExpr;
+        if (!parseTypeSyntaxExpression(lexer, typeExpr, *method)) {
             if (DEBUG) std::cout << DEBUG_ERROR_PREFIX << "Expected parameter type\n";
             method->valid = false;
             method->expected = {"parameter type"};
-            method->lastToken = type;
             lexer.rollPosition();
             return method;
         }
@@ -690,7 +681,7 @@ uref<MethodDefinition> MethodDefinition::parse(Lexer& lexer) {
             return method;
         }
 
-        method->parameters.push_back({type, paramName, variadic});
+        method->parameters.push_back({typeExpr, paramName, variadic});
         if (DEBUG) std::cout << DEBUG_SUCCESS_PREFIX << "Parsed method parameter: " << paramName.value << "\n";
 
         Token sep = lexer.nextToken();
@@ -771,7 +762,7 @@ Value MethodDefinition::execute(Scope& scope) {
     function.declarationLine = name.line;
     function.declarationCol = name.pos + 1;
 
-    auto childScope = Scope(scope);
+    auto childScope = scope.createChild();
 
     for (auto& param : parameters) {
 
@@ -779,7 +770,7 @@ Value MethodDefinition::execute(Scope& scope) {
         fp.name = param.name.value;
         fp.variadic = param.variadic;
 
-        Value typeVal = childScope.getVariable(param.type.value);
+        Value typeVal = resolveTypeSyntaxExpression(childScope, param.type, false, "");
         if (typeVal.type != TypeType) {
             return makeClassRegistrationError("unknown type");
         }
@@ -790,7 +781,7 @@ Value MethodDefinition::execute(Scope& scope) {
         function.parameters.push_back(fp);
     }
 
-    function.closure = create_reference<Scope>(scope);
+    function.closure = create_reference<Scope>(scope.snapshot());
 
     return Value(function);
 }

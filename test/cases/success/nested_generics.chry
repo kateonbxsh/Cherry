@@ -1,0 +1,41 @@
+class Box<T> {
+  public T value;
+}
+
+class Holder<T> {
+  public T inner;
+}
+
+class Constrained<T extends Box<Holder<int>>> {
+  public T val;
+}
+
+class WithDefault<T = Box<Holder<int>>> {
+  public T val;
+}
+
+type Nested = Box<Holder<int>>;
+type MaybeNested = Box<Holder<int>> | string;
+
+infer t = Box<Holder<int>>;
+
+Nested a = new Box<Holder<int>>();
+a.value = new Holder<int>();
+a.value.inner = 5;
+
+Constrained<Box<Holder<int>>> c = new Constrained<Box<Holder<int>>>();
+c.val = a;
+
+WithDefault d = new WithDefault();
+d.val = a;
+
+MaybeNested u = a;
+
+Standard.println(
+  "OK nested_generics {} {} {} {} {}",
+  a.value.inner,
+  c.val.value.inner,
+  d.val.value.inner,
+  t,
+  typeof a
+);

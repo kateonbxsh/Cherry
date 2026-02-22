@@ -2,6 +2,37 @@
 
 `Array<T = any>` is a built-in generic class backed by a runtime vector.
 
+---
+
+### Construction styles
+
+Cherry supports three common ways to construct arrays:
+
+1. Constructor call:
+
+```chry
+Array<int> a = new Array<int>();
+```
+
+2. Inferred array literal:
+
+```chry
+infer a = [1, 2, 3];
+```
+
+3. Explicitly typed array literal:
+
+```chry
+infer names = Array<string>["aya", "noah"];
+```
+
+The typed literal form also works when the left side is an identifier or alias that resolves to `Array<...>`:
+
+```chry
+type Names = Array<string>;
+infer names = Names["aya", "noah"];
+```
+
 ### Type parameters
 
 - `T`: element type
@@ -10,6 +41,33 @@
 ```chry
 Array<int> numbers = new Array<int>();
 Array mixed = new Array(); // Array<any>
+```
+
+### Array literal inference rules
+
+For `[x, y, z]`, Cherry infers the element type by widening across elements:
+
+- Start from the type of the first element.
+- For each next element:
+  - If current type accepts next element type, keep current type.
+  - Else if next element type accepts current type, widen to next type.
+  - Else fall back to `any`.
+
+Examples:
+
+```chry
+typeof [1, 2, 3]      // Array<int>
+typeof [1, 2.5, 3]    // Array<any> (with current built-in numeric rules)
+typeof [1, "x"]       // Array<any>
+```
+
+### Explicit typed literals
+
+`Array<T>[...]` enforces assignability of every element to `T`:
+
+```chry
+infer ok = Array<int>[1, 2, 3];      // OK
+infer bad = Array<string>["x", 2];   // RuntimeException
 ```
 
 ### Methods
@@ -24,6 +82,8 @@ int push(T value);
 - Returns the new size.
 - Throws a runtime type error if `value` is not assignable to `T`.
 
+---
+
 #### `size`
 
 ```chry
@@ -31,6 +91,8 @@ int size();
 ```
 
 - Returns current element count.
+
+---
 
 #### `get`
 
@@ -40,6 +102,8 @@ T get(int index);
 
 - Returns element at `index`.
 - Throws `IndexException` / runtime index error if out of range.
+
+---
 
 #### `set`
 
@@ -52,6 +116,8 @@ T set(int index, T value);
 - Throws on out-of-range index.
 - Throws a runtime type error if `value` is not assignable to `T`.
 
+---
+
 #### `pop`
 
 ```chry
@@ -61,6 +127,8 @@ T pop();
 - Removes and returns the last element.
 - Throws on empty array.
 
+---
+
 #### `clear`
 
 ```chry
@@ -69,6 +137,8 @@ void clear();
 
 - Removes all elements.
 
+---
+
 #### `empty`
 
 ```chry
@@ -76,6 +146,8 @@ boolean empty();
 ```
 
 - Returns `true` when size is `0`.
+
+---
 
 #### `contains`
 
