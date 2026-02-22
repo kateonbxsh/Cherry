@@ -521,8 +521,9 @@ Value ClassDeclaration::execute(Scope& scope) {
         for (auto& constructorDef : constructors) {
             Value constructorValue = constructorDef->execute(methodScope);
             if (constructorValue.thrownException != nullptr) return constructorValue;
-
-            constructor.overloads.push_back(get<Function>(constructorValue.value));
+            Function fn = get<Function>(constructorValue.value);
+            fn.debugName = name + "." + constructorDef->name.value;
+            constructor.overloads.push_back(fn);
         }
 
         Value overloadCheck = ensureNoCompatibleOverloads(classType, constructor, name, name);
@@ -544,8 +545,9 @@ Value ClassDeclaration::execute(Scope& scope) {
         for (auto& methodDef : methodDefinitions) {
             Value methodValue = methodDef->execute(methodScope);
             if (methodValue.thrownException != nullptr) return methodValue;
-
-            method.overloads.push_back(get<Function>(methodValue.value));
+            Function fn = get<Function>(methodValue.value);
+            fn.debugName = name + "." + methodName;
+            method.overloads.push_back(fn);
         }
 
         Value overloadCheck = ensureNoCompatibleOverloads(classType, method, name, methodName);
@@ -766,6 +768,8 @@ Value MethodDefinition::execute(Scope& scope) {
     function.body = body;
     function.parameters = {};
     function.debugName = name.value;
+    function.declarationLine = name.line;
+    function.declarationCol = name.pos + 1;
 
     auto childScope = Scope(scope);
 

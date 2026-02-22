@@ -43,6 +43,69 @@ static Value makeExpressionError(const std::string& message) {
     return makeThrown("RuntimeException", message);
 }
 
+static std::string valueTypeName(const Value& value) {
+    if (value.type == nullptr) return "null";
+    return value.type->getName();
+}
+
+static std::string expectedSignature(const Function& function) {
+    std::string out = "(";
+    for (size_t i = 0; i < function.parameters.size(); ++i) {
+        const auto& p = function.parameters[i];
+        if (i > 0) out += ", ";
+        out += (p.type ? p.type->getName() : std::string("unknown"));
+        if (p.variadic) out += "...";
+        out += " ";
+        out += p.name;
+    }
+    out += ")";
+    return out;
+}
+
+static std::string describeArgumentMismatch(const Function& function, const std::vector<Value>& args) {
+    size_t fixedCount = function.parameters.size();
+    bool variadic = !function.parameters.empty() && function.parameters.back().variadic;
+    if (variadic) fixedCount--;
+
+    if (!variadic && args.size() != fixedCount) {
+        return "arguments are not compatible with function signature: expected " + std::to_string(fixedCount) +
+               ", got " + std::to_string(args.size()) + " for " + expectedSignature(function);
+    }
+    if (variadic && args.size() < fixedCount) {
+        return "arguments are not compatible with function signature: expected at least " + std::to_string(fixedCount) +
+               ", got " + std::to_string(args.size()) + " for " + expectedSignature(function);
+    }
+
+    for (size_t i = 0; i < fixedCount; ++i) {
+        const auto& p = function.parameters[i];
+        if (p.type == nullptr || args[i].type == nullptr || !p.type->assignableFrom(args[i])) {
+            return "arguments are not compatible with function signature: argument #" + std::to_string(i + 1) +
+                   " (" + p.name + ") is incompatible: expected " +
+                   (p.type ? p.type->getName() : std::string("unknown")) + ", got " + valueTypeName(args[i]);
+        }
+    }
+
+    if (variadic) {
+        const auto& p = function.parameters.back();
+        for (size_t i = fixedCount; i < args.size(); ++i) {
+            if (p.type == nullptr || args[i].type == nullptr || !p.type->assignableFrom(args[i])) {
+                return "arguments are not compatible with function signature: variadic argument #" + std::to_string(i + 1) +
+                       " (" + p.name + ") is incompatible: expected " +
+                       (p.type ? p.type->getName() : std::string("unknown")) + ", got " + valueTypeName(args[i]);
+            }
+        }
+    }
+
+    return "arguments are not compatible with function signature";
+}
+
+static Value getVariableAtToken(Scope& scope, const Token& token) {
+    if (!scope.hasVariable(token.value)) {
+        return makeThrown("NameException", "undefined variable: " + token.value, token.line, token.pos + 1);
+    }
+    return scope.getVariable(token.value);
+}
+
 static bool bindCallArguments(
     const Function& function,
     const std::vector<Value>& args,
@@ -50,7 +113,7 @@ static bool bindCallArguments(
     std::string& error
 ) {
     if (!function.validArguments(args)) {
-        error = "arguments are not compatible with function signature";
+        error = describeArgumentMismatch(function, args);
         return false;
     }
 
@@ -85,7 +148,7 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
 
     if (function.kind == FunctionKind::Internal) {
         if (!function.internalHandler) return makeExpressionError("internal function is missing implementation");
-        runtimePushFrame(function.debugName);
+        runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
         Value ret = function.internalHandler(scope, boundArgs, function.__this);
         runtimePopFrame();
         return ret;
@@ -98,7 +161,7 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
     for (size_t i = 0; i < function.parameters.size(); ++i) {
         funcScope.addVariable(function.parameters[i].name, boundArgs[i]);
     }
-    runtimePushFrame(function.debugName);
+    runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
     Value ret = function.body->execute(funcScope);
     runtimePopFrame();
     return ret;
@@ -362,6 +425,43 @@ static bool findMethodInHierarchy(
         cursor = cursor->parent;
     }
     return false;
+}
+
+static Function makeMethodDispatcher(
+    const Method& method,
+    const string& debugName,
+    const reference<Value>& boundThis
+) {
+    Function dispatcher;
+    dispatcher.kind = FunctionKind::Internal;
+    dispatcher.debugName = debugName;
+    dispatcher.parameters.push_back({"args", AnyType, true});
+    dispatcher.internalHandler = [method, boundThis](Scope& scope, const std::vector<Value>& args, const reference<Value>&) -> Value {
+        if (args.empty()) {
+            return makeExpressionError("method dispatcher received no argument pack");
+        }
+
+        Value packed = args[0];
+        std::vector<Value>* items = nullptr;
+        if (!tryGetArrayItems(packed, items)) {
+            return makeExpressionError("method dispatcher expected packed argument array");
+        }
+
+        for (const auto& overload : method.overloads) {
+            if (!overload.validArguments(*items)) continue;
+            Function target = overload;
+            if (boundThis != nullptr) {
+                target.__this = boundThis;
+            }
+            return invokeFunction(target, scope, *items);
+        }
+
+        if (!method.overloads.empty()) {
+            return makeThrown("ArgumentException", describeArgumentMismatch(method.overloads.front(), *items));
+        }
+        return makeThrown("ArgumentException", "arguments are not compatible with function signature");
+    };
+    return dispatcher;
 }
 
 uref<Expression> Expression::parse(Lexer &lexer) {
@@ -826,12 +926,15 @@ Value ExpressionValue::execute(Scope &scope) {
         
         case THIS:
         {
+            if (!scope.hasVariable("this")) {
+                return makeThrown("NameException", "undefined variable: this", token.line, token.pos + 1);
+            }
             return scope.getVariable("this");
         }
 
         default: 
         {
-            Value base = scope.getVariable(token.value);
+            Value base = getVariableAtToken(scope, token);
             if (base.thrownException != nullptr) return base;
 
             if (!hasTypeArguments) {
@@ -845,7 +948,7 @@ Value ExpressionValue::execute(Scope &scope) {
             std::vector<reference<Type>> args;
             args.reserve(typeArguments.size());
             for (auto& argToken : typeArguments) {
-                Value argValue = scope.getVariable(argToken.value);
+                Value argValue = getVariableAtToken(scope, argToken);
                 if (argValue.thrownException != nullptr) return argValue;
                 if (argValue.type != TypeType) {
                     return makeTypeInstantiationError("type argument is not a type: " + argToken.value);
@@ -860,7 +963,15 @@ Value ExpressionValue::execute(Scope &scope) {
 }
 
 Value UnaryExpression::execute(Scope &scope) {
-    return performUnaryOperator(this->firstOperand->execute(scope), this->expressionOperator.kind);
+    Value operand = this->firstOperand->execute(scope);
+    if (operand.thrownException != nullptr) return operand;
+
+    if (this->expressionOperator.kind == TYPEOF) {
+        reference<Type> resultType = operand.type != nullptr ? operand.type : AnyType;
+        return Value(resultType);
+    }
+
+    return performUnaryOperator(operand, this->expressionOperator.kind);
 }
 
 uref<Expression> DotAccessExpression::parse(Lexer& lexer) {
@@ -925,7 +1036,10 @@ Value DotAccessExpression::execute(Scope& scope) {
             if (method.overloads.empty()) {
                 return makeExpressionError("static method has no overloads: " + member.value);
             }
-            return Value(method.overloads.front());
+            const string qualifiedName = ownerType != nullptr
+                ? ownerType->getName() + "." + member.value
+                : member.value;
+            return Value(makeMethodDispatcher(method, qualifiedName, nullptr));
         }
 
         return makeExpressionError("unknown static member: " + member.value);
@@ -954,9 +1068,10 @@ Value DotAccessExpression::execute(Scope& scope) {
             if (method.overloads.empty()) {
                 return makeExpressionError("method has no overloads: " + member.value);
             }
-            Function boundMethod = method.overloads.front();
-            boundMethod.__this = create_reference<Value>(base);
-            return Value(boundMethod);
+            const string qualifiedName = ownerType != nullptr
+                ? ownerType->getName() + "." + member.value
+                : member.value;
+            return Value(makeMethodDispatcher(method, qualifiedName, create_reference<Value>(base)));
         }
 
         // Builtin/native-backed instances (notably Exception) can expose runtime-injected fields.
@@ -1089,7 +1204,7 @@ uref<Expression> ConstructorExpression::parse(Lexer& lexer) {
 }
 
 Value ConstructorExpression::execute(Scope& scope) {
-    Value classValue = scope.getVariable(typeName.value);
+    Value classValue = getVariableAtToken(scope, typeName);
     if (classValue.thrownException != nullptr) return classValue;
     if (classValue.type != TypeType) {
         return makeTypeInstantiationError("new target is not a type: " + typeName.value);
@@ -1100,7 +1215,7 @@ Value ConstructorExpression::execute(Scope& scope) {
         std::vector<reference<Type>> args;
         args.reserve(typeArguments.size());
         for (auto& argToken : typeArguments) {
-            Value argValue = scope.getVariable(argToken.value);
+            Value argValue = getVariableAtToken(scope, argToken);
             if (argValue.thrownException != nullptr) return argValue;
             if (argValue.type != TypeType) {
                 return makeTypeInstantiationError("type argument is not a type: " + argToken.value);

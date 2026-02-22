@@ -223,6 +223,24 @@ boolean compareValues(const Value& value1, const Value& value2) {
     
     if (value1.type != value2.type && !areNumericTypes(value1, value2)) return false;
     if (value1.type == nullptr) return value2.type == nullptr;
+    if (value1.type == TypeType && value2.type == TypeType) {
+        auto t1 = get<reference<Type>>(value1.value);
+        auto t2 = get<reference<Type>>(value2.value);
+        if (t1 == t2) return true;
+        if (t1 == nullptr || t2 == nullptr) return false;
+        if (t1->kind != t2->kind) return false;
+        if (t1->getName() != t2->getName()) return false;
+
+        if (t1->typeBindings.size() != t2->typeBindings.size()) return false;
+        for (const auto& [name, bound1] : t1->typeBindings) {
+            if (!t2->typeBindings.contains(name)) return false;
+            auto bound2 = t2->typeBindings.at(name);
+            if (bound1 == bound2) continue;
+            if (bound1 == nullptr || bound2 == nullptr) return false;
+            if (bound1->getName() != bound2->getName()) return false;
+        }
+        return true;
+    }
     if (value1.type->kind != TypeKind::Primitive) return false;
 
     if (value1.type == RealType || value2.type == RealType)
@@ -478,6 +496,13 @@ Value performBinaryOperator(const Value& a, const Value& b, TokenKind op) {
         return classOperatorResult.value;
     }
 
+    if (op == COMPARATIVE_EQUALS) {
+        return Value((boolean)compareValues(a, b));
+    }
+    if (op == COMPARATIVE_NOT_EQUALS) {
+        return Value((boolean)!compareValues(a, b));
+    }
+
     // boolean?
     if (booleanBinaryTable.count(op) && (a.type == BooleanType || b.type == BooleanType)) {
         return booleanBinaryTable[op](a, b);
@@ -502,7 +527,7 @@ bool isBinaryOperator(const TokenKind& kind) {
 }
 
 bool isUnaryOperator(const TokenKind& kind) {
-    return (kind > BEGIN_OF_UNARY_OPERATORS && kind < END_OF_UNARY_OPERATORS) || kind == MINUS || kind == PLUS;
+    return (kind > BEGIN_OF_UNARY_OPERATORS && kind < END_OF_UNARY_OPERATORS) || kind == MINUS || kind == PLUS || kind == TYPEOF;
 }
 
 int precedence(const Token& token) {

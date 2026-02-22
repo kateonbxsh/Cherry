@@ -23,4 +23,5 @@ Value makeThrown(
 
 reference<Value> normalizeExceptionRef(const reference<Value>& ex);
 bool isExceptionInstance(const Value& value);
+void runtimeEnsureExceptionLocation(const reference<Value>& ex, int line, int col);
 void printRuntimeException(const reference<Value>& ex);
