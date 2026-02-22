@@ -429,3 +429,6 @@ function rgxG(tmplObj, ...subst) {
     return new RegExp(txt2, 'g');
 }
 var templateObject_1, templateObject_2, templateObject_3;
+if (typeof globalThis !== "undefined") {
+    globalThis.AnsiUp = AnsiUp;
+}
