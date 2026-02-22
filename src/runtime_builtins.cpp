@@ -183,8 +183,8 @@ Value makeArrayFromValues(const std::vector<Value>& values) {
 }
 
 void registerBuiltinRuntime(Scope& scope) {
-    if (initialized) return;
-    initialized = true;
+    if (!initialized) {
+        initialized = true;
 
     arrayType = create_reference<Type>(TypeKind::Class);
     arrayType->setName("Array");
@@ -527,10 +527,6 @@ void registerBuiltinRuntime(Scope& scope) {
         standardType->staticMethods["println"] = std::move(printlnMethod);
     }
 
-    scope.addVariable("Array", Value(arrayType));
-    scope.addVariable("Map", Value(mapType));
-    scope.addVariable("Standard", Value(standardType));
-
     exceptionType = create_reference<Type>(TypeKind::Class);
     exceptionType->setName("Exception");
     runtimeExceptionType = create_reference<Type>(TypeKind::Class);
@@ -573,6 +569,12 @@ void registerBuiltinRuntime(Scope& scope) {
     operationExceptionType->parent = runtimeExceptionType;
     divisionByZeroExceptionType->parent = operationExceptionType;
     indexExceptionType->parent = runtimeExceptionType;
+
+    }
+
+    scope.addVariable("Array", Value(arrayType));
+    scope.addVariable("Map", Value(mapType));
+    scope.addVariable("Standard", Value(standardType));
 
     scope.addVariable("Exception", Value(exceptionType));
     scope.addVariable("RuntimeException", Value(runtimeExceptionType));
