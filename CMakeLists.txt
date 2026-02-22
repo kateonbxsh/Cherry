@@ -48,6 +48,7 @@ add_executable(Cherry ${SOURCE_FILES})
 if(EMSCRIPTEN)
     target_link_options(Cherry PRIVATE
         -sFORCE_FILESYSTEM=1
+        -sINVOKE_RUN=0
         -sEXIT_RUNTIME=0
         -sEXPORTED_RUNTIME_METHODS=['callMain','FS']
     )
