@@ -7,6 +7,20 @@
   <title>Cherry</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script>
+    (function (l) {
+      if (!l.search || !l.search.startsWith("?/")) return;
+      var decoded = l.search
+        .slice(2)
+        .split("&")
+        .map(function (segment) { return segment.replace(/~and~/g, "&"); })
+        .join("?");
+      if (!decoded.startsWith("/")) decoded = "/" + decoded;
+      var basePath = l.pathname.endsWith("/") ? l.pathname.slice(0, -1) : l.pathname;
+      var restoredPath = (basePath || "") + decoded + (l.hash || "");
+      window.history.replaceState(null, "", restoredPath);
+    })(window.location);
+  </script>
 </head>
 <body>
   <div id="app"></div>

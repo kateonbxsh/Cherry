@@ -166,7 +166,7 @@
       "file": "cases/success/typeof_builtin.chry",
       "allowed_exit_codes": [0],
       "expect": {
-        "stdout_contains": ["OK typeof_builtin true true true true"]
+        "stdout_contains": ["OK typeof_builtin true true true true true"]
       }
     },
     {

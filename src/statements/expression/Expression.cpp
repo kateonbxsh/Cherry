@@ -899,6 +899,7 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
     Token nextToken = lexer.nextToken();
     if (
         nextToken.kind == IDENTIFIER ||
+        nextToken.kind == TYPE ||
         nextToken.kind == STRING ||
         nextToken.kind == INTEGER ||
         nextToken.kind == FLOAT ||
@@ -936,7 +937,7 @@ uref<ExpressionValue> ExpressionValue::parse(Lexer& lexer) {
     expression->valid = false;
     expression->lastToken = nextToken;
     expression->expected = tokenKindsToString({
-        IDENTIFIER, STRING, INTEGER, FLOAT, THIS, TRUE, FALSE, NULL_TOKEN
+        IDENTIFIER, TYPE, STRING, INTEGER, FLOAT, THIS, TRUE, FALSE, NULL_TOKEN
     });
     lexer.rollPosition();
 

@@ -4,5 +4,6 @@ infer ta = typeof a;
 infer tb = typeof b;
 infer tt = typeof int;
 infer tn = typeof null;
+infer tx = type;
 
-Standard.println("OK typeof_builtin {} {} {} {}", ta == int, tb == string, tt == typeof int, tn == any);
+Standard.println("OK typeof_builtin {} {} {} {} {}", ta == int, tb == string, tt == typeof int, tn == any, tx == typeof int);
