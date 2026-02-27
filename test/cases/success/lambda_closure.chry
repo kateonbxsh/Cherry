@@ -1,7 +1,8 @@
-int seed = 10;
+int seed = 5;
 function add = (int x) => { return x + seed; };
 function makeAdder = (int base) => { return (int y) => { return base + y; }; };
 function add3 = makeAdder(3);
+seed = 10;
 int r1 = add(5);
 int r2 = add3(4);
 Standard.println("OK lambda_closure {} {}", r1, r2);
