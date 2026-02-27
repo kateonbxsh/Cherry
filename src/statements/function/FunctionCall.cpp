@@ -155,8 +155,16 @@ Value FunctionCall::execute(Scope& scope) {
         if (!function.internalHandler) {
             return makeCallError("internal function is missing implementation");
         }
+        Scope internalScope = scope.createChild();
+        if (function.ownerType != nullptr) {
+            auto owner = function.ownerType;
+            internalScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+            if (!owner->getName().empty()) {
+                internalScope.addVariable(owner->getName(), Value(owner));
+            }
+        }
         runtimePushFrame(function.debugName, callToken.line, callToken.pos + 1);
-        Value ret = function.internalHandler(scope, boundArgs, function.__this);
+        Value ret = function.internalHandler(internalScope, boundArgs, function.__this);
         runtimePopFrame();
         if (ret.thrownException != nullptr) {
             runtimeEnsureExceptionLocation(ret.thrownException, callToken.line, callToken.pos + 1);
@@ -167,6 +175,13 @@ Value FunctionCall::execute(Scope& scope) {
 
     // Execute function body in a new scope
     Scope funcScope(function.closure);
+    if (function.ownerType != nullptr) {
+        auto owner = function.ownerType;
+        funcScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+        if (!owner->getName().empty()) {
+            funcScope.addVariable(owner->getName(), Value(owner));
+        }
+    }
     if (function.__this != nullptr) {
         funcScope.addVariable("this", *function.__this);
         injectThisTypeBindings(funcScope, *function.__this);

@@ -23,6 +23,7 @@ enum class FunctionKind {
 
 struct Function {
     reference<Value> __this;
+    reference<Type> ownerType = nullptr;
     std::vector<FunctionParameter> parameters;
     reference<Scope> closure;
     reference<Block> body;
@@ -34,3 +35,5 @@ struct Function {
 
     bool validArguments(const std::vector<Value>& arguments) const;
 };
+
+inline constexpr const char* INTERNAL_CLASS_CONTEXT_VAR = "::class_context::";

@@ -13,11 +13,12 @@ static Value makeAssignmentError(const std::string& message) {
 static Value coerceToDeclaredType(const Value& source, const reference<Type>& targetType) {
     Value coerced = source;
     if (targetType == nullptr) return coerced;
-    if (targetType->kind == TypeKind::Dynamic) return coerced;
     coerced.type = targetType;
     if (std::holds_alternative<ClassInstance>(coerced.value)) {
         auto instance = get<ClassInstance>(coerced.value);
-        instance.classType = targetType;
+        if (targetType->kind == TypeKind::Class) {
+            instance.classType = targetType;
+        }
         coerced.value = instance;
     }
     return coerced;
@@ -160,14 +161,29 @@ static Value invokeFunction(
 
     if (function.kind == FunctionKind::Internal) {
         if (!function.internalHandler) return makeAssignmentError("internal function is missing implementation");
+        Scope internalScope = scope.createChild();
+        if (function.ownerType != nullptr) {
+            auto owner = function.ownerType;
+            internalScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+            if (!owner->getName().empty()) {
+                internalScope.addVariable(owner->getName(), Value(owner));
+            }
+        }
         runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
-        Value ret = function.internalHandler(scope, boundArgs, function.__this);
+        Value ret = function.internalHandler(internalScope, boundArgs, function.__this);
         runtimePopFrame();
         ret.returning = false;
         return ret;
     }
 
     Scope funcScope(function.closure);
+    if (function.ownerType != nullptr) {
+        auto owner = function.ownerType;
+        funcScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+        if (!owner->getName().empty()) {
+            funcScope.addVariable(owner->getName(), Value(owner));
+        }
+    }
     if (function.__this != nullptr) {
         funcScope.addVariable("this", *function.__this);
         injectThisTypeBindings(funcScope, *function.__this);
@@ -238,11 +254,25 @@ static bool hasThisAccess(Scope& scope, const reference<Type>& ownerType, bool a
     return thisValue.type == ownerType || thisValue.type->getName() == ownerType->getName();
 }
 
+static bool hasClassContextAccess(Scope& scope, const reference<Type>& ownerType, bool allowDerived) {
+    if (!scope.hasVariable(INTERNAL_CLASS_CONTEXT_VAR)) return false;
+    Value contextTypeValue = scope.getVariable(INTERNAL_CLASS_CONTEXT_VAR);
+    if (contextTypeValue.thrownException != nullptr || contextTypeValue.type != TypeType) return false;
+    auto contextType = get<reference<Type>>(contextTypeValue.value);
+    if (contextType == nullptr) return false;
+    if (allowDerived) return isSameOrDerivedType(contextType, ownerType);
+    return contextType == ownerType || contextType->getName() == ownerType->getName();
+}
+
 static bool canAccessMember(unsigned int flags, const reference<Type>& ownerType, Scope& scope) {
     if ((flags & MemberFlags::Public) != 0) return true;
-    if ((flags & MemberFlags::Private) != 0) return hasThisAccess(scope, ownerType, false);
-    if ((flags & MemberFlags::Protected) != 0) return hasThisAccess(scope, ownerType, true);
-    return hasThisAccess(scope, ownerType, false);
+    if ((flags & MemberFlags::Private) != 0) {
+        return hasThisAccess(scope, ownerType, false) || hasClassContextAccess(scope, ownerType, false);
+    }
+    if ((flags & MemberFlags::Protected) != 0) {
+        return hasThisAccess(scope, ownerType, true) || hasClassContextAccess(scope, ownerType, true);
+    }
+    return hasThisAccess(scope, ownerType, false) || hasClassContextAccess(scope, ownerType, false);
 }
 
 static bool findFieldInHierarchy(

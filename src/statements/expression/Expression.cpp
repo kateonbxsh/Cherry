@@ -38,6 +38,28 @@ static bool parseTypeArgumentList(Lexer& lexer, std::vector<TypeSyntaxExpression
     }
 }
 
+static std::string typeSyntaxDisplayName(const TypeSyntaxExpression& syntax) {
+    if (syntax.isUnion) {
+        std::string out;
+        for (size_t i = 0; i < syntax.unionMembers.size(); ++i) {
+            if (i > 0) out += " | ";
+            out += typeSyntaxDisplayName(syntax.unionMembers[i]);
+        }
+        return out.empty() ? std::string("<type union>") : out;
+    }
+
+    std::string out = syntax.name.value;
+    if (!syntax.arguments.empty()) {
+        out += "<";
+        for (size_t i = 0; i < syntax.arguments.size(); ++i) {
+            if (i > 0) out += ", ";
+            out += typeSyntaxDisplayName(syntax.arguments[i]);
+        }
+        out += ">";
+    }
+    return out.empty() ? std::string("<type>") : out;
+}
+
 static Value makeTypeInstantiationError(const std::string& message) {
     return makeThrown("TypeException", message);
 }
@@ -152,14 +174,29 @@ static Value invokeFunction(const Function& function, Scope& scope, const std::v
 
     if (function.kind == FunctionKind::Internal) {
         if (!function.internalHandler) return makeExpressionError("internal function is missing implementation");
+        Scope internalScope = scope.createChild();
+        if (function.ownerType != nullptr) {
+            auto owner = function.ownerType;
+            internalScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+            if (!owner->getName().empty()) {
+                internalScope.addVariable(owner->getName(), Value(owner));
+            }
+        }
         runtimePushFrame(function.debugName, function.declarationLine, function.declarationCol);
-        Value ret = function.internalHandler(scope, boundArgs, function.__this);
+        Value ret = function.internalHandler(internalScope, boundArgs, function.__this);
         runtimePopFrame();
         ret.returning = false;
         return ret;
     }
 
     Scope funcScope(function.closure);
+    if (function.ownerType != nullptr) {
+        auto owner = function.ownerType;
+        funcScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+        if (!owner->getName().empty()) {
+            funcScope.addVariable(owner->getName(), Value(owner));
+        }
+    }
     if (function.__this != nullptr) {
         funcScope.addVariable("this", *function.__this);
         if ((*function.__this).type != nullptr) {
@@ -203,6 +240,20 @@ static reference<Type> resolveParameterType(const reference<Type>& ownerType, co
     return parameterType;
 }
 
+static bool isUnresolvedOwnerDynamic(
+    const reference<Type>& ownerType,
+    const reference<Type>& originalParameterType,
+    const reference<Type>& resolvedParameterType
+) {
+    if (ownerType == nullptr || originalParameterType == nullptr || resolvedParameterType == nullptr) return false;
+    if (originalParameterType->kind != TypeKind::Dynamic) return false;
+    if (resolvedParameterType != originalParameterType) return false;
+    const auto dynamicName = originalParameterType->getName();
+    if (dynamicName.empty()) return false;
+    if (!ownerType->typeBindings.contains(dynamicName)) return false;
+    return ownerType->typeBindings.at(dynamicName) == nullptr;
+}
+
 static bool acceptsParamType(const reference<Type>& targetType, const reference<Type>& sourceType) {
     if (targetType == nullptr || sourceType == nullptr) return false;
     auto sourceCopy = sourceType;
@@ -224,16 +275,16 @@ static bool overloadDirectionallyCovers(const reference<Type>& ownerType, const 
     for (size_t i = 0; i < aFixed; ++i) {
         auto aType = resolveParameterType(ownerType, a.parameters[i].type);
         auto bType = resolveParameterType(ownerType, b.parameters[i].type);
-        if (aType != nullptr && aType == a.parameters[i].type && aType->kind == TypeKind::Dynamic) return false;
-        if (bType != nullptr && bType == b.parameters[i].type && bType->kind == TypeKind::Dynamic) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, a.parameters[i].type, aType)) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, b.parameters[i].type, bType)) return false;
         if (!acceptsParamType(aType, bType)) return false;
     }
 
     if (aVariadic) {
         auto aType = resolveParameterType(ownerType, a.parameters.back().type);
         auto bType = resolveParameterType(ownerType, b.parameters.back().type);
-        if (aType != nullptr && aType == a.parameters.back().type && aType->kind == TypeKind::Dynamic) return false;
-        if (bType != nullptr && bType == b.parameters.back().type && bType->kind == TypeKind::Dynamic) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, a.parameters.back().type, aType)) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, b.parameters.back().type, bType)) return false;
         if (!acceptsParamType(aType, bType)) return false;
     }
 
@@ -448,6 +499,32 @@ static Value resolveTypeExpressionWithInstantiate(
     const TypeSyntaxExpression& syntax,
     bool strictMissing
 ) {
+    if (syntax.isUnion) {
+        auto unionType = create_reference<Type>(Type(TypeKind::Dynamic));
+        std::vector<reference<Type>> members;
+        members.reserve(syntax.unionMembers.size());
+        std::string unionName;
+
+        for (const auto& memberSyntax : syntax.unionMembers) {
+            Value memberValue = resolveTypeExpressionWithInstantiate(scope, memberSyntax, strictMissing);
+            if (memberValue.thrownException != nullptr) return memberValue;
+            if (memberValue.type != TypeType) {
+                return makeTypeInstantiationError("union member is not a type: " + typeSyntaxDisplayName(memberSyntax));
+            }
+            auto memberType = get<reference<Type>>(memberValue.value);
+            if (memberType == nullptr) {
+                return makeTypeInstantiationError("union member is null type: " + typeSyntaxDisplayName(memberSyntax));
+            }
+            members.push_back(memberType);
+            if (!unionName.empty()) unionName += " | ";
+            unionName += memberType->getName();
+        }
+
+        unionType->dynamicUnionTypes = std::move(members);
+        unionType->setName(unionName);
+        return Value(unionType);
+    }
+
     Value base = scope.getVariable(syntax.name.value);
     if (base.thrownException != nullptr) return base;
     if (base.type != TypeType) {
@@ -465,7 +542,7 @@ static Value resolveTypeExpressionWithInstantiate(
         Value argType = resolveTypeExpressionWithInstantiate(scope, argExpr, strictMissing);
         if (argType.thrownException != nullptr) return argType;
         if (argType.type != TypeType) {
-            return makeTypeInstantiationError("type argument is not a type: " + argExpr.name.value);
+            return makeTypeInstantiationError("type argument is not a type: " + typeSyntaxDisplayName(argExpr));
         }
         args.push_back(get<reference<Type>>(argType.value));
     }
@@ -494,11 +571,25 @@ static bool hasThisAccess(Scope& scope, const reference<Type>& ownerType, bool a
     return thisValue.type == ownerType || thisValue.type->getName() == ownerType->getName();
 }
 
+static bool hasClassContextAccess(Scope& scope, const reference<Type>& ownerType, bool allowDerived) {
+    if (!scope.hasVariable(INTERNAL_CLASS_CONTEXT_VAR)) return false;
+    Value contextTypeValue = scope.getVariable(INTERNAL_CLASS_CONTEXT_VAR);
+    if (contextTypeValue.thrownException != nullptr || contextTypeValue.type != TypeType) return false;
+    auto contextType = get<reference<Type>>(contextTypeValue.value);
+    if (contextType == nullptr) return false;
+    if (allowDerived) return isSameOrDerivedType(contextType, ownerType);
+    return contextType == ownerType || contextType->getName() == ownerType->getName();
+}
+
 static bool canAccessMember(unsigned int flags, const reference<Type>& ownerType, Scope& scope) {
     if ((flags & MemberFlags::Public) != 0) return true;
-    if ((flags & MemberFlags::Private) != 0) return hasThisAccess(scope, ownerType, false);
-    if ((flags & MemberFlags::Protected) != 0) return hasThisAccess(scope, ownerType, true);
-    return hasThisAccess(scope, ownerType, false);
+    if ((flags & MemberFlags::Private) != 0) {
+        return hasThisAccess(scope, ownerType, false) || hasClassContextAccess(scope, ownerType, false);
+    }
+    if ((flags & MemberFlags::Protected) != 0) {
+        return hasThisAccess(scope, ownerType, true) || hasClassContextAccess(scope, ownerType, true);
+    }
+    return hasThisAccess(scope, ownerType, false) || hasClassContextAccess(scope, ownerType, false);
 }
 
 static bool findFieldInHierarchy(
@@ -594,11 +685,11 @@ uref<Expression> Expression::parse(Lexer &lexer) {
     using ExprParser = std::function<uref<Expression>(Lexer&)>;
     std::vector<ExprParser> parsers = {
         [](Lexer& l) { return UnaryExpression::parse(l); },
+        [](Lexer& l) { return LambdaDefinition::parse(l); },
         [](Lexer& l) { return ExpressionParenWrapped::parse(l); },
         [](Lexer& l) { return ArrayLiteralExpression::parse(l); },
         [](Lexer& l) { return ConstructorExpression::parse(l); },
         [](Lexer& l) { return ExpressionValue::parse(l); },
-        [](Lexer& l) { return LambdaDefinition::parse(l); },
     };
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Trying to parse first operand\n";
@@ -1515,24 +1606,27 @@ Value ConstructorExpression::execute(Scope& scope) {
         argValues.push_back(argValue);
     }
 
-    if (!classType->constructor.overloads.empty()) {
-        Function* selected = nullptr;
-        std::vector<Value> boundCtorArgs;
-        for (auto& overload : classType->constructor.overloads) {
+    Function ctorFunction;
+    std::vector<Value> boundCtorArgs;
+    bool foundCtor = false;
+    for (reference<Type> cursor = classType; cursor != nullptr && !foundCtor; cursor = cursor->parent) {
+        if (cursor->constructor.overloads.empty()) continue;
+        for (auto& overload : cursor->constructor.overloads) {
             Value bindErr;
             std::vector<Value> candidate;
             if (bindArgumentsForFunction(overload, argValues, candidate, bindErr)) {
-                selected = &overload;
+                ctorFunction = overload;
+                if (ctorFunction.ownerType == nullptr) {
+                    ctorFunction.ownerType = cursor;
+                }
                 boundCtorArgs = std::move(candidate);
+                foundCtor = true;
                 break;
             }
         }
+    }
 
-        if (selected == nullptr) {
-            return makeTypeInstantiationError("no matching constructor overload for " + typeName.value);
-        }
-
-        Function ctorFunction = *selected;
+    if (foundCtor) {
         Value thisValue;
         thisValue.type = classType;
         thisValue.value = instance;
@@ -1571,7 +1665,7 @@ Value ConstructorExpression::execute(Scope& scope) {
             instance = get<ClassInstance>(thisValue.value);
         }
     } else if (!argValues.empty()) {
-        return makeTypeInstantiationError("class has no constructor overloads: " + typeName.value);
+        return makeTypeInstantiationError("no matching constructor overload for " + typeName.value);
     }
 
     Value ret;

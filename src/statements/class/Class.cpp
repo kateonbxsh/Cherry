@@ -35,6 +35,20 @@ reference<Type> resolveParameterType(const reference<Type>& ownerType, const ref
     return parameterType;
 }
 
+bool isUnresolvedOwnerDynamic(
+    const reference<Type>& ownerType,
+    const reference<Type>& originalParameterType,
+    const reference<Type>& resolvedParameterType
+) {
+    if (ownerType == nullptr || originalParameterType == nullptr || resolvedParameterType == nullptr) return false;
+    if (originalParameterType->kind != TypeKind::Dynamic) return false;
+    if (resolvedParameterType != originalParameterType) return false;
+    const auto dynamicName = originalParameterType->getName();
+    if (dynamicName.empty()) return false;
+    if (!ownerType->typeBindings.contains(dynamicName)) return false;
+    return ownerType->typeBindings.at(dynamicName) == nullptr;
+}
+
 bool overloadDirectionallyCovers(const reference<Type>& ownerType, const Function& a, const Function& b) {
     const bool aVariadic = !a.parameters.empty() && a.parameters.back().variadic;
     const bool bVariadic = !b.parameters.empty() && b.parameters.back().variadic;
@@ -47,16 +61,16 @@ bool overloadDirectionallyCovers(const reference<Type>& ownerType, const Functio
     for (size_t i = 0; i < aFixed; ++i) {
         auto aType = resolveParameterType(ownerType, a.parameters[i].type);
         auto bType = resolveParameterType(ownerType, b.parameters[i].type);
-        if (aType != nullptr && aType == a.parameters[i].type && aType->kind == TypeKind::Dynamic) return false;
-        if (bType != nullptr && bType == b.parameters[i].type && bType->kind == TypeKind::Dynamic) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, a.parameters[i].type, aType)) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, b.parameters[i].type, bType)) return false;
         if (!acceptsParamType(aType, bType)) return false;
     }
 
     if (aVariadic) {
         auto aType = resolveParameterType(ownerType, a.parameters.back().type);
         auto bType = resolveParameterType(ownerType, b.parameters.back().type);
-        if (aType != nullptr && aType == a.parameters.back().type && aType->kind == TypeKind::Dynamic) return false;
-        if (bType != nullptr && bType == b.parameters.back().type && bType->kind == TypeKind::Dynamic) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, a.parameters.back().type, aType)) return false;
+        if (isUnresolvedOwnerDynamic(ownerType, b.parameters.back().type, bType)) return false;
         if (!acceptsParamType(aType, bType)) return false;
     }
 
@@ -515,6 +529,7 @@ Value ClassDeclaration::execute(Scope& scope) {
             if (constructorValue.thrownException != nullptr) return constructorValue;
             Function fn = get<Function>(constructorValue.value);
             fn.debugName = name + "." + constructorDef->name.value;
+            fn.ownerType = classType;
             constructor.overloads.push_back(fn);
         }
 
@@ -539,6 +554,7 @@ Value ClassDeclaration::execute(Scope& scope) {
             if (methodValue.thrownException != nullptr) return methodValue;
             Function fn = get<Function>(methodValue.value);
             fn.debugName = name + "." + methodName;
+            fn.ownerType = classType;
             method.overloads.push_back(fn);
         }
 
