@@ -186,6 +186,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+
+      - name: Build WASM artifacts for web
+        shell: bash
+        run: |
+          emcmake cmake -S . -B build-wasm -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-wasm --config Release
+
+          mkdir -p web/public/wasm
+
+          JS_PATH="build-wasm/Cherry.js"
+          if [ ! -f "$JS_PATH" ]; then
+            JS_PATH="build-wasm/Release/Cherry.js"
+          fi
+          if [ ! -f "$JS_PATH" ]; then
+            echo "Cherry.js not found in build-wasm or build-wasm/Release."
+            exit 1
+          fi
+
+          WASM_DIR="$(dirname "$JS_PATH")"
+          cp "$JS_PATH" web/public/wasm/Cherry.js
+          if [ -f "$WASM_DIR/Cherry.wasm" ]; then
+            cp "$WASM_DIR/Cherry.wasm" web/public/wasm/Cherry.wasm
+          fi
+          if [ -f "$WASM_DIR/Cherry.data" ]; then
+            cp "$WASM_DIR/Cherry.data" web/public/wasm/Cherry.data
+          fi
+          if [ -f "$WASM_DIR/Cherry.worker.js" ]; then
+            cp "$WASM_DIR/Cherry.worker.js" web/public/wasm/Cherry.worker.js
+          fi
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
