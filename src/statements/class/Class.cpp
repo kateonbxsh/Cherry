@@ -792,7 +792,13 @@ Value MethodDefinition::execute(Scope& scope) {
         }
 
         fp.type = get<reference<Type>>(typeVal.value);
-        childScope.addVariable(fp.name, Value::Uninitialized(fp.type));
+        if (fp.type == TypeType) {
+            auto typePlaceholder = create_reference<Type>(TypeKind::Dynamic);
+            typePlaceholder->setName(fp.name);
+            childScope.addVariable(fp.name, Value(typePlaceholder));
+        } else {
+            childScope.addVariable(fp.name, Value::Uninitialized(fp.type));
+        }
 
         function.parameters.push_back(fp);
     }

@@ -138,7 +138,13 @@ Value LambdaDefinition::execute(Scope& scope) {
         }
 
         fp.type = get<reference<Type>>(typeVal.value);
-        closureScope->addVariable(fp.name, Value::Uninitialized(fp.type));
+        if (fp.type == TypeType) {
+            auto typePlaceholder = create_reference<Type>(TypeKind::Dynamic);
+            typePlaceholder->setName(fp.name);
+            closureScope->addVariable(fp.name, Value(typePlaceholder));
+        } else {
+            closureScope->addVariable(fp.name, Value::Uninitialized(fp.type));
+        }
 
         function.parameters.push_back(fp);
     }
