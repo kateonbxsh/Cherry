@@ -66,6 +66,7 @@ static std::string expectedSignature(const Function& function) {
 }
 
 static std::string describeArgumentMismatch(const Function& function, const std::vector<Value>& args) {
+
     size_t fixedCount = function.parameters.size();
     bool variadic = !function.parameters.empty() && function.parameters.back().variadic;
     if (variadic) fixedCount--;
@@ -211,6 +212,7 @@ static bool acceptsParamType(const reference<Type>& targetType, const reference<
 }
 
 static bool overloadDirectionallyCovers(const reference<Type>& ownerType, const Function& a, const Function& b) {
+
     const bool aVariadic = !a.parameters.empty() && a.parameters.back().variadic;
     const bool bVariadic = !b.parameters.empty() && b.parameters.back().variadic;
     if (aVariadic != bVariadic) return false;
@@ -981,14 +983,18 @@ uref<Expression> UnaryExpression::parse(Lexer& lexer) {
 
 Value Expression::execute(Scope& scope) {
     
-    auto value1 = this->firstOperand->execute(scope);
+    Value value1;
     if (conditional) {
         auto cond = isTruthy(condition->execute(scope));
         if (unlessCondition) cond = !cond;
-        if (!cond) {
+        if (cond) {
+            value1 = this->firstOperand->execute(scope);
+        } else {
             value1 = NullValue;
             if (withElseValue) value1 = elseValue->execute(scope); 
         }
+    } else {
+        value1 = this->firstOperand->execute(scope);
     }
     if (value1.thrownException != nullptr) return value1;
 
@@ -1423,6 +1429,7 @@ uref<Expression> ConstructorExpression::parse(Lexer& lexer) {
 }
 
 Value ConstructorExpression::execute(Scope& scope) {
+
     Value classValue = getVariableAtToken(scope, typeName);
     if (classValue.thrownException != nullptr) return classValue;
     if (classValue.type != TypeType) {
