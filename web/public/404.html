@@ -3,7 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Redirecting…</title>
+  <title>Cherry | 404</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, #0d0d0d 0%, #050505 70%);
+      color: #f3f4f6;
+      font-family: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .blob-a, .blob-b {
+      position: fixed;
+      border-radius: 9999px;
+      pointer-events: none;
+      filter: blur(80px);
+    }
+    .blob-a { width: 26rem; height: 26rem; background: radial-gradient(circle, #ff5f7a33 0%, transparent 70%); top: -6rem; right: -4rem; }
+    .blob-b { width: 22rem; height: 22rem; background: radial-gradient(circle, #ffb7cc22 0%, transparent 70%); bottom: -8rem; left: -6rem; }
+    .panel {
+      width: min(700px, calc(100vw - 2rem));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(20px);
+      border-radius: 1rem;
+      box-shadow: 0 0 30px rgba(255, 182, 193, 0.08);
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+    .accent { color: #ff5f7a; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .78rem; }
+    h1 { margin: .45rem 0 .6rem; font-size: clamp(1.6rem, 5vw, 2.2rem); }
+    p { margin: 0; color: #d1d5db; line-height: 1.65; }
+    code {
+      display: inline-block;
+      margin-top: .9rem;
+      padding: .35rem .5rem;
+      border-radius: .45rem;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      color: #fda4af;
+      font-family: "JetBrains Mono", monospace;
+      font-size: .8rem;
+      word-break: break-all;
+    }
+    .actions {
+      margin-top: 1.3rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem;
+    }
+    .btn {
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.05);
+      color: #f3f4f6;
+      border-radius: .6rem;
+      padding: .55rem .85rem;
+      text-decoration: none;
+      font-size: .85rem;
+      transition: .2s ease;
+    }
+    .btn:hover {
+      border-color: rgba(255, 95, 122, 0.55);
+      background: rgba(255, 95, 122, 0.18);
+    }
+  </style>
   <script>
     (function () {
       var l = window.location;
@@ -11,13 +79,49 @@
       var parts = l.pathname.split("/").filter(Boolean);
       var base = "/" + parts.slice(0, pathSegmentsToKeep).join("/");
       if (base !== "/") base += "/";
-      var route = parts.slice(pathSegmentsToKeep).join("/").replace(/&/g, "~and~");
-      var search = l.search ? "&" + l.search.slice(1).replace(/&/g, "~and~") : "";
-      var target =
-        l.protocol + "//" + l.host + base + "?/" + route + search + (l.hash || "");
-      l.replace(target);
+      var route = parts.slice(pathSegmentsToKeep).join("/");
+      var hasFileExtension = /\.[a-z0-9]+$/i.test(route);
+
+      if (route && !hasFileExtension) {
+        var routeForQuery = route.replace(/&/g, "~and~");
+        var search = l.search ? "&" + l.search.slice(1).replace(/&/g, "~and~") : "";
+        var target = l.protocol + "//" + l.host + base + "?/" + routeForQuery + search + (l.hash || "");
+        l.replace(target);
+      }
+
+      window.__cherry404Base = base;
+      window.__cherry404Path = route || "/";
     })();
   </script>
 </head>
-<body></body>
+<body>
+  <div class="blob-a"></div>
+  <div class="blob-b"></div>
+  <main class="panel">
+    <div class="accent">404 not found</div>
+    <h1>This Cherry page does not exist.</h1>
+    <p>
+      The route could not be resolved. If this URL should exist, the client-side router may not have been initialized.
+    </p>
+    <code id="missingPath">/</code>
+    <div class="actions">
+      <a class="btn" id="goHome" href="/">home</a>
+      <a class="btn" id="goDocs" href="/docs">docs</a>
+      <a class="btn" id="goPlayground" href="/playground">playground</a>
+    </div>
+  </main>
+  <script>
+    (function () {
+      var base = window.__cherry404Base || "/";
+      var withBase = function (segment) {
+        segment = String(segment || "").replace(/^\/+/, "");
+        return base + segment;
+      };
+      document.getElementById("missingPath").textContent = window.__cherry404Path || "/";
+      document.getElementById("goHome").href = withBase("");
+      document.getElementById("goDocs").href = withBase("docs");
+      document.getElementById("goPlayground").href = withBase("playground");
+    })();
+  </script>
+</body>
 </html>
