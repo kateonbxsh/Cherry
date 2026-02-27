@@ -1,8 +1,10 @@
-int x = 0;
-if true { x = x + 1; } else { x = x + 100; }
-if false { x = x + 1000; } else { x = x + 2; }
-unless false { x = x + 3; }
-unless true { x = x + 10000; }
-if x == 6 { x = x + 1; }
-boolean ok = x == 7;
+int x = 0;;
+if true x = x + 1;
+if false x = x + 1000; else x = x + 2;
+unless false x = x + 3;;
+unless true x = x + 10000;
+if true x;
+if true int noop = 0;
+if x == 6 { x = x + 1; };;
+boolean ok = x == 7;;
 Standard.println("OK if_unless {} {}", x, ok);

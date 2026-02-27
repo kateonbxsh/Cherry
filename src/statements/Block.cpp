@@ -7,7 +7,9 @@ uref<Block> Block::parse(Lexer& lexer) {
     auto block = create_unique<Block>();
 
     if (lexer.expectToken(LEFT_BRACE)) {
-        while (!lexer.expectToken(RIGHT_BRACE)) {
+        while (true) {
+            while (lexer.expectToken(SEMICOLON)) {}
+            if (lexer.expectToken(RIGHT_BRACE)) break;
 
             auto stmt = GeneralStatement::parse(lexer);
 
@@ -26,19 +28,10 @@ uref<Block> Block::parse(Lexer& lexer) {
         return block;
     }
 
-    auto stmt = Expression::parse(lexer);
-
-    if (!stmt->valid) {
-        block->valid = false;
-        block->expected = stmt->expected;
-        block->lastToken = stmt->lastToken;
-        lexer.rollPosition();
-        return block;
-    }
-
-    block->statements.push_back(move(stmt));
-    block->valid = true;
-    lexer.deletePosition();
+    block->valid = false;
+    block->expected = tokenKindsToString({LEFT_BRACE});
+    block->lastToken = lexer.peekToken();
+    lexer.rollPosition();
     return block;
 }
 

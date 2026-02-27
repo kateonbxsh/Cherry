@@ -226,6 +226,14 @@
       }
     },
     {
+      "name": "compile_missing_semicolon",
+      "file": "cases/compile_error/missing_semicolon.chry",
+      "allowed_exit_codes": [1, 2],
+      "expect": {
+        "stderr_contains": ["missing semicolon", "COMPILE ERROR"]
+      }
+    },
+    {
       "name": "runtime_array_push_type_mismatch",
       "file": "cases/runtime_error/array_push_type_mismatch.chry",
       "allowed_exit_codes": [0],

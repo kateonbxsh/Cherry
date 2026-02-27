@@ -10,7 +10,12 @@ uref<GlobalBlock> GlobalBlock::parse(Lexer& lexer) {
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Entering GlobalBlock::parse\n";
 
-    while(!lexer.expectToken(END_OF_FEED)) {
+    while (true) {
+        while (lexer.expectToken(SEMICOLON)) {
+            if (DEBUG) std::cout << DEBUG_PREFIX << "Ignoring extra semicolon in global scope\n";
+        }
+
+        if (lexer.expectToken(END_OF_FEED)) break;
 
         if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing next general statement...\n";
 

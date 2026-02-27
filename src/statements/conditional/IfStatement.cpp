@@ -48,13 +48,16 @@ uref<IfStatement> IfStatement::parse(Lexer& lexer) {
         }
 
         auto parseClauseBody = [&]() -> uref<Block> {
-            lexer.savePosition();
-            auto block = Block::parse(lexer);
-            if (block->valid) {
-                lexer.deletePosition();
+            if (lexer.peekToken().kind == LEFT_BRACE) {
+                lexer.savePosition();
+                auto block = Block::parse(lexer);
+                if (block->valid) {
+                    lexer.deletePosition();
+                    return block;
+                }
+                lexer.rollPosition();
                 return block;
             }
-            lexer.rollPosition();
 
             lexer.savePosition();
             auto stmt = GeneralStatement::parse(lexer);

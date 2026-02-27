@@ -32,6 +32,13 @@ uref<GlobalBlock> Parser::parse() {
         std::string message = "Unexpected token '" + lastToken.value + "' of type " + tokenKindStrings[lastToken.kind];
         if (!block->errorMessage.empty()) {
             message = block->errorMessage;
+        } else {
+            const auto semicolonToken = tokenKindStrings[SEMICOLON];
+            const bool expectsSemicolon =
+                std::find(block->expected.begin(), block->expected.end(), semicolonToken) != block->expected.end();
+            if (expectsSemicolon) {
+                message = "missing semicolon ';' at end of statement";
+            }
         }
         CompileError::fail(absolutePath, lexer.getParseData(), lastToken, message, block->expected);
     }
