@@ -10,6 +10,8 @@ type Comparable = int | string | real;
 ```
 Here we define the type Comparable as the union of `int`, `string` and `real`. We can use `Comparable` as a type in our code to match one of those three types.
 ```chry
+type Comparable = int | string | real;
+
 0 is Comparable; // true
 "hello" is Comparable; // true
 
@@ -25,6 +27,8 @@ type Username = string x when x.length() > 5 default "sample";
 ```
 Now `Username` is a string, which enforces the constraint of being longer than 5 characters.
 ```chry
+type Username = string x when x.length() > 5 default "sample";
+
 "John" is Username; // false
 "Jessica" is Username; // true
 ```

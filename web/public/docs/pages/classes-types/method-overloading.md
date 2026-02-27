@@ -23,7 +23,7 @@ p.sayHello("Mark"); // Hello, Mark!
 
 An example of method overloading is `Standard.println`, this standard built-in method is defined using two signatures:
 
-```chry
+```text
 class Standard {
     public static println(any x);
     public static println(string format, any ...args);

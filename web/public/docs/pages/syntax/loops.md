@@ -26,7 +26,9 @@ do {
 ### for loop
 
 ```chry
+int n = 0;
 for (int k = 0; k < 5; k += 1) {
+  Standard.println("n={}", n);
   n += k;
 }
 ```
@@ -34,17 +36,20 @@ for (int k = 0; k < 5; k += 1) {
 ### repeat-until loop
 
 ```chry
+int n = 1;
 repeat {
+  Standard.println("n={}", n);
   n *= 2;
-} until (n > 1000)
+} until (n > 10)
 ```
 
 ### repeat-times loop
 
 ```chry
 int n = 1;
-int k = 4;  
+int k = 10;  
 repeat (k) times {
   n *= 2;
+  Standard.println("n={}", n);
 }
 ```

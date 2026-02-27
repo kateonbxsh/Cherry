@@ -20,11 +20,17 @@ The inner `x` only exists inside the `if` block.
 
 Any expression can be used as a statement when you care about side effects.
 
-```chry
+```text
 expression;
 ```
 ```chry
 Standard.println('hello');
-makeLogger()('ready');
+let readyLogger = (string msg) => Standard.println("{}", msg);
+readyLogger('ready');
+class User {
+  public User(string name) {
+    Standard.println("created {}", name);
+  }
+}
 new User('Mina');
 ```

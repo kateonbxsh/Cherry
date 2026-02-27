@@ -56,9 +56,9 @@ For `[x, y, z]`, Cherry infers the element type by widening across elements:
 Examples:
 
 ```chry
-typeof [1, 2, 3]      // Array<int>
-typeof [1, 2.5, 3]    // Array<any> (with current built-in numeric rules)
-typeof [1, "x"]       // Array<any>
+typeof [1, 2, 3];      // Array<int>
+typeof [1, 2.5, 3];    // Array<any> (with current built-in numeric rules)
+typeof [1, "x"];       // Array<any>
 ```
 
 ### Explicit typed literals
@@ -67,14 +67,14 @@ typeof [1, "x"]       // Array<any>
 
 ```chry
 infer ok = Array<int>[1, 2, 3];      // OK
-infer bad = Array<string>["x", 2];   // RuntimeException
+// infer bad = Array<string>["x", 2];   // RuntimeException
 ```
 
 ### Methods
 
 #### `push`
 
-```chry
+```text
 int push(T value);
 ```
 
@@ -86,7 +86,7 @@ int push(T value);
 
 #### `size`
 
-```chry
+```text
 int size();
 ```
 
@@ -96,7 +96,7 @@ int size();
 
 #### `get`
 
-```chry
+```text
 T get(int index);
 ```
 
@@ -107,7 +107,7 @@ T get(int index);
 
 #### `set`
 
-```chry
+```text
 T set(int index, T value);
 ```
 
@@ -120,7 +120,7 @@ T set(int index, T value);
 
 #### `pop`
 
-```chry
+```text
 T pop();
 ```
 
@@ -131,7 +131,7 @@ T pop();
 
 #### `clear`
 
-```chry
+```text
 void clear();
 ```
 
@@ -141,7 +141,7 @@ void clear();
 
 #### `empty`
 
-```chry
+```text
 boolean empty();
 ```
 
@@ -151,7 +151,7 @@ boolean empty();
 
 #### `contains`
 
-```chry
+```text
 boolean contains(T value);
 ```
 
@@ -161,7 +161,7 @@ boolean contains(T value);
 
 `Array` integrates with index operators:
 
-```chry
+```text
 arr[0]       // equivalent to get(0)
 arr[0] = 42  // equivalent to set(0, 42)
 ```

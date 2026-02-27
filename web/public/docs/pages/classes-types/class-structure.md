@@ -35,7 +35,10 @@ class Person {
   }
 }
 
-// Following on the previous example
+let myPerson = new Person();
+myPerson.name = "Mark";
+let otherPerson = new Person();
+
 myPerson.sayHello(); // prints: Hello, I'm Mark
 otherPerson.sayHello(); // prints: Hello, I'm John
 ```

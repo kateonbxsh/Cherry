@@ -16,6 +16,14 @@ class Box<T> {
 ```
 `Box` is now a well defined class and type. However, when referred to or instantiated, it requires a type parameter `T` and that type parameter is used when defining the inner field `value` and as a parameter of its constructor.
 ```chry
+class Box<T> {
+  public T value;
+
+  public Box(T v) {
+    this.value = v;
+  }
+}
+
 let boxedInt = new Box<int>();
 ```
 We have defined a `Box` instance that uses `int`.
@@ -46,7 +54,11 @@ class Repo<T extends int> {
 }
 new Repo<int>(); // pass
 new Repo<Binary>(); // pass
-new Repo<string>(); // fail
+try {
+  new Repo<string>(); // fail
+} catch (Exception e) {
+  Standard.println("expected: {}", e.message);
+}
 ```
 
 ### Partial consumption of generics
@@ -60,6 +72,9 @@ let IntPair = Pair<int>;
 ```
 Now, `IntPair` is a class that takes only one type parameter.
 ```chry
+class Pair<T, U> {};
+let IntPair = Pair<int>;
+
 let IntAndStringPair = IntPair<string>;
 // equivalent to Pair<int, string>
 ```
@@ -81,6 +96,8 @@ Taking the previous example, `is` also checks assignability of type parameters.
 
 ```chry
 type Binary = 0 | 1;
+type Optional<T> = T | null;
+
 Optional<Binary> a = 0;
 a is Optional<Binary>; // true
 a is Optional<int>; // true

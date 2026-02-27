@@ -35,13 +35,21 @@ Built-in classes include:
 Use `throw` with an exception instance:
 
 ```chry
-throw new Exception("something went wrong");
+try {
+  throw new Exception("something went wrong");
+} catch (Exception e) {
+  Standard.println("caught: {}", e.message);
+}
 ```
 
 Throwing a `string` is also accepted by runtime conversion: it is wrapped into an `Exception` and used as `message`.
 
 ```chry
-throw "bad state";
+try {
+  throw "bad state";
+} catch (Exception e) {
+  Standard.println("caught: {}", e.message);
+}
 ```
 
 ### Try / catch / finally

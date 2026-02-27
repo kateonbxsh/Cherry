@@ -3,7 +3,11 @@
 Cherry errors are values of type `Exception`. Use `throw` to raise, `try/catch` to recover, and `finally` for cleanup that must always run.
 
 ```chry
-throw "something went wrong";
+try {
+  throw "something went wrong";
+} catch (Exception e) {
+  Standard.println("{}", e.message);
+}
 ```
 Throwing a string is normalized to an `Exception` instance whose message is that string.
 
@@ -38,7 +42,9 @@ You can also handle two different types in the same case, thanks to type union:
 ```chry
 try {
   dangerous();
-} catch (DivisionByZeroException | TypeException e) {
-  Standard.println("division or type error");
+} catch (DivisionByZeroException | NameException e) {
+  Standard.println("division or name {} {}", typeof e, e.message);
+} catch (TypeException e) {
+  Standard.println("type error");
 }
 ```

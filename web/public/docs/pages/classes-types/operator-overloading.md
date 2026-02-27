@@ -9,6 +9,12 @@ For example:
 class Point {
     int x;
     int y;
+
+    public Point() {}
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
 }
 ```
 We have a `Point` that has two values, we want to be able to add two instances of `Point` using their coordinates, we use the following formula:
@@ -16,6 +22,11 @@ We have a `Point` that has two values, we want to be able to add two instances o
 class Point {
     int x;
     int y;
+    public Point() {}
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
     public static operator+(Point a, Point b) {
         return new Point(a.x + b.x, a.y + b.y);
     }
@@ -25,7 +36,21 @@ class Point {
 
 We can now do:
 ```chry
-Point a; Point b;
+class Point {
+    int x;
+    int y;
+    public Point() {}
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+    public static operator+(Point a, Point b) {
+        return new Point(a.x + b.x, a.y + b.y);
+    }
+}
+
+Point a = new Point(1, 2);
+Point b = new Point(3, 4);
 Point c = a + b;
 ```
 

@@ -21,7 +21,11 @@ function f = (string a) => {
 };
 
 f("hello"); // passes
-f(5); // fails
+try {
+  f(5); // fails
+} catch (Exception e) {
+  Standard.println("expected: {}", e.message);
+}
 ```
 
 If you know the concepts of [lambdas (anonymous functions)](https://en.wikipedia.org/wiki/Anonymous_function), in Cherry, there is no distinction between functions and lambdas, you can think of as basically defining a function as an arrow expression and store it in a variable.
@@ -43,7 +47,13 @@ In this example, when the `next` function is defined, it captures the outer scop
 Variadic parameters are parameters that can very in count, for example if you have a function `sum` that sums a certain amount of numbers, but that amount can vary. You can use a variadic parameter for that:
 
 ```chry
-function sum = (int ...numbers) => { ... };
+function sum = (int ...numbers) => {
+  int acc = 0;
+  for (int i = 0; i < numbers.size(); i += 1) {
+    acc += numbers[i];
+  }
+  return acc;
+};
 ```
 
 ### Return

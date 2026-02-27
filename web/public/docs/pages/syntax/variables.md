@@ -6,43 +6,52 @@ Variables in Cherry hold runtime values. A value always carries a type, and assi
 
 Declaring a variable in Cherry is quite similar to a lot of other languages:
 
-```chry
+```text
 TypeName name = expression;
 ```
 ```chry
 // Example
 int count = 0;
-string label = 'ok';
+string label = "ok";
 Array<int> xs = new Array<int>();
 ```
 
 You may also assign a value to a pre-defined variable.
 
-```chry
+```text
 target = expression;
 ```
 ```chry
+int count = 0;
+class User { public string name = "Nora"; }
+let user = new User();
+Map<string, int> matrix = new Map<string, int>();
+
 count = count + 1;
 user.name = 'Ari';
-matrix[1, 2] = 42;
+matrix["1,2"] = 42;
 ```
 
 You can also perform an operation + assignment in one step by putting the operator before the `=` sign
 
-```chry
+```text
 target += expression;
 target -= expression;
 target *= expression;
 target /= expression;
 ```
 ```chry
+int count = 0;
+int vec = 10;
+int otherVec = 3;
+
 count += 1;
 vec -= otherVec;
 ```
 
 If a variable has been previously defined with a type, you can only re-assign values compatible with that type to it.
 
-```chry
+```text
 // fail: incompatible assignment
 int age = 20;
 age = "twenty";
@@ -56,7 +65,7 @@ Variables declared inside a block are not visible outside it. Shadowing creates 
 
 ```chry
 int x = 10;
-{
+if (x > 5) {
   int x = 99;
   Standard.println('inner={}', x);
 }

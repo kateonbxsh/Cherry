@@ -18,7 +18,7 @@ Map m = new Map(); // Map<string, any>
 
 #### `set`
 
-```chry
+```text
 V set(U key, V value);
 ```
 
@@ -31,7 +31,7 @@ V set(U key, V value);
 
 #### `get`
 
-```chry
+```text
 V get(U key);
 ```
 
@@ -42,7 +42,7 @@ V get(U key);
 
 #### `has`
 
-```chry
+```text
 boolean has(U key);
 ```
 
@@ -52,7 +52,7 @@ boolean has(U key);
 
 #### `remove`
 
-```chry
+```text
 boolean remove(U key);
 ```
 
@@ -63,7 +63,7 @@ boolean remove(U key);
 
 #### `size`
 
-```chry
+```text
 int size();
 ```
 
@@ -73,7 +73,7 @@ int size();
 
 #### `clear`
 
-```chry
+```text
 void clear();
 ```
 
@@ -83,7 +83,7 @@ void clear();
 
 #### `empty`
 
-```chry
+```text
 boolean empty();
 ```
 
@@ -93,7 +93,7 @@ boolean empty();
 
 #### `keys`
 
-```chry
+```text
 Array<U> keys();
 ```
 
@@ -103,7 +103,7 @@ Array<U> keys();
 
 #### `values`
 
-```chry
+```text
 Array<V> values();
 ```
 
@@ -115,7 +115,7 @@ Array<V> values();
 
 `Map` integrates with index operators:
 
-```chry
+```text
 m["k"]       // equivalent to get("k")
 m["k"] = 7   // equivalent to set("k", 7)
 ```

@@ -6,12 +6,12 @@ The standard library in Cherry is implemented in the class `Standard`.
 
 ### `println`
 
-```chry
+```text
 Standard.println(any x);
 ```
 Prints stringified `x` and a line break
 
-```chry
+```text
 Standard.println(string format, any... args);
 ```
 Formats `args` in `format` and prints them, and a line break.
@@ -24,7 +24,7 @@ Formats `args` in `format` and prints them, and a line break.
 
 ### `print`
 
-```chry
+```text
 Standard.println(any x);
 Standard.println(string format, any... args);
 ```
@@ -34,7 +34,7 @@ Follows the same principles as `println` without a line break.
 
 ### `format`
 
-```chry
+```text
 Standard.format(string format, any... args);
 ```
 Follows the same principles as `print` and `println` but returns the formatted string.
@@ -47,7 +47,7 @@ When `Standard.print`, `Standard.println`, or `Standard.format` needs a string f
 
 For class instances, if the class defines:
 
-```chry
+```text
 display {
   return "some string";
 }
