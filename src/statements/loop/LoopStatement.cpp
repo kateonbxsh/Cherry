@@ -1,11 +1,42 @@
 #include "LoopStatement.hpp"
 #include "../Block.hpp"
+#include "../GeneralStatement.h"
 #include "../variable/VariableAffectation.h"
 #include "expressions.h"
 #include "runtime_exception.h"
 
 static inline bool shouldPropagateLoopValue(const Value& value) {
     return value.thrownException != nullptr || value.returning;
+}
+
+static uref<Block> parseLoopBody(Lexer& lexer) {
+    if (lexer.peekToken().kind == LEFT_BRACE) {
+        lexer.savePosition();
+        auto block = Block::parse(lexer);
+        if (block->valid) {
+            lexer.deletePosition();
+            return block;
+        }
+        lexer.rollPosition();
+        return block;
+    }
+
+    lexer.savePosition();
+    auto stmt = GeneralStatement::parse(lexer);
+    if (!stmt->valid) {
+        auto invalid = create_unique<Block>();
+        invalid->valid = false;
+        invalid->expected = stmt->expected;
+        invalid->lastToken = stmt->lastToken;
+        lexer.rollPosition();
+        return invalid;
+    }
+
+    auto single = create_unique<Block>();
+    single->valid = true;
+    single->statements.push_back(move(stmt));
+    lexer.deletePosition();
+    return single;
 }
 
 uref<Statement> ForStatement::parse(Lexer& lexer) {
@@ -71,7 +102,7 @@ uref<Statement> ForStatement::parse(Lexer& lexer) {
     // Optional semicolon for do-while form: do {...} while (cond);
     lexer.expectToken(SEMICOLON);
 
-    auto body = Block::parse(lexer);
+    auto body = parseLoopBody(lexer);
     if (!body->valid) {
         stmt->invalidFrom(*body);
         lexer.rollPosition();
@@ -142,7 +173,7 @@ uref<Statement> WhileStatement::parse(Lexer& lexer) {
     // Optional semicolon for repeat-until form: repeat {...} until (cond);
     lexer.expectToken(SEMICOLON);
 
-    auto body = Block::parse(lexer);
+    auto body = parseLoopBody(lexer);
     if (!body->valid) {
         stmt->invalidFrom(*body);
         lexer.rollPosition();
@@ -183,7 +214,7 @@ uref<Statement> DoWhileStatement::parse(Lexer& lexer) {
         return stmt;
     }
 
-    auto body = Block::parse(lexer);
+    auto body = parseLoopBody(lexer);
     if (!body->valid) {
         stmt->invalidFrom(*body);
         lexer.rollPosition();
@@ -250,7 +281,7 @@ uref<Statement> RepeatUntilStatement::parse(Lexer& lexer) {
         return stmt;
     }
 
-    auto body = Block::parse(lexer);
+    auto body = parseLoopBody(lexer);
     if (!body->valid) {
         stmt->invalidFrom(*body);
         lexer.rollPosition();
@@ -338,7 +369,7 @@ uref<Statement> RepeatTimesStatement::parse(Lexer& lexer) {
 
     if (DEBUG) std::cout << DEBUG_PREFIX << "Parsing block" << std::endl;
 
-    auto body = Block::parse(lexer);
+    auto body = parseLoopBody(lexer);
     if (!body->valid) {
         stmt->invalidFrom(*body);
         lexer.rollPosition();
