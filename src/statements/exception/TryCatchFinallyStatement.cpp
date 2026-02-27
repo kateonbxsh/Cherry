@@ -13,14 +13,25 @@ bool parseCatchClause(Lexer& lexer, CatchClause& out, Statement& st) {
         return true;
     }
 
-    Token typeToken = lexer.nextToken();
-    if (typeToken.kind != IDENTIFIER) {
+    Token firstTypeToken = lexer.nextToken();
+    if (firstTypeToken.kind != IDENTIFIER) {
         st.valid = false;
         st.expected = {"exception type"};
-        st.lastToken = typeToken;
+        st.lastToken = firstTypeToken;
         return true;
     }
-    out.typeName = typeToken;
+    out.typeNames.push_back(firstTypeToken);
+
+    while (lexer.expectToken(BITWISE_OR)) {
+        Token nextTypeToken = lexer.nextToken();
+        if (nextTypeToken.kind != IDENTIFIER) {
+            st.valid = false;
+            st.expected = {"exception type"};
+            st.lastToken = nextTypeToken;
+            return true;
+        }
+        out.typeNames.push_back(nextTypeToken);
+    }
 
     Token maybeName = lexer.nextToken();
     if (maybeName.kind == IDENTIFIER) {
@@ -106,13 +117,16 @@ uref<TryCatchFinallyStatement> TryCatchFinallyStatement::parse(Lexer& lexer) {
 
     for (size_t i = 0; i < st->catches.size(); ++i) {
         for (size_t j = i + 1; j < st->catches.size(); ++j) {
-            if (st->catches[i].typeName.value == st->catches[j].typeName.value) {
-                st->valid = false;
-                st->lastToken = st->catches[j].typeName;
-                st->expected = {"non-duplicate catch type"};
-                st->errorMessage = "duplicate compatible catch blocks for type " + st->catches[j].typeName.value;
-                lexer.rollPosition();
-                return st;
+            for (const auto& leftType : st->catches[i].typeNames) {
+                for (const auto& rightType : st->catches[j].typeNames) {
+                    if (leftType.value != rightType.value) continue;
+                    st->valid = false;
+                    st->lastToken = rightType;
+                    st->expected = {"non-duplicate catch type"};
+                    st->errorMessage = "duplicate compatible catch blocks for type " + rightType.value;
+                    lexer.rollPosition();
+                    return st;
+                }
             }
         }
     }
@@ -123,32 +137,53 @@ uref<TryCatchFinallyStatement> TryCatchFinallyStatement::parse(Lexer& lexer) {
 }
 
 Value TryCatchFinallyStatement::execute(Scope& scope) {
-    std::vector<reference<Type>> catchTypes;
+    std::vector<std::vector<reference<Type>>> catchTypes;
     catchTypes.reserve(catches.size());
     for (const auto& c : catches) {
-        Value tv = scope.getVariable(c.typeName.value);
-        if (tv.thrownException != nullptr) return tv;
-        if (tv.type != TypeType) {
-            return makeThrown("TypeException", "catch type is not a type: " + c.typeName.value, c.typeName.line, c.typeName.pos + 1);
+        std::vector<reference<Type>> clauseTypes;
+        clauseTypes.reserve(c.typeNames.size());
+        for (const auto& typeName : c.typeNames) {
+            Value tv = scope.getVariable(typeName.value);
+            if (tv.thrownException != nullptr) return tv;
+            if (tv.type != TypeType) {
+                return makeThrown("TypeException", "catch type is not a type: " + typeName.value, typeName.line, typeName.pos + 1);
+            }
+            clauseTypes.push_back(get<reference<Type>>(tv.value));
         }
-        catchTypes.push_back(get<reference<Type>>(tv.value));
+        catchTypes.push_back(std::move(clauseTypes));
     }
+
+    auto typeCoversType = [](const reference<Type>& covering, const reference<Type>& target) -> bool {
+        auto targetTypeCopy = target;
+        auto targetProbe = Value::Uninitialized(targetTypeCopy);
+        targetProbe.type = target;
+        return covering->assignableFrom(targetProbe);
+    };
+
+    auto clauseCoversClause = [&typeCoversType](const std::vector<reference<Type>>& a, const std::vector<reference<Type>>& b) -> bool {
+        for (const auto& bType : b) {
+            bool covered = false;
+            for (const auto& aType : a) {
+                if (typeCoversType(aType, bType)) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered) return false;
+        }
+        return true;
+    };
 
     for (size_t i = 0; i < catchTypes.size(); ++i) {
         for (size_t j = i + 1; j < catchTypes.size(); ++j) {
-            auto aType = catchTypes[i];
-            auto bType = catchTypes[j];
-            auto aProbe = Value::Uninitialized(aType);
-            auto bProbe = Value::Uninitialized(bType);
-            aProbe.type = aType;
-            bProbe.type = bType;
-            // Reject only unreachable ordering: a broader catch before a narrower one.
-            if (aType->assignableFrom(bProbe)) {
+            // Reject only unreachable ordering: an earlier clause fully covering a later one.
+            if (clauseCoversClause(catchTypes[i], catchTypes[j])) {
+                auto offending = catches[j].typeNames.empty() ? catches[j].variableName : catches[j].typeNames.front();
                 return makeThrown(
                     "TypeException",
-                    "unreachable catch block: " + catches[j].typeName.value + " is already covered by " + catches[i].typeName.value,
-                    catches[j].typeName.line,
-                    catches[j].typeName.pos + 1
+                    "unreachable catch block: catch clause is already covered by previous catch clause",
+                    offending.line,
+                    offending.pos + 1
                 );
             }
         }
@@ -159,7 +194,14 @@ Value TryCatchFinallyStatement::execute(Scope& scope) {
         auto ex = normalizeExceptionRef(result.thrownException);
         bool handled = false;
         for (size_t i = 0; i < catches.size(); ++i) {
-            if (!catchTypes[i]->assignableFrom(*ex)) continue;
+            bool matches = false;
+            for (const auto& catchType : catchTypes[i]) {
+                if (catchType->assignableFrom(*ex)) {
+                    matches = true;
+                    break;
+                }
+            }
+            if (!matches) continue;
             reference<Scope> parentRef(&scope, [](Scope*) {});
             Scope catchScope(parentRef);
             if (catches[i].variableName.kind == IDENTIFIER) {

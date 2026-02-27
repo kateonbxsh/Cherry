@@ -4,7 +4,7 @@
 #include "statements/Block.hpp"
 
 struct CatchClause {
-    Token typeName;
+    std::vector<Token> typeNames;
     Token variableName;
     uref<Block> body;
 };

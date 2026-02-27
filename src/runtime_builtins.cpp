@@ -574,6 +574,42 @@ void registerBuiltinRuntime(Scope& scope) {
     exceptionType->fields.push_back(makeExceptionField("line"));
     exceptionType->fields.push_back(makeExceptionField("col"));
     exceptionType->fields.push_back(makeExceptionField("file"));
+    auto setExceptionDefaults = [](Value& thisValue) {
+        auto instance = get<ClassInstance>(thisValue.value);
+        instance.fieldValues["message"] = Value(string(""));
+        instance.fieldValues["stacktrace"] = Value(string(""));
+        instance.fieldValues["line"] = Value((integer)0);
+        instance.fieldValues["col"] = Value((integer)0);
+        instance.fieldValues["file"] = Value(string(""));
+        thisValue.value = instance;
+    };
+
+    auto makeExceptionConstructors = [setExceptionDefaults](const std::string& typeName) -> Method {
+        Method ctorMethod;
+        ctorMethod.flags = MemberFlags::Public;
+
+        ctorMethod.overloads.push_back(makeInternal({}, [setExceptionDefaults, typeName](Scope&, const std::vector<Value>&, const reference<Value>& self) -> Value {
+            if (self == nullptr) return runtimeError(typeName + " constructor missing receiver");
+            Value thisValue = *self;
+            setExceptionDefaults(thisValue);
+            *self = thisValue;
+            return NullValue;
+        }));
+
+        FunctionParameter messageParam{"message", StringType, false};
+        ctorMethod.overloads.push_back(makeInternal({messageParam}, [setExceptionDefaults, typeName](Scope&, const std::vector<Value>& args, const reference<Value>& self) -> Value {
+            if (self == nullptr) return runtimeError(typeName + " constructor missing receiver");
+            Value thisValue = *self;
+            setExceptionDefaults(thisValue);
+            auto instance = get<ClassInstance>(thisValue.value);
+            instance.fieldValues["message"] = args[0];
+            thisValue.value = instance;
+            *self = thisValue;
+            return NullValue;
+        }));
+
+        return ctorMethod;
+    };
 
     runtimeExceptionType->parent = exceptionType;
     valueExceptionType->parent = runtimeExceptionType;
@@ -583,6 +619,8 @@ void registerBuiltinRuntime(Scope& scope) {
     operationExceptionType->parent = runtimeExceptionType;
     divisionByZeroExceptionType->parent = operationExceptionType;
     indexExceptionType->parent = runtimeExceptionType;
+
+    exceptionType->constructor = makeExceptionConstructors(exceptionType->getName());
 
     }
 
