@@ -41,8 +41,16 @@ static Value invokeOverload(
     const std::vector<Value>& args,
     const reference<Type>& ownerType = nullptr
 ) {
+    reference<Type> effectiveOwnerType = ownerType != nullptr ? ownerType : fn.ownerType;
     if (fn.kind == FunctionKind::Internal) {
         Scope internalScope(fn.closure);
+        if (effectiveOwnerType != nullptr) {
+            auto owner = effectiveOwnerType;
+            internalScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(owner));
+            if (!owner->getName().empty()) {
+                internalScope.addVariable(owner->getName(), Value(owner));
+            }
+        }
         if (!fn.internalHandler) {
             Value err;
             err.thrownException = create_reference<Value>(Value("internal function is missing implementation"));
@@ -54,9 +62,12 @@ static Value invokeOverload(
     }
 
     Scope funcScope(fn.closure);
-    if (ownerType != nullptr && !ownerType->getName().empty()) {
-        auto ownerTypeCopy = ownerType;
-        funcScope.addVariable(ownerType->getName(), Value(ownerTypeCopy));
+    if (effectiveOwnerType != nullptr) {
+        auto ownerTypeCopy = effectiveOwnerType;
+        funcScope.addVariable(INTERNAL_CLASS_CONTEXT_VAR, Value(ownerTypeCopy));
+        if (!effectiveOwnerType->getName().empty()) {
+            funcScope.addVariable(effectiveOwnerType->getName(), Value(ownerTypeCopy));
+        }
     }
     if (fn.__this != nullptr) {
         funcScope.addVariable("this", *fn.__this);
@@ -189,6 +200,25 @@ std::string stringify(const Value& value) {
     };
 
     if (value.type == nullptr) return "null";
+    if (value.type->kind == TypeKind::Dynamic) {
+        if (std::holds_alternative<string>(value.value)) return std::get<string>(value.value);
+        if (std::holds_alternative<integer>(value.value)) return std::to_string(std::get<integer>(value.value));
+        if (std::holds_alternative<real>(value.value)) return std::to_string(std::get<real>(value.value));
+        if (std::holds_alternative<boolean>(value.value)) return std::get<boolean>(value.value) ? "true" : "false";
+        if (std::holds_alternative<Function>(value.value)) return "[function]";
+        if (std::holds_alternative<reference<Type>>(value.value)) {
+            auto t = std::get<reference<Type>>(value.value);
+            if (t != nullptr) return "[type " + t->getName() + "]";
+            return "[type <unknown>]";
+        }
+        if (std::holds_alternative<ClassInstance>(value.value)) {
+            const auto& instance = std::get<ClassInstance>(value.value);
+            if (instance.classType != nullptr) {
+                return "[" + stringifyClassName(instance.classType) + " instance]";
+            }
+            return "[object]";
+        }
+    }
     if (value.type == RealType) return std::to_string(getValue<real>(value));
     if (value.type == StringType) return getValue<string>(value);
     if (value.type == IntegerType) return std::to_string(getValue<integer>(value));
@@ -352,7 +382,13 @@ static Value divide(const Value& a, const Value& b) {
 }
 
 static Value exponent(const Value& a, const Value& b) {
-    return Value(real(std::pow(getNumericValueAsReal(a), getNumericValueAsReal(b))));
+    real base = getNumericValueAsReal(a);
+    real exp = getNumericValueAsReal(b);
+    real result = std::pow(base, exp);
+    if (a.type == IntegerType && b.type == IntegerType) {
+        return Value((integer)result);
+    }
+    return Value(result);
 }
 
 static Value modulo(const Value& a, const Value& b) {
@@ -525,6 +561,48 @@ Value performBinaryOperator(const Value& a, const Value& b, TokenKind op) {
         return Value((boolean)checkType->assignableFrom(a));
     }
 
+    if (op == BITWISE_OR && a.type == TypeType && b.type == TypeType) {
+        auto leftType = get<reference<Type>>(a.value);
+        auto rightType = get<reference<Type>>(b.value);
+        auto unionType = create_reference<Type>(Type(TypeKind::Dynamic));
+
+        auto appendUnionMember = [&](const reference<Type>& candidate, auto&& appendRef) -> void {
+            if (candidate == nullptr) return;
+
+            if (candidate->kind == TypeKind::Dynamic &&
+                candidate->dynamicPredicate == nullptr &&
+                candidate->dynamicBaseType == nullptr &&
+                candidate->dynamicUnionLiterals.empty() &&
+                !candidate->dynamicUnionTypes.empty()) {
+                for (const auto& nested : candidate->dynamicUnionTypes) {
+                    appendRef(nested, appendRef);
+                }
+                return;
+            }
+
+            for (const auto& existing : unionType->dynamicUnionTypes) {
+                if (existing == candidate) return;
+                if (existing != nullptr && candidate != nullptr &&
+                    !existing->getName().empty() && existing->getName() == candidate->getName()) {
+                    return;
+                }
+            }
+            unionType->dynamicUnionTypes.push_back(candidate);
+        };
+
+        appendUnionMember(leftType, appendUnionMember);
+        appendUnionMember(rightType, appendUnionMember);
+
+        std::string unionName;
+        for (size_t i = 0; i < unionType->dynamicUnionTypes.size(); ++i) {
+            if (i > 0) unionName += " | ";
+            auto member = unionType->dynamicUnionTypes[i];
+            unionName += member != nullptr ? member->getName() : std::string("<unknown>");
+        }
+        unionType->setName(unionName);
+        return Value(unionType);
+    }
+
     ClassOperatorResult classOperatorResult = tryClassBinaryOperator(a, b, op);
     if (classOperatorResult.handled) {
         return classOperatorResult.value;
@@ -571,7 +649,8 @@ int precedence(const Token& token) {
     if (kind == PLUS || kind == MINUS) return 5;
     if (kind == BIGGER_THAN || kind == BIGGER_OR_EQUAL ||
         kind == SMALLER_THAN || kind == SMALLER_OR_EQUAL) return 4;
-    if (kind == COMPARATIVE_EQUALS || kind == COMPARATIVE_NOT_EQUALS || kind == IS) return 3;
+    if (kind == COMPARATIVE_EQUALS || kind == COMPARATIVE_NOT_EQUALS) return 3;
+    if (kind == IS) return 2;
     if (kind == BITWISE_AND || kind == BITWISE_OR || kind == BITWISE_XOR) return 2;
     if (kind == AND || kind == OR || kind == XOR) return 1;
     return 0;
