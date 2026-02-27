@@ -1,0 +1,9 @@
+class Person {
+  public sayHello(any a) {
+    Standard.println("any");
+  }
+
+  public sayHello(string to) {
+    Standard.println("string");
+  }
+}

@@ -9,6 +9,8 @@
 struct TypeSyntaxExpression {
     Token name;
     std::vector<TypeSyntaxExpression> arguments;
+    bool isUnion = false;
+    std::vector<TypeSyntaxExpression> unionMembers;
 };
 
 bool parseTypeSyntaxExpression(Lexer& lexer, TypeSyntaxExpression& out, Statement& st);

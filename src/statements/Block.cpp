@@ -36,9 +36,10 @@ uref<Block> Block::parse(Lexer& lexer) {
 }
 
 Value Block::execute(Scope& scope) {
+    Scope localScope = scope.createChild();
     Value result = NullValue;
     for (auto& stmt : statements) {
-        result = stmt->execute(scope);
+        result = stmt->execute(localScope);
         if (result.thrownException != nullptr) return result;
         if (result.returning) return result;
     }

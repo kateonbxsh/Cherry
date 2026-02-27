@@ -1,0 +1,9 @@
+let dangerous = () => {
+  throw new NameException("boom");
+};
+
+try {
+  dangerous();
+} catch (DivisionByZeroException | NameException e) {
+  Standard.println("OK catch_union {} {}", typeof e, e.message);
+}

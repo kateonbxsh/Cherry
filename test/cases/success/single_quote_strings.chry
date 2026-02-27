@@ -1,0 +1,3 @@
+string a = 'alpha';
+string b = "beta";
+Standard.println('OK single_quote_strings {} {}', a, b);

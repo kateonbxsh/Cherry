@@ -14,6 +14,10 @@ void Interpreter::interpret(uref<GlobalBlock>& block)
         printRuntimeException(returned.thrownException);
         return;
     }
+
+    if (returned.type != nullptr) {
+        std::cout << stringify(returned) << std::endl;
+    }
     if (DEBUG) mainScope.printVariables();
 
 }

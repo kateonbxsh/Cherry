@@ -2,6 +2,23 @@
 #include "types/function.h"
 #include "runtime_exception.h"
 
+namespace {
+
+struct LambdaExpressionReturnStatement final : public Statement {
+    explicit LambdaExpressionReturnStatement(uref<Expression> expr) : expression(move(expr)) {}
+
+    Value execute(Scope& scope) override {
+        Value value = expression->execute(scope);
+        if (value.thrownException != nullptr) return value;
+        value.returning = true;
+        return value;
+    }
+
+    uref<Expression> expression;
+};
+
+}
+
 uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
 
     lexer.savePosition();
@@ -17,7 +34,7 @@ uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
     while (!lexer.expectToken(RIGHT_PARENTHESIS)) {
 
         Token type = lexer.nextToken();
-        if (type.kind != IDENTIFIER) {
+        if (type.kind != IDENTIFIER && type.kind != TYPE) {
             lambda->valid = false;
             lambda->expected = {"parameter type"};
             lambda->lastToken = type;
@@ -72,17 +89,28 @@ uref<Expression> LambdaDefinition::parse(Lexer& lexer) {
         return lambda;
     }
 
-    // body
-    auto body = Block::parse(lexer);
-    if (!body->valid) {
+    // body: either block or expression (implicit return)
+    auto blockBody = Block::parse(lexer);
+    if (blockBody->valid) {
+        lambda->body = move(blockBody);
+        lambda->valid = true;
+        lexer.deletePosition();
+        return lambda;
+    }
+
+    auto expressionBody = Expression::parse(lexer);
+    if (!expressionBody->valid) {
         lambda->valid = false;
-        lambda->expected = body->expected;
-        lambda->lastToken = body->lastToken;
+        lambda->expected = expressionBody->expected;
+        lambda->lastToken = expressionBody->lastToken;
         lexer.rollPosition();
         return lambda;
     }
 
-    lambda->body = move(body);
+    auto synthesizedBody = create_unique<Block>();
+    synthesizedBody->valid = true;
+    synthesizedBody->statements.push_back(create_unique<LambdaExpressionReturnStatement>(move(expressionBody)));
+    lambda->body = move(synthesizedBody);
     lambda->valid = true;
 
     lexer.deletePosition();

@@ -1,14 +1,40 @@
 #include "type_syntax.h"
 #include "runtime_exception.h"
 
-bool parseTypeSyntaxExpression(Lexer& lexer, TypeSyntaxExpression& out, Statement& st) {
+namespace {
+
+std::string typeSyntaxDisplayName(const TypeSyntaxExpression& syntax) {
+    if (syntax.isUnion) {
+        std::string out;
+        for (size_t i = 0; i < syntax.unionMembers.size(); ++i) {
+            if (i > 0) out += " | ";
+            out += typeSyntaxDisplayName(syntax.unionMembers[i]);
+        }
+        return out.empty() ? std::string("<type union>") : out;
+    }
+
+    std::string out = syntax.name.value;
+    if (!syntax.arguments.empty()) {
+        out += "<";
+        for (size_t i = 0; i < syntax.arguments.size(); ++i) {
+            if (i > 0) out += ", ";
+            out += typeSyntaxDisplayName(syntax.arguments[i]);
+        }
+        out += ">";
+    }
+    return out.empty() ? std::string("<type>") : out;
+}
+
+bool parseTypeSyntaxPrimary(Lexer& lexer, TypeSyntaxExpression& out, Statement& st) {
     Token base = lexer.nextToken();
-    if (base.kind != IDENTIFIER) {
+    if (base.kind != IDENTIFIER && base.kind != TYPE) {
         st.valid = false;
         st.expected = {"type identifier"};
         st.lastToken = base;
         return false;
     }
+    out.isUnion = false;
+    out.unionMembers.clear();
     out.name = base;
     out.arguments.clear();
 
@@ -35,6 +61,35 @@ bool parseTypeSyntaxExpression(Lexer& lexer, TypeSyntaxExpression& out, Statemen
         }
     }
 
+    return true;
+}
+
+}
+
+bool parseTypeSyntaxExpression(Lexer& lexer, TypeSyntaxExpression& out, Statement& st) {
+    TypeSyntaxExpression first;
+    if (!parseTypeSyntaxPrimary(lexer, first, st)) {
+        return false;
+    }
+
+    std::vector<TypeSyntaxExpression> members;
+    members.push_back(std::move(first));
+    while (lexer.expectToken(BITWISE_OR)) {
+        TypeSyntaxExpression next;
+        if (!parseTypeSyntaxPrimary(lexer, next, st)) {
+            return false;
+        }
+        members.push_back(std::move(next));
+    }
+
+    if (members.size() == 1) {
+        out = std::move(members.front());
+        return true;
+    }
+
+    out = TypeSyntaxExpression{};
+    out.isUnion = true;
+    out.unionMembers = std::move(members);
     return true;
 }
 
@@ -113,6 +168,32 @@ Value resolveTypeSyntaxExpression(
     bool strictMissing,
     const std::string& errorPrefix
 ) {
+    if (syntax.isUnion) {
+        auto unionType = create_reference<Type>(Type(TypeKind::Dynamic));
+        std::vector<reference<Type>> members;
+        members.reserve(syntax.unionMembers.size());
+        std::string unionName;
+
+        for (const auto& memberSyntax : syntax.unionMembers) {
+            Value member = resolveTypeSyntaxExpression(scope, memberSyntax, strictMissing, errorPrefix);
+            if (member.thrownException != nullptr) return member;
+            if (member.type != TypeType) {
+                return makeThrown("TypeException", errorPrefix + "union member is not a type: " + typeSyntaxDisplayName(memberSyntax));
+            }
+            auto memberType = get<reference<Type>>(member.value);
+            if (memberType == nullptr) {
+                return makeThrown("TypeException", errorPrefix + "union member is null type: " + typeSyntaxDisplayName(memberSyntax));
+            }
+            members.push_back(memberType);
+            if (!unionName.empty()) unionName += " | ";
+            unionName += memberType->getName();
+        }
+
+        unionType->dynamicUnionTypes = std::move(members);
+        unionType->setName(unionName);
+        return Value(unionType);
+    }
+
     Value base = scope.getVariable(syntax.name.value);
     if (base.thrownException != nullptr) return base;
     if (base.type != TypeType) {
@@ -130,7 +211,7 @@ Value resolveTypeSyntaxExpression(
         Value argType = resolveTypeSyntaxExpression(scope, argExpr, strictMissing, errorPrefix);
         if (argType.thrownException != nullptr) return argType;
         if (argType.type != TypeType) {
-            return makeThrown("TypeException", errorPrefix + "type argument is not a type: " + argExpr.name.value);
+            return makeThrown("TypeException", errorPrefix + "type argument is not a type: " + typeSyntaxDisplayName(argExpr));
         }
         args.push_back(get<reference<Type>>(argType.value));
     }

@@ -1,0 +1,9 @@
+int v = 7;
+boolean c0 = v is string | int;
+
+string | int u = 10;
+boolean c1 = u is int;
+u = "x";
+boolean c2 = u is string | int;
+
+Standard.println("OK type_union_references {} {} {}", c0, c1, c2);

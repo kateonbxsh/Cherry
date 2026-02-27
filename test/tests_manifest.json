@@ -18,6 +18,14 @@
       }
     },
     {
+      "name": "success_block_scope_shadowing",
+      "file": "cases/success/block_scope_shadowing.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["inner=99", "outer=10"]
+      }
+    },
+    {
       "name": "success_loops",
       "file": "cases/success/loops.chry",
       "allowed_exit_codes": [0],
@@ -106,6 +114,14 @@
       }
     },
     {
+      "name": "success_operator_private_field_access",
+      "file": "cases/success/operator_private_field_access.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK operator_private_field_access 10"]
+      }
+    },
+    {
       "name": "success_display_and_format",
       "file": "cases/success/display_and_format.chry",
       "allowed_exit_codes": [0],
@@ -146,6 +162,14 @@
       }
     },
     {
+      "name": "success_type_union_references",
+      "file": "cases/success/type_union_references.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK type_union_references true true true"]
+      }
+    },
+    {
       "name": "success_try_catch_finally",
       "file": "cases/success/try_catch_finally.chry",
       "allowed_exit_codes": [0],
@@ -154,11 +178,27 @@
       }
     },
     {
+      "name": "success_catch_union_types",
+      "file": "cases/success/catch_union_types.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK catch_union [type NameException] boom"]
+      }
+    },
+    {
       "name": "success_comments",
       "file": "cases/success/comments.chry",
       "allowed_exit_codes": [0],
       "expect": {
         "stdout_contains": ["OK comments 9"]
+      }
+    },
+    {
+      "name": "success_single_quote_strings",
+      "file": "cases/success/single_quote_strings.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stdout_contains": ["OK single_quote_strings alpha beta"]
       }
     },
     {
@@ -319,6 +359,14 @@
       "allowed_exit_codes": [0],
       "expect": {
         "stderr_contains": ["unreachable catch block", "TypeException"]
+      }
+    },
+    {
+      "name": "runtime_compatible_method_overloads_any",
+      "file": "cases/runtime_error/compatible_method_overloads_any.chry",
+      "allowed_exit_codes": [0],
+      "expect": {
+        "stderr_contains": ["ambiguous overloads for Person.sayHello", "TypeException"]
       }
     }
   ]

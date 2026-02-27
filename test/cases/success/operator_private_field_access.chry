@@ -1,0 +1,24 @@
+class Point {
+  int x;
+  int y;
+
+  public Point() {}
+
+  public Point(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  public sum() {
+    return this.x + this.y;
+  }
+
+  public static operator + (Point a, Point b) {
+    return new Point(a.x + b.x, a.y + b.y);
+  }
+}
+
+Point a = new Point(1, 2);
+Point b = new Point(3, 4);
+Point c = a + b;
+Standard.println("OK operator_private_field_access {}", c.sum());

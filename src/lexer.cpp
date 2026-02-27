@@ -70,11 +70,13 @@ Lexer::Lexer(std::string data) {
         size_t startLine = line;
 
         // ---------- STRING ----------
-        if (c == '"') {
-            i++; pos++;
+        if (c == '"' || c == '\'') {
+            char delimiter = c;
+            i++;
+            pos++;
             std::string value;
 
-            while (i < parseData.size() && parseData[i] != '"') {
+            while (i < parseData.size() && parseData[i] != delimiter) {
                 if (parseData[i] == '\n') {
                     line++;
                     pos = 0;
@@ -85,8 +87,9 @@ Lexer::Lexer(std::string data) {
             }
 
             // Consume closing quote
-            if (i < parseData.size()) {
-                i++; pos++;
+            if (i < parseData.size() && parseData[i] == delimiter) {
+                i++;
+                pos++;
             }
 
             pushToken(STRING, value, startPos, startLine);

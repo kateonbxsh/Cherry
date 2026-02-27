@@ -13,11 +13,12 @@ Value makeVarDefError(const std::string& message) {
 Value coerceToDeclaredType(const Value& source, const reference<Type>& targetType) {
     Value coerced = source;
     if (targetType == nullptr) return coerced;
-    if (targetType->kind == TypeKind::Dynamic) return coerced;
     coerced.type = targetType;
     if (std::holds_alternative<ClassInstance>(coerced.value)) {
         auto instance = get<ClassInstance>(coerced.value);
-        instance.classType = targetType;
+        if (targetType->kind == TypeKind::Class) {
+            instance.classType = targetType;
+        }
         coerced.value = instance;
     }
     return coerced;

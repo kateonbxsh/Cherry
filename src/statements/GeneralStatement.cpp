@@ -22,8 +22,8 @@ uref<Statement> GeneralStatement::parse(Lexer& lexer) {
 
     // List of parser functions with their names for debug
     std::vector<std::pair<std::string, ParserFunc>> parsers = {
-        {"VariableDefinition", [](Lexer& l) { return VariableDefinition::parse(l); }},
         {"TypeDefinition", [](Lexer& l) { return TypeDefinition::parse(l); }},
+        {"VariableDefinition", [](Lexer& l) { return VariableDefinition::parse(l); }},
         {"VariableAffectation", [](Lexer& l) { return VariableAffectation::parse(l); }},
         {"TryCatchFinallyStatement", [](Lexer& l) { return TryCatchFinallyStatement::parse(l); }},
         {"ThrowStatement", [](Lexer& l) { return ThrowStatement::parse(l); }},

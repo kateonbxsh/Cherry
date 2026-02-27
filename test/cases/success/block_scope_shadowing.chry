@@ -1,0 +1,6 @@
+int x = 10;
+if (x > 5) {
+  int x = 99;
+  Standard.println("inner={}", x);
+}
+Standard.println("outer={}", x);

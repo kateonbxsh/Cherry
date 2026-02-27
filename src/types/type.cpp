@@ -15,6 +15,45 @@ bool literalValueEquals(const Value& a, const Value& b) {
     return false;
 }
 
+Value normalizeDynamicRuntimeValue(const Value& value) {
+    if (value.type == nullptr || value.type->kind != TypeKind::Dynamic) return value;
+
+    Value normalized = value;
+    if (std::holds_alternative<string>(value.value)) {
+        normalized.type = StringType;
+        return normalized;
+    }
+    if (std::holds_alternative<integer>(value.value)) {
+        normalized.type = IntegerType;
+        return normalized;
+    }
+    if (std::holds_alternative<real>(value.value)) {
+        normalized.type = RealType;
+        return normalized;
+    }
+    if (std::holds_alternative<boolean>(value.value)) {
+        normalized.type = BooleanType;
+        return normalized;
+    }
+    if (std::holds_alternative<Function>(value.value)) {
+        normalized.type = FunctionType;
+        return normalized;
+    }
+    if (std::holds_alternative<reference<Type>>(value.value)) {
+        normalized.type = TypeType;
+        return normalized;
+    }
+    if (std::holds_alternative<ClassInstance>(value.value)) {
+        const auto& instance = std::get<ClassInstance>(value.value);
+        if (instance.classType != nullptr) {
+            normalized.type = instance.classType;
+        }
+        return normalized;
+    }
+
+    return normalized;
+}
+
 }
 
 void Type::defineTypes()
@@ -56,6 +95,8 @@ Value Type::getDefaultValue()
 }
 
 bool Type::assignableFrom(const Value& other) {
+    const Value normalizedOther = normalizeDynamicRuntimeValue(other);
+
     if (this->kind == TypeKind::Dynamic) {
         auto resolveDynamicBinding = [&](const reference<Type>& maybeDynamic) -> reference<Type> {
             if (maybeDynamic == nullptr) return nullptr;
@@ -69,12 +110,12 @@ bool Type::assignableFrom(const Value& other) {
 
         if (dynamicBaseType != nullptr) {
             auto baseType = resolveDynamicBinding(dynamicBaseType);
-            if (baseType == nullptr || !baseType->assignableFrom(other)) return false;
+            if (baseType == nullptr || !baseType->assignableFrom(normalizedOther)) return false;
         }
 
         if (dynamicPredicate != nullptr && !dynamicVariableName.empty()) {
             Scope evalScope;
-            evalScope.addVariable(dynamicVariableName, other);
+            evalScope.addVariable(dynamicVariableName, normalizedOther);
             Value predicate = dynamicPredicate->execute(evalScope);
             if (predicate.thrownException != nullptr) return false;
             if (predicate.type == BooleanType) return std::get<boolean>(predicate.value);
@@ -84,25 +125,25 @@ bool Type::assignableFrom(const Value& other) {
         if (!dynamicUnionTypes.empty() || !dynamicUnionLiterals.empty()) {
             for (auto& t : dynamicUnionTypes) {
                 auto candidate = resolveDynamicBinding(t);
-                if (candidate != nullptr && candidate->assignableFrom(other)) return true;
+                if (candidate != nullptr && candidate->assignableFrom(normalizedOther)) return true;
             }
             for (auto& lit : dynamicUnionLiterals) {
-                if (lit != nullptr && literalValueEquals(*lit, other)) return true;
+                if (lit != nullptr && literalValueEquals(*lit, normalizedOther)) return true;
             }
             return false;
         }
 
         return true;
     }
-    if (other.type == nullptr) {
+    if (normalizedOther.type == nullptr) {
         return false;
     }
-    switch(other.type->kind) {
+    switch(normalizedOther.type->kind) {
         case TypeKind::Primitive:
-            return other.type->getName() == this->getName();
+            return normalizedOther.type->getName() == this->getName();
         case TypeKind::Class:
             {
-                reference<Type> cursor = other.type;
+                reference<Type> cursor = normalizedOther.type;
                 while (cursor != nullptr) {
                     if (cursor.get() == this || (!this->getName().empty() && this->getName() == cursor->getName())) {
                         auto a = typeParameters;
