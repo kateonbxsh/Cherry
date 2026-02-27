@@ -10,6 +10,19 @@ Value makeVarDefError(const std::string& message) {
     return makeThrown("TypeException", message);
 }
 
+Value coerceToDeclaredType(const Value& source, const reference<Type>& targetType) {
+    Value coerced = source;
+    if (targetType == nullptr) return coerced;
+    if (targetType->kind == TypeKind::Dynamic) return coerced;
+    coerced.type = targetType;
+    if (std::holds_alternative<ClassInstance>(coerced.value)) {
+        auto instance = get<ClassInstance>(coerced.value);
+        instance.classType = targetType;
+        coerced.value = instance;
+    }
+    return coerced;
+}
+
 }
 
 uref<VariableDefinition> VariableDefinition::parse(Lexer &lexer) {
@@ -101,6 +114,7 @@ Value VariableDefinition::execute(Scope& scope) {
         if (!typeType->assignableFrom(value)) {
             return makeVarDefError("value is not assignable to type " + typeType->getName());
         }
+        value = coerceToDeclaredType(value, typeType);
         if (value.type == FunctionType) {
             auto fn = get<Function>(value.value);
             if (fn.debugName.empty() || fn.debugName == "<lambda>") {

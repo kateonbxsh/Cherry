@@ -10,6 +10,19 @@ static Value makeAssignmentError(const std::string& message) {
     return makeThrown("TypeException", message);
 }
 
+static Value coerceToDeclaredType(const Value& source, const reference<Type>& targetType) {
+    Value coerced = source;
+    if (targetType == nullptr) return coerced;
+    if (targetType->kind == TypeKind::Dynamic) return coerced;
+    coerced.type = targetType;
+    if (std::holds_alternative<ClassInstance>(coerced.value)) {
+        auto instance = get<ClassInstance>(coerced.value);
+        instance.classType = targetType;
+        coerced.value = instance;
+    }
+    return coerced;
+}
+
 static uref<Expression> parseAssignmentTarget(Lexer& lexer) {
     auto base = ExpressionValue::parse(lexer);
     if (!base->valid) {
@@ -350,12 +363,18 @@ static Value assignToTarget(Expression* target, Scope& scope, const Value& value
         if (!id->isPlainIdentifier(&t)) {
             return makeAssignmentError("assignment target must be assignable");
         }
-        if (t.kind == THIS) {
-            scope.setVariable("this", value);
-        } else {
-            scope.setVariable(t.value, value);
+        const std::string varName = (t.kind == THIS) ? "this" : t.value;
+        if (!scope.hasVariable(varName)) {
+            return makeAssignmentError("undefined variable: " + varName);
         }
-        return value;
+        Value current = scope.getVariable(varName);
+        if (current.thrownException != nullptr) return current;
+        if (current.type != nullptr && !current.type->assignableFrom(value)) {
+            return makeAssignmentError("value is not assignable to type " + current.type->getName());
+        }
+        Value coerced = coerceToDeclaredType(value, current.type);
+        scope.setVariable(varName, coerced);
+        return coerced;
     }
 
     if (auto dot = dynamic_cast<DotAccessExpression*>(target)) {
