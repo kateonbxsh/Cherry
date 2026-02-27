@@ -19,12 +19,12 @@ class Vec {
     return new Vec(a.x + b.x, a.y + b.y);
   }
 
-  public get[int idx]() {
+  public get[int idx] {
     if (idx == 0) return this.x;
     return this.y;
   }
 
-  public set[int idx](int value) {
+  public set[int idx] {
     if (idx == 0) this.x = value;
     else this.y = value;
   }

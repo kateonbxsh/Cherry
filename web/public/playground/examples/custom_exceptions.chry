@@ -1,6 +1,6 @@
 class ValidationException extends Exception {
   public ValidationException(string message) {
-    Exception(message);
+    this.message = message;
   }
 }
 
